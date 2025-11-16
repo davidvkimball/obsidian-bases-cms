@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
-	"version": "1.0.0",
-	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"id": "bases-cms",
+	"name": "Bases CMS",
+	"version": "0.0.1",
+	"minAppVersion": "1.10.2",
+	"description": "Manage your content in bases like a content management system.",
+	"author": "David V. Kimball",
+	"authorUrl": "https://davidvkimball.com",
+	"fundingUrl": "https://patreon.com/davidvkimball",
 	"isDesktopOnly": false
 }
