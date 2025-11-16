@@ -17,7 +17,7 @@ export default class BasesCMSPlugin extends Plugin {
 		try {
 			this.registerBasesView(CMS_VIEW_TYPE, {
 				name: 'CMS',
-				icon: 'lucide-blocks',
+				icon: this.settings.useHomeIcon ? 'lucide-home' : 'lucide-blocks',
 				factory: (controller: QueryController, containerEl: HTMLElement) => {
 					return new BasesCMSView(controller, containerEl, this);
 				},

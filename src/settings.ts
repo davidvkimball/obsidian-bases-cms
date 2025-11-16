@@ -87,6 +87,19 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 					this.plugin.settings.confirmDeletions = value;
 					await this.plugin.saveData(this.plugin.settings);
 				}));
+
+		// Icon settings
+		containerEl.createEl('h3', { text: 'Appearance' });
+
+		new Setting(containerEl)
+			.setName('Use home icon for CMS view')
+			.setDesc('Use the home icon instead of blocks icon for the CMS view in the Bases view selector. Restart Obsidian for this change to take effect.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.useHomeIcon)
+				.onChange(async (value) => {
+					this.plugin.settings.useHomeIcon = value;
+					await this.plugin.saveData(this.plugin.settings);
+				}));
 	}
 }
 

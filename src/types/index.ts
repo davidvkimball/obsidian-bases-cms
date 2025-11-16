@@ -16,6 +16,9 @@ export interface BasesCMSSettings {
 	
 	// Confirmation dialog settings
 	confirmDeletions: boolean;
+	
+	// Icon settings
+	useHomeIcon: boolean;
 }
 
 export const DEFAULT_SETTINGS: BasesCMSSettings = {
@@ -25,6 +28,7 @@ export const DEFAULT_SETTINGS: BasesCMSSettings = {
 	deleteParentFolderFilename: 'index',
 	deleteUniqueAttachments: false,
 	confirmDeletions: true,
+	useHomeIcon: false,
 };
 
 /**
