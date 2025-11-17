@@ -1,7 +1,7 @@
 {
 	"name": "bases-cms",
 	"version": "0.0.4",
-	"description": "Manage your content in bases like a content management system.",
+	"description": "Manage your notes in bases like a content management system.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
