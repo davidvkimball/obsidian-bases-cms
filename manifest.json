@@ -1,7 +1,7 @@
 {
 	"id": "bases-cms",
 	"name": "Bases CMS",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"minAppVersion": "1.10.2",
 	"description": "Manage your content in bases like a content management system.",
 	"author": "David V. Kimball",

@@ -74,9 +74,9 @@
 	margin: 0 !important;
 	display: flex;
 	flex-direction: column;
-	height: 100%;
+	min-height: 100%;
 	min-width: 0;
-	overflow: hidden;
+	overflow: visible;
 }
 
 .bases-cms-grid .card .card-content ~ .card-properties,
@@ -117,6 +117,11 @@
 .card.selected {
 	border-color: var(--interactive-accent);
 	box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+/* Ensure cover image respects card border-radius when selected */
+.card.selected.image-format-cover .card-cover {
+	border-radius: var(--dynamic-views-card-border-radius, 8px) var(--dynamic-views-card-border-radius, 8px) 0 0;
 }
 
 /* Selection checkbox */
@@ -176,6 +181,7 @@
 	gap: var(--dynamic-views-element-spacing, 8px);
 	flex: 1;
 	min-width: 0;
+	min-height: 0;
 }
 
 .card.image-format-thumbnail .card-text-preview {
@@ -264,6 +270,11 @@
 	margin-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
 }
 
+/* When placeholder exists, push title down similar to cover image */
+.card.image-format-cover:has(.card-cover-placeholder) .card-title {
+	margin-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
+}
+
 .card.image-format-cover .card-cover {
 	position: absolute;
 	top: 0;
@@ -274,10 +285,23 @@
 	border-radius: var(--dynamic-views-card-border-radius, 8px) var(--dynamic-views-card-border-radius, 8px) 0 0;
 	margin: 0;
 	overflow: hidden;
+	/* Account for selected card's box-shadow */
+	top: -1px;
+	left: -1px;
+	width: calc(100% + 2px) !important;
 }
 
 .card.image-format-cover .card-cover-placeholder {
-	display: none;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100% !important;
+	height: 0;
+	padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%) !important;
+	border-radius: var(--dynamic-views-card-border-radius, 8px) var(--dynamic-views-card-border-radius, 8px) 0 0;
+	background-color: var(--background-modifier-border);
+	margin: 0;
+	overflow: hidden;
 }
 
 .card.image-format-cover .card-cover .image-embed {
@@ -286,6 +310,7 @@
 	left: 0;
 	width: 100%;
 	height: 100%;
+	/* Ensure it fills the parent completely */
 }
 
 .card.image-format-cover .card-cover img {
@@ -349,6 +374,15 @@
 	margin-bottom: 0;
 }
 
+/* For cover placeholders, position badge on the placeholder */
+.card.image-format-cover .card-cover-placeholder .card-status-badge {
+	position: absolute;
+	top: 8px;
+	left: 8px;
+	z-index: 11;
+	margin-bottom: 0;
+}
+
 /* For non-cover formats (thumbnail/none), position badge above title */
 .card:not(.image-format-cover) .card-status-badge {
 	position: absolute;
@@ -381,6 +415,7 @@
 
 .card-properties {
 	margin-top: var(--dynamic-views-element-spacing, 8px);
+	flex-shrink: 0;
 }
 
 .properties-4field {
@@ -489,7 +524,7 @@
 }
 
 .card-tag:hover {
-	background-color: var(--background-modifier-hover);
+	background-color: var(--background-modifier-border);
 }
 
 .card-tag-more {
@@ -591,52 +626,108 @@
    BULK TOOLBAR
    ============================================ */
 
+/* Ensure padding variables are available in the workspace context */
+.workspace-leaf-content[data-type="bases"] .bases-cms-bulk-toolbar {
+	--bases-header-padding-start: var(--size-4-2);
+	--bases-header-padding-end: var(--size-4-2);
+}
+
 .bases-cms-bulk-toolbar {
-	position: sticky;
-	bottom: 0;
-	z-index: 100;
-	background: var(--background-primary);
-	border-top: 1px solid var(--background-modifier-border);
-	padding: 0.75rem 1rem;
+	display: none;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	width: 100%;
+	opacity: 0;
+	transform: translateY(-10px);
+	transition: opacity 0.2s ease, transform 0.2s ease;
+	padding-left: var(--bases-header-padding-start, var(--size-4-2));
+	padding-right: var(--bases-header-padding-end, var(--size-4-2));
+	box-sizing: border-box;
+	min-width: 0; /* Allow flex items to shrink */
+	overflow: hidden; /* Prevent overflow */
+}
+
+.bases-cms-bulk-toolbar-left {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
-	flex-wrap: wrap;
-	min-width: 0;
-	width: 100%;
-	box-sizing: border-box;
+	gap: 0;
+	flex: 0 0 auto;
+	min-width: 0; /* Allow shrinking */
+	flex-wrap: nowrap; /* Keep buttons in a row */
 }
 
-.bases-cms-bulk-toolbar .selected-count {
-	font-weight: 600;
-	margin-right: auto;
+.bases-cms-bulk-toolbar-right {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	flex: 0 0 auto;
+	margin-left: auto;
+	min-width: 0; /* Allow shrinking */
+	flex-wrap: nowrap; /* Keep buttons in a row */
 }
 
-.bases-cms-bulk-toolbar button {
-	padding: 0.5rem 1rem;
-	border-radius: 4px;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-primary);
-	cursor: pointer;
-	font-size: 0.9em;
-	transition: background-color 0.2s, border-color 0.2s;
-	flex-shrink: 0;
-	min-width: fit-content;
-	white-space: nowrap;
+/* Selected count styling */
+.bases-cms-selected-count {
+	margin-left: 0.75rem !important;
 }
 
-.bases-cms-bulk-toolbar button:hover {
-	background: var(--background-modifier-hover);
-	border-color: var(--text-faint);
+.bases-cms-selected-count .text-button-label {
+	font-size: var(--font-ui-smaller);
+	cursor: default;
+	pointer-events: none;
+	color: var(--text-muted);
 }
 
-.bases-cms-bulk-toolbar button.destructive {
+.bases-cms-selected-count:hover {
+	background: transparent !important;
+}
+
+/* Use Bases' existing text-icon-button styles, but ensure cursor is default */
+.bases-cms-bulk-toolbar .text-icon-button {
+	cursor: default;
+	color: var(--text-normal);
+}
+
+.bases-cms-bulk-toolbar .text-icon-button .text-button-icon svg {
+	color: var(--text-normal);
+	stroke: var(--text-normal);
+}
+
+.bases-cms-bulk-toolbar .text-icon-button.destructive {
 	color: var(--text-error);
-	border-color: var(--text-error);
 }
 
-.bases-cms-bulk-toolbar button.destructive:hover {
+.bases-cms-bulk-toolbar .text-icon-button.destructive .text-button-icon svg {
+	color: var(--text-error) !important;
+	stroke: var(--text-error) !important;
+}
+
+.bases-cms-bulk-toolbar .text-icon-button.destructive:hover {
 	background: var(--background-modifier-error);
+	color: var(--text-error);
+}
+
+/* Keep delete button icon color consistent on hover */
+.bases-cms-bulk-toolbar .text-icon-button.destructive:hover .text-button-icon svg {
+	color: var(--text-error);
+	stroke: var(--text-error);
+}
+
+/* Responsive: Hide text labels on icon buttons when collapsed, but keep count visible */
+.bases-cms-bulk-toolbar.collapsed .text-icon-button .text-button-label {
+	display: none;
+}
+
+/* Always keep the selected count text visible */
+.bases-cms-bulk-toolbar.collapsed .bases-cms-selected-count .text-button-label {
+	display: block !important;
+}
+
+/* When collapsed, reduce padding on buttons to save space */
+.bases-cms-bulk-toolbar.collapsed .text-icon-button {
+	padding-left: var(--size-4-1);
+	padding-right: var(--size-4-1);
 }
 
 /* ============================================

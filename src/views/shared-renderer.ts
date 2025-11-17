@@ -214,9 +214,17 @@ export class SharedCardRenderer {
 				}
 			} else {
 				// For cover/no-image format, stack vertically
-				// Text preview
-				if (settings.showTextPreview && card.snippet) {
-					contentContainer.createDiv({ cls: 'card-text-preview', text: card.snippet });
+				// Text preview - always create if showTextPreview is enabled, even if snippet isn't loaded yet
+				if (settings.showTextPreview) {
+					const textPreviewEl = contentContainer.createDiv('card-text-preview');
+					if (card.snippet) {
+						textPreviewEl.setText(card.snippet);
+					}
+					// Store reference to update later when snippet loads
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					(cardEl as any).__textPreviewEl = textPreviewEl;
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					(cardEl as any).__cardPath = card.path;
 				}
 
 				// Tags as pills (under text preview)
@@ -292,14 +300,51 @@ export class SharedCardRenderer {
 					});
 					// Set CSS variable for letterbox blur background
 					imageEmbedContainer.style.setProperty('--cover-image-url', `url("${imageUrls[0]}")`);
+					
+					// Properties - MUST be called before returning
+					this.renderProperties(cardEl, card, entry, settings, onPropertyToggle);
+					
 					// Return image element and src for batch loading
 					return { img: imgEl, src: imageUrls[0] };
 				}
-			} else if (settings.imageFormat !== 'none') {
-				// Always render placeholder when no image - CSS controls visibility
-				const placeholderClassName = settings.imageFormat === 'cover' ? 'card-cover-placeholder' : 'card-thumbnail-placeholder';
-				contentContainer.createDiv(placeholderClassName);
+			} else if (settings.imageFormat === 'cover') {
+				// For cover format, render placeholder and add badge if needed
+				const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
+				
+				// Draft status badge on placeholder (top-left, clickable to toggle)
+				if (settings.showDraftStatus && settings.draftStatusProperty) {
+					const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
+					if (draftValue) {
+						const draftObj = draftValue as { data?: unknown } | null;
+						if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
+							const booleanValue = draftObj.data;
+							const isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
+							
+							const statusBadge = placeholderEl.createDiv('card-status-badge');
+							if (isDraft) {
+								statusBadge.addClass('status-draft');
+								statusBadge.appendText('Draft');
+							} else {
+								statusBadge.addClass('status-published');
+								statusBadge.appendText('Published');
+							}
+							
+							if (onPropertyToggle) {
+								statusBadge.style.cursor = 'pointer';
+								statusBadge.addEventListener('click', async (e) => {
+									e.stopPropagation();
+									const newValue = !booleanValue;
+									const cleanProperty = settings.draftStatusProperty.startsWith('note.') 
+										? settings.draftStatusProperty.substring(5) 
+										: settings.draftStatusProperty;
+									await onPropertyToggle(card.path, cleanProperty, newValue);
+								});
+							}
+						}
+					}
+				}
 			}
+			// For thumbnail format, don't render placeholder when no image - just skip it
 		}
 
 

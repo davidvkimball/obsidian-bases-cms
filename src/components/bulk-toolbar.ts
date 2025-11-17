@@ -3,7 +3,7 @@
  * Toolbar that appears when items are selected
  */
 
-import { App } from 'obsidian';
+import { App, setIcon } from 'obsidian';
 import type BasesCMSPlugin from '../main';
 import { BulkOperations } from '../utils/bulk-operations';
 import { ManageTagsModal } from './manage-tags-modal';
@@ -18,6 +18,7 @@ export class BulkToolbar {
 	private countEl: HTMLElement | null = null;
 	private bulkOps: BulkOperations;
 	private selectAllCallback?: () => void;
+	private resizeObserver: ResizeObserver | null = null;
 
 	constructor(
 		private app: App,
@@ -34,70 +35,204 @@ export class BulkToolbar {
 	}
 
 	private createToolbar(): void {
-		this.toolbarEl = this.container.createDiv('bases-cms-bulk-toolbar');
+		// Create toolbar element matching Bases structure
+		this.toolbarEl = document.createElement('div');
+		this.toolbarEl.className = 'bases-toolbar bases-cms-bulk-toolbar';
 		this.toolbarEl.style.display = 'none';
+		this.toolbarEl.style.opacity = '0';
+		this.toolbarEl.style.transform = 'translateY(-10px)';
+		this.toolbarEl.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+		// Store reference to this instance on the element for cleanup checks
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(this.toolbarEl as any).__bulkToolbarInstance = this;
 
-		// Selected count
-		this.countEl = this.toolbarEl.createDiv('selected-count');
+		// Create the toolbar content
+		this.createToolbarContent();
+
+		// Try to find and position the toolbar - use a small delay to ensure DOM is ready
+		this.positionToolbar();
+		
+		// Also try positioning after a short delay in case DOM isn't ready yet
+		setTimeout(() => this.positionToolbar(), 100);
+	}
+
+	private positionToolbar(): void {
+		if (!this.toolbarEl) return;
+
+		// Find the bases-header - it should be a sibling of our container
+		// The structure should be: bases-header, then bulk toolbar, then bases-view bases-cms bases-cms-container
+		let basesHeader = this.container.closest('.bases-header') as HTMLElement | null;
+		if (!basesHeader) {
+			// Try finding it in the parent hierarchy
+			let parent = this.container.parentElement;
+			while (parent && !basesHeader) {
+				if (parent.classList.contains('bases-header')) {
+					basesHeader = parent as HTMLElement;
+					break;
+				}
+				parent = parent.parentElement;
+			}
+		}
+		if (!basesHeader) {
+			// Try querying from document - look for one that contains our container
+			const allHeaders = Array.from(document.querySelectorAll('.bases-header')) as HTMLElement[];
+			for (const header of allHeaders) {
+				if (header.contains(this.container)) {
+					basesHeader = header;
+					break;
+				}
+			}
+		}
+		
+		// Find the view-content container that should contain both bases-header and our container
+		// The structure should be: view-content > bases-header > bases-toolbar, then our bulk toolbar, then bases-view
+		const viewContent = this.container.closest('.view-content') as HTMLElement | null;
+		
+		if (viewContent) {
+			// Position toolbar as a sibling of bases-header, right after it, before bases-view container
+			// Find where to insert - should be after bases-header, before our container
+			if (this.toolbarEl.parentElement !== viewContent) {
+				if (this.toolbarEl.parentElement) {
+					this.toolbarEl.remove();
+				}
+				// Insert after bases-header, before the bases-view container
+				viewContent.insertBefore(this.toolbarEl, this.container);
+			} else if (this.toolbarEl.nextSibling !== this.container) {
+				// Reposition if it's not right before the container
+				if (this.toolbarEl.parentElement) {
+					this.toolbarEl.remove();
+				}
+				viewContent.insertBefore(this.toolbarEl, this.container);
+			}
+		} else if (basesHeader && basesHeader.parentElement) {
+			// Fallback: insert after bases-header in its parent
+			if (this.toolbarEl.parentElement !== basesHeader.parentElement) {
+				if (this.toolbarEl.parentElement) {
+					this.toolbarEl.remove();
+				}
+				basesHeader.parentElement.insertBefore(this.toolbarEl, basesHeader.nextSibling);
+			}
+		} else {
+			// Last resort: insert before container
+			const parent = this.container.parentElement;
+			if (parent) {
+				if (this.toolbarEl.parentElement !== parent || this.toolbarEl.nextSibling !== this.container) {
+					if (this.toolbarEl.parentElement) {
+						this.toolbarEl.remove();
+					}
+					parent.insertBefore(this.toolbarEl, this.container);
+				}
+			}
+		}
+	}
+
+	private createToolbarContent(): void {
+		if (!this.toolbarEl) return;
+		
+		// Left side container (Select all, Clear selection, Count)
+		const leftContainer = this.toolbarEl.createDiv('bases-cms-bulk-toolbar-left');
+		
+		// Helper function to create Bases-style icon+text button
+		const createBasesButton = (iconName: string, text: string, onClick: () => void, container: HTMLElement, isDestructive = false): HTMLElement => {
+			const toolbarItem = container.createDiv('bases-toolbar-item');
+			const button = toolbarItem.createDiv('text-icon-button');
+			if (isDestructive) {
+				button.addClass('destructive');
+			}
+			button.setAttribute('tabindex', '0');
+			
+			const iconEl = button.createSpan('text-button-icon');
+			setIcon(iconEl, iconName);
+			
+			const textEl = button.createSpan('text-button-label');
+			textEl.setText(text);
+			
+			button.addEventListener('click', onClick);
+			return button;
+		};
+
+		// Left side: Select all
+		createBasesButton('copy-check', 'Select all', () => this.handleSelectAll(), leftContainer);
+
+		// Left side: Clear
+		createBasesButton('square-x', 'Clear', () => this.clearSelection(), leftContainer);
+
+		// Left side: Selected count (not a button, just text)
+		const countItem = leftContainer.createDiv('bases-toolbar-item bases-cms-selected-count');
+		this.countEl = countItem.createSpan('text-button-label');
 		this.countEl.setText('0 items selected');
 
-		// Buttons
-		const buttonContainer = this.toolbarEl.createDiv();
-		buttonContainer.style.display = 'flex';
-		buttonContainer.style.gap = '0.5rem';
-		buttonContainer.style.marginLeft = 'auto';
-		buttonContainer.style.flexWrap = 'wrap';
-		buttonContainer.style.minWidth = '0';
-		buttonContainer.style.flex = '1 1 auto';
-		buttonContainer.style.justifyContent = 'flex-end';
+		// Right side container (all action buttons)
+		const rightContainer = this.toolbarEl.createDiv('bases-cms-bulk-toolbar-right');
 
-		// Select all
-		const selectAllBtn = buttonContainer.createEl('button');
-		selectAllBtn.setText('Select all');
-		selectAllBtn.addEventListener('click', () => this.handleSelectAll());
+		// Right side: Draft
+		createBasesButton('pencil-line', 'Draft', () => this.handleSetDraft(), rightContainer);
 
-		// Clear selection
-		const clearSelectionBtn = buttonContainer.createEl('button');
-		clearSelectionBtn.setText('Clear selection');
-		clearSelectionBtn.addEventListener('click', () => this.clearSelection());
+		// Right side: Publish
+		createBasesButton('book-check', 'Publish', () => this.handlePublish(), rightContainer);
 
-		// Separator
-		const separator = buttonContainer.createDiv();
-		separator.style.width = '1px';
-		separator.style.height = '20px';
-		separator.style.backgroundColor = 'var(--background-modifier-border)';
-		separator.style.margin = '0 0.25rem';
+		// Right side: Tags
+		createBasesButton('tags', 'Tags', () => this.handleManageTags(), rightContainer);
 
-		// Mark draft
-		const draftBtn = buttonContainer.createEl('button');
-		draftBtn.setText('Mark draft');
-		draftBtn.addEventListener('click', () => this.handleSetDraft());
+		// Right side: Set
+		createBasesButton('list-check', 'Set', () => this.handleSetProperty(), rightContainer);
 
-		// Mark published
-		const publishBtn = buttonContainer.createEl('button');
-		publishBtn.setText('Mark published');
-		publishBtn.addEventListener('click', () => this.handlePublish());
+		// Right side: Remove
+		createBasesButton('list-x', 'Remove', () => this.handleRemoveProperty(), rightContainer);
 
-		// Manage tags
-		const tagsBtn = buttonContainer.createEl('button');
-		tagsBtn.setText('Manage tags');
-		tagsBtn.addEventListener('click', () => this.handleManageTags());
+		// Right side: Delete
+		createBasesButton('trash-2', 'Delete', () => this.handleDelete(), rightContainer, true);
 
-		// Set property
-		const setPropBtn = buttonContainer.createEl('button');
-		setPropBtn.setText('Set property');
-		setPropBtn.addEventListener('click', () => this.handleSetProperty());
+		// Set up responsive behavior - detect collapsed state
+		this.setupResponsiveBehavior();
+	}
 
-		// Remove property
-		const removePropBtn = buttonContainer.createEl('button');
-		removePropBtn.setText('Remove property');
-		removePropBtn.addEventListener('click', () => this.handleRemoveProperty());
+	private setupResponsiveBehavior(): void {
+		if (!this.toolbarEl) return;
 
-		// Delete
-		const deleteBtn = buttonContainer.createEl('button');
-		deleteBtn.setText('Delete');
-		deleteBtn.addClass('destructive');
-		deleteBtn.addEventListener('click', () => this.handleDelete());
+		// Check initial state after a short delay to ensure toolbar is rendered
+		setTimeout(() => {
+			this.updateCollapsedState();
+		}, 100);
+
+		// Observe toolbar width changes (more accurate than container)
+		if (this.toolbarEl) {
+			this.resizeObserver = new ResizeObserver(() => {
+				this.updateCollapsedState();
+			});
+			this.resizeObserver.observe(this.toolbarEl);
+		}
+		
+		// Also observe container as fallback
+		const container = this.container;
+		if (container) {
+			// Use a separate observer for container to catch window resize
+			const containerObserver = new ResizeObserver(() => {
+				// Small delay to let toolbar resize first
+				setTimeout(() => {
+					this.updateCollapsedState();
+				}, 10);
+			});
+			containerObserver.observe(container);
+			
+			// Store for cleanup
+			(this as any).containerObserver = containerObserver;
+		}
+	}
+
+	private updateCollapsedState(): void {
+		if (!this.toolbarEl) return;
+
+		// Check if toolbar itself is narrow (collapsed)
+		// Use the toolbar's actual width, not the container
+		const toolbarWidth = this.toolbarEl.offsetWidth;
+		const isCollapsed = toolbarWidth < 680; // Threshold for collapsing
+
+		if (isCollapsed) {
+			this.toolbarEl.addClass('collapsed');
+		} else {
+			this.toolbarEl.removeClass('collapsed');
+		}
 	}
 
 	updateCount(count: number): void {
@@ -113,14 +248,52 @@ export class BulkToolbar {
 	}
 
 	show(): void {
+		if (!this.toolbarEl) {
+			console.warn('[Bases CMS] Toolbar element not found, recreating...');
+			this.createToolbar();
+		}
+		
 		if (this.toolbarEl) {
+			// Make sure it's positioned correctly first
+			this.positionToolbar();
+			
+			// Ensure it's in the DOM
+			if (!this.toolbarEl.parentElement) {
+				console.warn('[Bases CMS] Toolbar not in DOM, repositioning...');
+				this.positionToolbar();
+			}
+			
+			// Show it with flex display
 			this.toolbarEl.style.display = 'flex';
+			// Remove any inline styles that might interfere
+			this.toolbarEl.style.visibility = 'visible';
+			
+			// Force reflow to ensure transition works
+			void this.toolbarEl.offsetHeight;
+			
+			// Animate in - use setTimeout instead of requestAnimationFrame for more reliability
+			setTimeout(() => {
+				if (this.toolbarEl) {
+					this.toolbarEl.style.opacity = '1';
+					this.toolbarEl.style.transform = 'translateY(0)';
+				}
+			}, 10);
+		} else {
+			console.error('[Bases CMS] Failed to show toolbar - element is null');
 		}
 	}
 
 	hide(): void {
 		if (this.toolbarEl) {
-			this.toolbarEl.style.display = 'none';
+			// Animate out
+			this.toolbarEl.style.opacity = '0';
+			this.toolbarEl.style.transform = 'translateY(-10px)';
+			// Wait for transition to complete before hiding
+			setTimeout(() => {
+				if (this.toolbarEl) {
+					this.toolbarEl.style.display = 'none';
+				}
+			}, 200);
 		}
 	}
 
@@ -242,6 +415,16 @@ export class BulkToolbar {
 	}
 
 	destroy(): void {
+		if (this.resizeObserver) {
+			this.resizeObserver.disconnect();
+			this.resizeObserver = null;
+		}
+		// Clean up container observer if it exists
+		const containerObserver = (this as any).containerObserver;
+		if (containerObserver) {
+			containerObserver.disconnect();
+			(this as any).containerObserver = null;
+		}
 		if (this.toolbarEl) {
 			this.toolbarEl.remove();
 			this.toolbarEl = null;

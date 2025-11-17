@@ -33,6 +33,8 @@ export class BasesCMSView extends BasesView {
 	private cardRenderer: SharedCardRenderer;
 	private bulkToolbar: BulkToolbar | null = null;
 	private isRefreshingWithSelection: boolean = false;
+	private viewTypeCheckInterval: number | null = null;
+	private lastActiveViewType: string | null = null;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: BasesCMSPlugin) {
 		super(controller);
@@ -63,7 +65,79 @@ export class BasesCMSView extends BasesView {
 
 		// Intercept new note button clicks
 		this.setupNewNoteInterceptor();
+		
+		// Listen for view switches to clear selection when switching away
+		this.setupViewSwitchListener();
 	}
+	
+	/**
+	 * Setup listener to clear selection when switching to a different view
+	 */
+	private setupViewSwitchListener(): void {
+		// Simple approach: Watch for view selector changes
+		// When view type changes on the same tab, clear selection (same as "Clear" button)
+		this.viewTypeCheckInterval = window.setInterval(() => {
+			if (this.selectedFiles.size === 0) {
+				this.lastActiveViewType = null;
+				return; // No selection, nothing to clear
+			}
+			
+			// Check if our container is in the active leaf (we're on this tab)
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const activeLeaf = this.app.workspace.activeLeaf;
+			if (!activeLeaf) {
+				return;
+			}
+			
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const activeView = activeLeaf.view as any;
+			if (!activeView) {
+				return;
+			}
+			
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const activeContainer = activeView?.containerEl;
+			if (!activeContainer || !activeContainer.contains(this.containerEl)) {
+				// Our container is NOT in the active leaf - we're on a different tab
+				// Don't clear selection (preserve across tabs)
+				this.lastActiveViewType = null;
+				return;
+			}
+			
+			// We're on the same tab - check if view type changed
+			// Try to find view selector
+			const viewSelector = document.querySelector('.bases-view-selector') || 
+				this.containerEl.closest('.bases-view')?.querySelector('.bases-view-selector') ||
+				document.querySelector('[class*="view-selector"]');
+			
+			if (viewSelector) {
+				// Try multiple ways to find the active view type button
+				const activeViewButton = viewSelector.querySelector('[data-view-type].is-active') ||
+					viewSelector.querySelector('[data-view-type][aria-selected="true"]') ||
+					viewSelector.querySelector('[data-view-type].mod-active') ||
+					viewSelector.querySelector('[data-view-type][class*="active"]');
+				
+				if (activeViewButton) {
+					const activeViewType = activeViewButton.getAttribute('data-view-type');
+					
+					// If this is the first check, just store the view type
+					if (this.lastActiveViewType === null) {
+						this.lastActiveViewType = activeViewType;
+						return;
+					}
+					
+					// If view type changed from CMS to something else, clear selection
+					if (this.lastActiveViewType === CMS_VIEW_TYPE && activeViewType && activeViewType !== CMS_VIEW_TYPE) {
+						this.selectedFiles.clear();
+						this.updateSelectionUI();
+					}
+					
+					this.lastActiveViewType = activeViewType;
+				}
+			}
+		}, 200);
+	}
+	
 
 	/**
 	 * Setup interceptor for new note button
@@ -305,6 +379,17 @@ export class BasesCMSView extends BasesView {
 	}
 
 	onDataUpdated(): void {
+		// Check if container is still visible - if not, clear selection (same as "Clear" button)
+		const isVisible = this.containerEl && 
+			this.containerEl.isConnected && 
+			this.containerEl.offsetParent !== null;
+		
+		if (!isVisible && this.selectedFiles.size > 0) {
+			this.selectedFiles.clear();
+			this.updateSelectionUI();
+			return; // Don't continue with data update if we're not visible
+		}
+		
 		void (async () => {
 			const groupedData = this.data.groupedData;
 			const allEntries = this.data.data;
@@ -480,13 +565,28 @@ export class BasesCMSView extends BasesView {
 					.filter((e): e is { path: string; file: TFile; descriptionData: unknown } => e !== null);
 
 				// Don't await - load snippets in background
+				// After snippets load, update the text preview elements
 				void loadSnippetsForEntries(
 					snippetEntries,
 					settings.fallbackToContent,
 					false,
 					this.app,
 					this.snippets
-				);
+				).then(() => {
+					// Update text preview elements for cards that now have snippets
+					snippetEntries.forEach(entry => {
+						if (entry.path in this.snippets && this.snippets[entry.path]) {
+							const cardEl = this.containerEl.querySelector(`[data-path="${entry.path}"]`);
+							if (cardEl) {
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
+								const textPreviewEl = (cardEl as any).__textPreviewEl;
+								if (textPreviewEl && !textPreviewEl.textContent) {
+									textPreviewEl.setText(this.snippets[entry.path]);
+								}
+							}
+						}
+					});
+				});
 			}
 
 			// Preserve toolbar element if we're refreshing with selection
@@ -814,6 +914,19 @@ export class BasesCMSView extends BasesView {
 		// Show/hide bulk toolbar - ONLY hide if selection is actually empty
 		// Don't hide if we're in the middle of a refresh that will restore selection
 		if (this.selectedFiles.size > 0) {
+			// Check if toolbar element already exists in DOM (from previous view switch)
+			// Remove any orphaned toolbar elements that might be left over
+			const orphanedToolbars = document.querySelectorAll('.bases-cms-bulk-toolbar');
+			orphanedToolbars.forEach(toolbar => {
+				// Only remove if it's not our current toolbar
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const toolbarInstance = (toolbar as any).__bulkToolbarInstance;
+				if (!toolbarInstance || toolbarInstance !== this.bulkToolbar) {
+					toolbar.remove();
+				}
+			});
+			
+			// If toolbar doesn't exist, create it
 			if (!this.bulkToolbar) {
 				this.bulkToolbar = new BulkToolbar(
 					this.app,
@@ -878,7 +991,7 @@ export class BasesCMSView extends BasesView {
 			this.bulkToolbar.show();
 		} else {
 			// Only hide if selection is truly empty (not during a refresh)
-			if (this.bulkToolbar) {
+			if (this.bulkToolbar && !this.isRefreshingWithSelection) {
 				this.bulkToolbar.hide();
 			}
 		}
@@ -888,11 +1001,19 @@ export class BasesCMSView extends BasesView {
 		if (this.resizeObserver) {
 			this.resizeObserver.disconnect();
 		}
+		if (this.viewTypeCheckInterval !== null) {
+			window.clearInterval(this.viewTypeCheckInterval);
+			this.viewTypeCheckInterval = null;
+		}
 		this.propertyObservers.forEach(obs => obs.disconnect());
 		this.propertyObservers = [];
 		if (this.bulkToolbar) {
 			this.bulkToolbar.destroy();
 		}
+		// Clean up selection and toolbar when view closes
+		this.selectedFiles.clear();
+		const orphanedToolbars = document.querySelectorAll('.bases-cms-bulk-toolbar');
+		orphanedToolbars.forEach(toolbar => toolbar.remove());
 	}
 
 	/**

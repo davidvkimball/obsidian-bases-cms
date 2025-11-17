@@ -63,6 +63,43 @@ export function getCMSViewOptions(): any[] {
 			default: 250
 		},
 		{
+			type: 'dropdown',
+			displayName: 'Card image',
+			key: 'imageFormat',
+			options: {
+				'none': 'No image',
+				'thumbnail': 'Thumbnail',
+				'cover': 'Cover'
+			},
+			default: 'thumbnail'
+		},
+		{
+			type: 'slider',
+			displayName: 'Image aspect ratio',
+			key: 'imageAspectRatio',
+			min: 0.1,
+			max: 2.0,
+			step: 0.05,
+			default: 0.55,
+			showWhen: {
+				key: 'imageFormat',
+				value: 'cover'
+			}
+		},
+		{
+			type: 'property',
+			displayName: 'Image property',
+			key: 'imageProperty',
+			placeholder: 'Select property',
+			default: 'image'
+		},
+		{
+			type: 'toggle',
+			displayName: 'Use in-note images if image property unavailable',
+			key: 'fallbackToEmbeds',
+			default: false
+		},
+		{
 			type: 'toggle',
 			displayName: 'Show title',
 			key: 'showTitle',
@@ -138,43 +175,6 @@ export function getCMSViewOptions(): any[] {
 			key: 'tagsProperty',
 			placeholder: 'Select property',
 			default: ''
-		},
-		{
-			type: 'dropdown',
-			displayName: 'Card image',
-			key: 'imageFormat',
-			options: {
-				'none': 'No image',
-				'thumbnail': 'Thumbnail',
-				'cover': 'Cover'
-			},
-			default: 'thumbnail'
-		},
-		{
-			type: 'slider',
-			displayName: 'Image aspect ratio',
-			key: 'imageAspectRatio',
-			min: 0.1,
-			max: 2.0,
-			step: 0.05,
-			default: 0.55,
-			showWhen: {
-				key: 'imageFormat',
-				value: 'cover'
-			}
-		},
-		{
-			type: 'property',
-			displayName: 'Image property',
-			key: 'imageProperty',
-			placeholder: 'Select property',
-			default: 'image'
-		},
-		{
-			type: 'toggle',
-			displayName: 'Use in-note images if image property unavailable',
-			key: 'fallbackToEmbeds',
-			default: false
 		},
 		{
 			type: 'property',
