@@ -157,6 +157,20 @@
 	-webkit-box-orient: vertical;
 	overflow: hidden;
 	line-height: var(--line-height-tight);
+	position: relative;
+	padding-right: 28px; /* Make room for the icon */
+}
+
+/* Quick edit icon styling */
+.bases-cms-quick-edit-icon {
+	display: inline-flex;
+	align-items: center;
+	cursor: default !important;
+	position: absolute;
+	right: 8px;
+	top: 0;
+	z-index: 10;
+	pointer-events: auto;
 }
 
 /* ============================================

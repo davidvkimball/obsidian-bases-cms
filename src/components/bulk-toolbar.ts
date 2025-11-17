@@ -152,10 +152,14 @@ export class BulkToolbar {
 		};
 
 		// Left side: Select all
-		createBasesButton('copy-check', 'Select all', () => this.handleSelectAll(), leftContainer);
+		if (this.plugin.settings.showToolbarSelectAll) {
+			createBasesButton('copy-check', 'Select all', () => this.handleSelectAll(), leftContainer);
+		}
 
 		// Left side: Clear
-		createBasesButton('square-x', 'Clear', () => this.clearSelection(), leftContainer);
+		if (this.plugin.settings.showToolbarClear) {
+			createBasesButton('square-x', 'Clear', () => this.clearSelection(), leftContainer);
+		}
 
 		// Left side: Selected count (not a button, just text)
 		const countItem = leftContainer.createDiv('bases-toolbar-item bases-cms-selected-count');
@@ -166,22 +170,34 @@ export class BulkToolbar {
 		const rightContainer = this.toolbarEl.createDiv('bases-cms-bulk-toolbar-right');
 
 		// Right side: Draft
-		createBasesButton('pencil-line', 'Draft', () => this.handleSetDraft(), rightContainer);
+		if (this.plugin.settings.showToolbarDraft) {
+			createBasesButton('book-dashed', 'Draft', () => this.handleSetDraft(), rightContainer);
+		}
 
 		// Right side: Publish
-		createBasesButton('book-check', 'Publish', () => this.handlePublish(), rightContainer);
+		if (this.plugin.settings.showToolbarPublish) {
+			createBasesButton('book-check', 'Publish', () => this.handlePublish(), rightContainer);
+		}
 
 		// Right side: Tags
-		createBasesButton('tags', 'Tags', () => this.handleManageTags(), rightContainer);
+		if (this.plugin.settings.showToolbarTags) {
+			createBasesButton('tags', 'Tags', () => this.handleManageTags(), rightContainer);
+		}
 
 		// Right side: Set
-		createBasesButton('list-check', 'Set', () => this.handleSetProperty(), rightContainer);
+		if (this.plugin.settings.showToolbarSet) {
+			createBasesButton('list-check', 'Set', () => this.handleSetProperty(), rightContainer);
+		}
 
 		// Right side: Remove
-		createBasesButton('list-x', 'Remove', () => this.handleRemoveProperty(), rightContainer);
+		if (this.plugin.settings.showToolbarRemove) {
+			createBasesButton('list-x', 'Remove', () => this.handleRemoveProperty(), rightContainer);
+		}
 
 		// Right side: Delete
-		createBasesButton('trash-2', 'Delete', () => this.handleDelete(), rightContainer, true);
+		if (this.plugin.settings.showToolbarDelete) {
+			createBasesButton('trash-2', 'Delete', () => this.handleDelete(), rightContainer, true);
+		}
 
 		// Set up responsive behavior - detect collapsed state
 		this.setupResponsiveBehavior();
@@ -411,6 +427,35 @@ export class BulkToolbar {
 			await executeSmartDeletion(this.app, preview);
 			this.clearSelection();
 			this.refreshView();
+		}
+	}
+
+	/**
+	 * Recreate the toolbar with updated settings
+	 * Preserves visibility state and count
+	 */
+	recreate(): void {
+		const wasVisible = this.toolbarEl && this.toolbarEl.style.display !== 'none' && this.toolbarEl.style.opacity !== '0';
+		let currentCount = 0;
+		
+		// Get current count before destroying
+		if (this.countEl && this.countEl.textContent) {
+			const match = this.countEl.textContent.match(/\d+/);
+			if (match) {
+				currentCount = parseInt(match[0], 10);
+			}
+		}
+		
+		// Destroy existing toolbar
+		this.destroy();
+		
+		// Recreate toolbar
+		this.createToolbar();
+		
+		// Restore visibility and count if it was visible
+		if (wasVisible && this.toolbarEl && currentCount > 0) {
+			this.updateCount(currentCount);
+			this.show();
 		}
 	}
 

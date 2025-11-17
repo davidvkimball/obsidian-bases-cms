@@ -19,6 +19,21 @@ export interface BasesCMSSettings {
 	
 	// Image performance settings
 	thumbnailCacheSize: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited';
+	
+	// Quick edit settings
+	enableQuickEdit: boolean;
+	quickEditCommand: string;
+	quickEditCommandName: string; // Store command name for display
+	
+	// Toolbar button visibility settings
+	showToolbarSelectAll: boolean;
+	showToolbarClear: boolean;
+	showToolbarDraft: boolean;
+	showToolbarPublish: boolean;
+	showToolbarTags: boolean;
+	showToolbarSet: boolean;
+	showToolbarRemove: boolean;
+	showToolbarDelete: boolean;
 }
 
 export const DEFAULT_SETTINGS: BasesCMSSettings = {
@@ -29,6 +44,17 @@ export const DEFAULT_SETTINGS: BasesCMSSettings = {
 	confirmDeletions: true,
 	useHomeIcon: false,
 	thumbnailCacheSize: 'balanced',
+	enableQuickEdit: false,
+	quickEditCommand: '',
+	quickEditCommandName: '',
+	showToolbarSelectAll: true,
+	showToolbarClear: true,
+	showToolbarDraft: true,
+	showToolbarPublish: true,
+	showToolbarTags: true,
+	showToolbarSet: true,
+	showToolbarRemove: true,
+	showToolbarDelete: true,
 };
 
 /**

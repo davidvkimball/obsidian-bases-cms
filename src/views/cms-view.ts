@@ -195,32 +195,45 @@ export class BasesCMSView extends BasesView {
 				// If location is empty, use Obsidian's default new note location
 				if (locationInput === '') {
 					console.log('[CMS View] Using Obsidian default new note location');
-					// Use Obsidian's default new note creation
+					// Use Obsidian's default new note creation behavior
+					// Access Obsidian's vault config directly
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const newNotePath = (this.app as any).vault?.getConfig?.('newFileLocation') || 'folder';
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const newNoteFolderPath = (this.app as any).vault?.getConfig?.('newFileFolderPath') || '';
+					const vaultConfig = (this.app.vault as any).config;
+					const newFileLocation = vaultConfig?.newFileLocation || 'folder';
+					const newFileFolderPath = vaultConfig?.newFileFolderPath || '';
 					
-					// Create note in the default location
-					const defaultPath = newNotePath === 'folder' && newNoteFolderPath 
-						? newNoteFolderPath 
-						: '';
+					console.log('[CMS View] Obsidian config:', { newFileLocation, newFileFolderPath });
 					
-					if (defaultPath) {
-						const file = await this.app.vault.create(`${defaultPath}/Untitled.md`, '');
-						await this.app.workspace.openLinkText(file.path, '', false);
-					} else {
-						// Create in vault root
-						const file = await this.app.vault.create('Untitled.md', '');
-						await this.app.workspace.openLinkText(file.path, '', false);
+					let filePath = 'Untitled.md';
+					
+					// Handle Obsidian's new file location settings
+					if (newFileLocation === 'folder' && newFileFolderPath) {
+						// Create in specified folder
+						filePath = `${newFileFolderPath}/Untitled.md`;
+					} else if (newFileLocation === 'current') {
+						// Create in current file's folder
+						const activeFile = this.app.workspace.getActiveFile();
+						if (activeFile && activeFile.parent) {
+							filePath = `${activeFile.parent.path}/Untitled.md`;
+						}
+						// If no active file, fall through to vault root
+					} else if (newFileLocation === 'root') {
+						// Create in vault root (already set)
+						filePath = 'Untitled.md';
 					}
+					// For 'folder' without path or any other value, default to vault root
+					
+					console.log('[CMS View] Creating file at:', filePath);
+					const file = await this.app.vault.create(filePath, '');
+					await this.app.workspace.openLinkText(file.path, '', false);
 					return;
 				}
 				
-				// If location is "/", use vault root
-				if (locationInput === '/') {
+				// If location is "/" or just slashes, use vault root
+				if (locationInput === '/' || locationInput.replace(/\//g, '') === '') {
 					console.log('[CMS View] Creating note in vault root');
 					try {
+						// Explicitly create in vault root (no folder path)
 						const newFile = await this.app.vault.create('Untitled.md', '');
 						await this.app.workspace.openLinkText(newFile.path, '', false);
 					} catch (error) {
@@ -308,27 +321,43 @@ export class BasesCMSView extends BasesView {
 					
 					// If location is empty, use Obsidian's default new note location
 					if (locationInput === '') {
+						// Use Obsidian's default new note creation behavior
+						// Access Obsidian's vault config directly
 						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						const vault = this.app.vault as any;
-						const newNotePath = vault.getConfig?.('newFileLocation') || 'folder';
-						const newNoteFolderPath = vault.getConfig?.('newFileFolderPath') || '';
+						const vaultConfig = (this.app.vault as any).config;
+						const newFileLocation = vaultConfig?.newFileLocation || 'folder';
+						const newFileFolderPath = vaultConfig?.newFileFolderPath || '';
 						
-						const defaultPath = newNotePath === 'folder' && newNoteFolderPath 
-							? newNoteFolderPath 
-							: '';
+						console.log('[CMS View] Obsidian config:', { newFileLocation, newFileFolderPath });
 						
-						if (defaultPath) {
-							const file = await this.app.vault.create(`${defaultPath}/Untitled.md`, '');
-							await this.app.workspace.openLinkText(file.path, '', false);
-						} else {
-							const file = await this.app.vault.create('Untitled.md', '');
-							await this.app.workspace.openLinkText(file.path, '', false);
+						let filePath = 'Untitled.md';
+						
+						// Handle Obsidian's new file location settings
+						if (newFileLocation === 'folder' && newFileFolderPath) {
+							// Create in specified folder
+							filePath = `${newFileFolderPath}/Untitled.md`;
+						} else if (newFileLocation === 'current') {
+							// Create in current file's folder
+							const activeFile = this.app.workspace.getActiveFile();
+							if (activeFile && activeFile.parent) {
+								filePath = `${activeFile.parent.path}/Untitled.md`;
+							}
+							// If no active file, fall through to vault root
+						} else if (newFileLocation === 'root') {
+							// Create in vault root (already set)
+							filePath = 'Untitled.md';
 						}
+						// For 'folder' without path or any other value, default to vault root
+						
+						console.log('[CMS View] Creating file at:', filePath);
+						const file = await this.app.vault.create(filePath, '');
+						await this.app.workspace.openLinkText(file.path, '', false);
 						return;
 					}
 					
-					// If location is "/", use vault root
-					if (locationInput === '/') {
+					// If location is "/" or just slashes, use vault root
+					if (locationInput === '/' || locationInput.replace(/\//g, '') === '') {
+						// Explicitly create in vault root (no folder path)
 						const newFile = await this.app.vault.create('Untitled.md', '');
 						await this.app.workspace.openLinkText(newFile.path, '', false);
 						return;
@@ -892,6 +921,21 @@ export class BasesCMSView extends BasesView {
 		this.updateSelectionUI();
 	}
 
+	/**
+	 * Refresh the toolbar when settings change
+	 * Called from settings tab when toolbar button visibility settings are updated
+	 */
+	refreshToolbar(): void {
+		if (this.bulkToolbar) {
+			const currentCount = this.selectedFiles.size;
+			this.bulkToolbar.recreate();
+			// Update count after recreation
+			if (currentCount > 0) {
+				this.bulkToolbar.updateCount(currentCount);
+			}
+		}
+	}
+
 	private updateSelectionUI(): void {
 		// Update card visual states
 		const cards = this.containerEl.querySelectorAll('.card');
@@ -1014,6 +1058,11 @@ export class BasesCMSView extends BasesView {
 		this.selectedFiles.clear();
 		const orphanedToolbars = document.querySelectorAll('.bases-cms-bulk-toolbar');
 		orphanedToolbars.forEach(toolbar => toolbar.remove());
+		
+		// Remove from plugin tracking
+		if (this.plugin && typeof (this.plugin as any).removeView === 'function') {
+			(this.plugin as any).removeView(this);
+		}
 	}
 
 	/**

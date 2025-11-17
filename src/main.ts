@@ -5,6 +5,7 @@ import { BasesCMSSettings, DEFAULT_SETTINGS } from './types';
 
 export default class BasesCMSPlugin extends Plugin {
 	settings: BasesCMSSettings;
+	private activeViews: Set<BasesCMSView> = new Set();
 
 	async onload() {
 		await this.loadSettings();
@@ -19,7 +20,9 @@ export default class BasesCMSPlugin extends Plugin {
 				name: 'CMS',
 				icon: this.settings.useHomeIcon ? 'lucide-home' : 'lucide-blocks',
 				factory: (controller: QueryController, containerEl: HTMLElement) => {
-					return new BasesCMSView(controller, containerEl, this);
+					const view = new BasesCMSView(controller, containerEl, this);
+					this.activeViews.add(view);
+					return view;
 				},
 				options: this.getCMSViewOptions()
 			});
@@ -39,6 +42,39 @@ export default class BasesCMSPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	/**
+	 * Refresh toolbars in all active CMS views
+	 */
+	refreshAllToolbars(): void {
+		// Clean up any views that are no longer active
+		const viewsToRemove: BasesCMSView[] = [];
+		this.activeViews.forEach(view => {
+			// Check if view is still in DOM
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const containerEl = (view as any).containerEl;
+			if (!containerEl || !containerEl.parentElement) {
+				viewsToRemove.push(view);
+			}
+		});
+		
+		// Remove inactive views
+		viewsToRemove.forEach(view => this.activeViews.delete(view));
+		
+		// Refresh all active views
+		this.activeViews.forEach(view => {
+			if (view && typeof view.refreshToolbar === 'function') {
+				view.refreshToolbar();
+			}
+		});
+	}
+
+	/**
+	 * Remove a view from tracking when it's closed
+	 */
+	removeView(view: BasesCMSView): void {
+		this.activeViews.delete(view);
 	}
 
 	/**
