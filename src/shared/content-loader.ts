@@ -6,11 +6,14 @@
 import type { App, TFile } from 'obsidian';
 import { processImagePaths, resolveInternalImagePaths, extractEmbedImages } from '../utils/image';
 import { loadFilePreview } from '../utils/preview';
+import { generateThumbnail, generateThumbnailFromUrl, type ThumbnailCacheSize } from '../utils/thumbnail';
 
 /**
- * Loads images for multiple entries in parallel
+ * Loads images for multiple entries synchronously (fast path)
+ * Resolves image file references immediately for instant rendering
+ * Generates thumbnails based on cache size setting for better performance
  */
-export async function loadImagesForEntries(
+export async function loadImagesForEntriesSync(
 	entries: Array<{
 		path: string;
 		file: TFile;
@@ -19,37 +22,89 @@ export async function loadImagesForEntries(
 	fallbackToEmbeds: boolean,
 	app: App,
 	imageCache: Record<string, string | string[]>,
+	hasImageCache: Record<string, boolean>,
+	thumbnailCacheSize: ThumbnailCacheSize = 'balanced'
+): Promise<void> {
+	for (const entry of entries) {
+		// Skip if already in cache
+		if (entry.path in imageCache) {
+			continue;
+		}
+
+		try {
+			// Process image paths synchronously (no validation for performance)
+			const { internalPaths, externalUrls } = processImagePaths(entry.imagePropertyValues as string[]);
+
+			// Resolve internal paths to TFile references first, then convert to resource URLs
+			const validImageFiles: TFile[] = [];
+			const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
+			
+			for (const propPath of internalPaths) {
+				const imageFile = app.metadataCache.getFirstLinkpathDest(propPath, entry.path);
+				if (imageFile && validImageExtensions.includes(imageFile.extension)) {
+					validImageFiles.push(imageFile);
+				}
+			}
+
+			// Generate thumbnails for better performance (unless unlimited)
+			const thumbnailPromises: Promise<string | null>[] = [];
+			
+			// Generate thumbnails for internal images
+			for (const imageFile of validImageFiles) {
+				thumbnailPromises.push(generateThumbnail(imageFile, app, thumbnailCacheSize));
+			}
+			
+			// Generate thumbnails for external URLs
+			for (const externalUrl of externalUrls) {
+				thumbnailPromises.push(generateThumbnailFromUrl(externalUrl, thumbnailCacheSize));
+			}
+			
+			// Wait for all thumbnails to be generated
+			const thumbnails = await Promise.all(thumbnailPromises);
+			const validThumbnails = thumbnails.filter((thumb): thumb is string => thumb !== null);
+
+			if (validThumbnails.length > 0) {
+				// Store thumbnails as data URLs (served from memory cache like Bases)
+				imageCache[entry.path] = validThumbnails.length > 1 ? validThumbnails : validThumbnails[0];
+				hasImageCache[entry.path] = true;
+			} else if (fallbackToEmbeds) {
+				// Mark for async embed extraction (don't block rendering)
+				hasImageCache[entry.path] = false;
+			}
+		} catch (error) {
+			console.error(`Failed to load image for ${entry.path}:`, error);
+		}
+	}
+}
+
+/**
+ * Loads embed images asynchronously (fallback only)
+ * Called in background after initial render for entries without property images
+ */
+export async function loadEmbedImagesForEntries(
+	entries: Array<{
+		path: string;
+		file: TFile;
+	}>,
+	app: App,
+	imageCache: Record<string, string | string[]>,
 	hasImageCache: Record<string, boolean>
 ): Promise<void> {
 	await Promise.all(
 		entries.map(async (entry) => {
-			// Skip if already in cache
-			if (entry.path in imageCache) {
+			// Only process entries that don't have images yet
+			if (entry.path in imageCache || hasImageCache[entry.path]) {
 				return;
 			}
 
 			try {
-				// Process and validate image paths
-				const { internalPaths, externalUrls } = await processImagePaths(entry.imagePropertyValues as string[]);
-
-				// Convert internal paths to resource URLs
-				let validImages: string[] = [
-					...resolveInternalImagePaths(internalPaths, entry.path, app),
-					...externalUrls
-				];
-
-				// If no property images and fallback enabled, extract embed images
-				if (validImages.length === 0 && fallbackToEmbeds) {
-					validImages = await extractEmbedImages(entry.file, app);
-				}
-
+				const validImages = await extractEmbedImages(entry.file, app);
 				if (validImages.length > 0) {
-					// Store as array if multiple, string if single
 					imageCache[entry.path] = validImages.length > 1 ? validImages : validImages[0];
 					hasImageCache[entry.path] = true;
 				}
 			} catch (error) {
-				console.error(`Failed to load image for ${entry.path}:`, error);
+				console.error(`Failed to load embed images for ${entry.path}:`, error);
 			}
 		})
 	);

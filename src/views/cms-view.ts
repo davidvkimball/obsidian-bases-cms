@@ -8,7 +8,7 @@ import type BasesCMSPlugin from '../main';
 import { transformBasesEntries } from '../shared/data-transform';
 import { readCMSSettings, getCMSViewOptions } from '../shared/settings-schema';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
-import { loadSnippetsForEntries, loadImagesForEntries } from '../shared/content-loader';
+import { loadSnippetsForEntries, loadImagesForEntriesSync, loadEmbedImagesForEntries } from '../shared/content-loader';
 import { SharedCardRenderer } from './shared-renderer';
 import { BATCH_SIZE, GAP_SIZE } from '../shared/constants';
 import { BulkToolbar } from '../components/bulk-toolbar';
@@ -354,8 +354,135 @@ export class BasesCMSView extends BasesView {
 				remainingCount -= entriesToTake;
 			}
 
-			// Load snippets and images ONLY for displayed entries
-			await this.loadContentForEntries(visibleEntries, settings);
+			// Load images synchronously for ALL entries (not just visible) for instant rendering
+			// This ensures images are ready when switching views or scrolling
+			if (settings.imageFormat !== 'none') {
+				// Process ALL entries, not just visible ones
+				const allImageEntries = allEntries
+					.filter(entry => !(entry.file.path in this.images))
+					.map(entry => {
+						const file = this.app.vault.getAbstractFileByPath(entry.file.path);
+						if (!(file instanceof TFile)) return null;
+						const imagePropertyValues = getAllBasesImagePropertyValues(entry, settings.imageProperty);
+						return {
+							path: entry.file.path,
+							file,
+							imagePropertyValues: imagePropertyValues as unknown[]
+						};
+					})
+					.filter((e): e is NonNullable<typeof e> => e !== null);
+
+				// For visible entries, generate thumbnails immediately (blocking for instant display)
+				// For rest, generate in background
+				const visibleImageEntries = allImageEntries.filter(e => 
+					visibleEntries.some(ve => ve.file.path === e.path)
+				);
+				const backgroundImageEntries = allImageEntries.filter(e => 
+					!visibleEntries.some(ve => ve.file.path === e.path)
+				);
+				
+				// Generate thumbnails for visible entries first (this will populate cache)
+				if (visibleImageEntries.length > 0) {
+					await loadImagesForEntriesSync(
+						visibleImageEntries,
+						settings.fallbackToEmbeds,
+						this.app,
+						this.images,
+						this.hasImageAvailable,
+						settings.thumbnailCacheSize
+					);
+				}
+				
+				// Generate thumbnails for background entries (non-blocking)
+				if (backgroundImageEntries.length > 0) {
+					void loadImagesForEntriesSync(
+						backgroundImageEntries,
+						settings.fallbackToEmbeds,
+						this.app,
+						this.images,
+						this.hasImageAvailable,
+						settings.thumbnailCacheSize
+					);
+				}
+
+				// Load embed images in background for entries without property images
+				if (settings.fallbackToEmbeds) {
+					const embedEntries = allImageEntries.filter(e => !(e.path in this.images) && !this.hasImageAvailable[e.path]);
+					if (embedEntries.length > 0) {
+						// Don't await - let it run in background
+						void loadEmbedImagesForEntries(embedEntries, this.app, this.images, this.hasImageAvailable).then(() => {
+							// Update cards that got embed images
+							embedEntries.forEach(entry => {
+								if (entry.path in this.images) {
+									const cardEl = this.containerEl.querySelector(`.card[data-path="${entry.path}"]`);
+									if (cardEl) {
+										const imageUrl = this.images[entry.path];
+										const url = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl;
+										if (url) {
+											// Check if image element exists
+											let imgEl = cardEl.querySelector('img');
+											if (!imgEl) {
+												// No image element - need to create it (replace placeholder)
+												const placeholder = cardEl.querySelector('.card-cover-placeholder, .card-thumbnail-placeholder');
+												if (placeholder) {
+													const imageClassName = placeholder.classList.contains('card-cover-placeholder') ? 'card-cover' : 'card-thumbnail';
+													const imageEl = placeholder.parentElement?.createDiv(imageClassName);
+													if (imageEl) {
+														const imageEmbedContainer = imageEl.createDiv('image-embed');
+														imgEl = imageEmbedContainer.createEl('img', {
+															attr: { 
+																src: url, 
+																alt: '',
+																decoding: 'async'
+															}
+														});
+														imageEmbedContainer.style.setProperty('--cover-image-url', `url("${url}")`);
+														placeholder.remove();
+													}
+												}
+											} else if (imgEl.src !== url) {
+												// Image element exists, just update src
+												imgEl.src = url;
+												// Update CSS variable for cover images
+												const imageEmbedContainer = imgEl.parentElement;
+												if (imageEmbedContainer && imageEmbedContainer.classList.contains('image-embed')) {
+													imageEmbedContainer.style.setProperty('--cover-image-url', `url("${url}")`);
+												}
+											}
+										}
+									}
+								}
+							});
+						});
+					}
+				}
+			}
+
+			// Load snippets in background (non-blocking)
+			if (settings.showTextPreview) {
+				const snippetEntries = visibleEntries
+					.filter(entry => !(entry.file.path in this.snippets))
+					.map(entry => {
+						const file = this.app.vault.getAbstractFileByPath(entry.file.path);
+						if (!(file instanceof TFile)) return null;
+						const descValue = getFirstBasesPropertyValue(entry, settings.descriptionProperty) as { data?: unknown } | null;
+						return {
+							path: entry.file.path,
+							file,
+							descriptionData: descValue?.data
+						};
+					})
+					.filter((e): e is { path: string; file: TFile; descriptionData: unknown } => e !== null);
+
+				// Don't await - load snippets in background
+				void loadSnippetsForEntries(
+					snippetEntries,
+					settings.fallbackToContent,
+					false,
+					this.app,
+					this.snippets
+				);
+			}
 
 			// Preserve toolbar element if we're refreshing with selection
 			let preservedToolbarEl: HTMLElement | null = null;
@@ -380,6 +507,8 @@ export class BasesCMSView extends BasesView {
 
 			// Render groups with headers
 			let displayedSoFar = 0;
+			const imageElements: Array<{ img: HTMLImageElement; src: string }> = [];
+			
 			for (const processedGroup of processedGroups) {
 				if (displayedSoFar >= this.displayedCount) break;
 
@@ -413,10 +542,22 @@ export class BasesCMSView extends BasesView {
 				for (let i = 0; i < cards.length; i++) {
 					const card = cards[i];
 					const entry = groupEntries[i];
-					this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
+					const imgData = this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
+					if (imgData) {
+						imageElements.push(imgData);
+					}
 				}
 
 				displayedSoFar += entriesToDisplay;
+			}
+			
+			// Batch set all image src attributes at once to trigger parallel loading
+			if (imageElements.length > 0) {
+				requestAnimationFrame(() => {
+					for (const { img, src } of imageElements) {
+						img.src = src;
+					}
+				});
 			}
 
 			// Restore scroll position after rendering
@@ -490,9 +631,9 @@ export class BasesCMSView extends BasesView {
 		entry: BasesEntry,
 		index: number,
 		settings: any
-	): void {
+	): { img: HTMLImageElement; src: string } | null {
 		const isSelected = this.selectedFiles.has(card.path);
-		this.cardRenderer.renderCard(
+		return this.cardRenderer.renderCard(
 			container,
 			card,
 			entry,
@@ -524,57 +665,6 @@ export class BasesCMSView extends BasesView {
 		return 'mtime-desc';
 	}
 
-	private async loadContentForEntries(entries: BasesEntry[], settings: any): Promise<void> {
-		// Load snippets for text preview
-		if (settings.showTextPreview) {
-			const snippetEntries = entries
-				.filter(entry => !(entry.file.path in this.snippets))
-				.map(entry => {
-					const file = this.app.vault.getAbstractFileByPath(entry.file.path);
-					if (!(file instanceof TFile)) return null;
-					const descValue = getFirstBasesPropertyValue(entry, settings.descriptionProperty) as { data?: unknown } | null;
-					return {
-						path: entry.file.path,
-						file,
-						descriptionData: descValue?.data
-					};
-				})
-				.filter((e): e is { path: string; file: TFile; descriptionData: unknown } => e !== null);
-
-			await loadSnippetsForEntries(
-				snippetEntries,
-				settings.fallbackToContent,
-				false,
-				this.app,
-				this.snippets
-			);
-		}
-
-		// Load images for thumbnails
-		if (settings.imageFormat !== 'none') {
-			const imageEntries = entries
-				.filter(entry => !(entry.file.path in this.images))
-				.map(entry => {
-					const file = this.app.vault.getAbstractFileByPath(entry.file.path);
-					if (!(file instanceof TFile)) return null;
-					const imagePropertyValues = getAllBasesImagePropertyValues(entry, settings.imageProperty);
-					return {
-						path: entry.file.path,
-						file,
-						imagePropertyValues: imagePropertyValues as unknown[]
-					};
-				})
-				.filter((e): e is NonNullable<typeof e> => e !== null);
-
-			await loadImagesForEntries(
-				imageEntries,
-				settings.fallbackToEmbeds,
-				this.app,
-				this.images,
-				this.hasImageAvailable
-			);
-		}
-	}
 
 	private setupInfiniteScroll(totalEntries: number): void {
 		// Clean up existing listener

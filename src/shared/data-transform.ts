@@ -54,6 +54,7 @@ export interface CMSSettings {
 	tagsProperty: string;
 	customizeNewButton: boolean;
 	newNoteLocation: string;
+	thumbnailCacheSize: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited';
 }
 
 /**

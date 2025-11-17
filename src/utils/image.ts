@@ -38,10 +38,11 @@ export function stripWikilinkSyntax(path: string): string {
 
 /**
  * Process and validate image paths from property values
+ * Synchronous version for performance - no async validation
  */
-export async function processImagePaths(
+export function processImagePaths(
 	imagePaths: string[]
-): Promise<{ internalPaths: string[]; externalUrls: string[] }> {
+): { internalPaths: string[]; externalUrls: string[] } {
 	const internalPaths: string[] = [];
 	const externalUrls: string[] = [];
 

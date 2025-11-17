@@ -42,6 +42,7 @@ export function readCMSSettings(
 		tagsProperty: (config.get('tagsProperty') as string) || '',
 		customizeNewButton: (config.get('customizeNewButton') as boolean) ?? false,
 		newNoteLocation: (config.get('newNoteLocation') as string) || '',
+		thumbnailCacheSize: (config.get('thumbnailCacheSize') as 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited') || 'balanced',
 	};
 }
 
@@ -214,6 +215,19 @@ export function getCMSViewOptions(): any[] {
 			key: 'newNoteLocation',
 			placeholder: 'Simply use / for vault folder',
 			default: ''
+		},
+		{
+			type: 'dropdown',
+			displayName: 'Thumbnail cache size',
+			key: 'thumbnailCacheSize',
+			options: {
+				'minimal': 'Minimal (100x100, fastest)',
+				'small': 'Small (200x200)',
+				'balanced': 'Balanced (400x400, recommended)',
+				'large': 'Large (800x800)',
+				'unlimited': 'Unlimited (full resolution)'
+			},
+			default: 'balanced'
 		}
 	];
 }

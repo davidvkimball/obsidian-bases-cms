@@ -39,7 +39,7 @@ export class SharedCardRenderer {
 		isSelected: boolean,
 		onSelect: (path: string, selected: boolean) => void,
 		onPropertyToggle?: (path: string, property: string, value: unknown) => void
-	): void {
+	): { img: HTMLImageElement; src: string } | null {
 		// Create card element
 		const cardEl = container.createDiv('card bases-cms-card');
 		if (settings.imageFormat === 'cover') {
@@ -282,15 +282,18 @@ export class SharedCardRenderer {
 
 				if (imageUrls.length > 0) {
 					const imageEmbedContainer = imageEl.createDiv('image-embed');
+					// Create img element WITHOUT src first (will be set in batch)
 					const imgEl = imageEmbedContainer.createEl('img', {
 						attr: { 
-							src: imageUrls[0], 
 							alt: '',
-							decoding: 'async'
+							decoding: 'async',
+							sizes: settings.imageFormat === 'cover' ? '100vw' : '80px'
 						}
 					});
 					// Set CSS variable for letterbox blur background
 					imageEmbedContainer.style.setProperty('--cover-image-url', `url("${imageUrls[0]}")`);
+					// Return image element and src for batch loading
+					return { img: imgEl, src: imageUrls[0] };
 				}
 			} else if (settings.imageFormat !== 'none') {
 				// Always render placeholder when no image - CSS controls visibility
@@ -302,6 +305,8 @@ export class SharedCardRenderer {
 
 		// Properties
 		this.renderProperties(cardEl, card, entry, settings, onPropertyToggle);
+		
+		return null; // No image for this card
 	}
 
 	/**

@@ -19,6 +19,9 @@ export interface BasesCMSSettings {
 	
 	// Icon settings
 	useHomeIcon: boolean;
+	
+	// Image performance settings
+	thumbnailCacheSize: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited';
 }
 
 export const DEFAULT_SETTINGS: BasesCMSSettings = {
@@ -29,6 +32,7 @@ export const DEFAULT_SETTINGS: BasesCMSSettings = {
 	deleteUniqueAttachments: false,
 	confirmDeletions: true,
 	useHomeIcon: false,
+	thumbnailCacheSize: 'balanced',
 };
 
 /**
