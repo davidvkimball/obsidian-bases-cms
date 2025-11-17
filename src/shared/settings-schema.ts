@@ -40,6 +40,7 @@ export function readCMSSettings(
 		draftStatusReverse: (config.get('draftStatusReverse') as boolean) ?? false,
 		showTags: (config.get('showTags') as boolean) ?? false,
 		tagsProperty: (config.get('tagsProperty') as string) || '',
+		maxTagsToShow: (config.get('maxTagsToShow') as number) ?? 3,
 		customizeNewButton: (config.get('customizeNewButton') as boolean) ?? false,
 		newNoteLocation: (config.get('newNoteLocation') as string) || '',
 		thumbnailCacheSize: pluginSettings.thumbnailCacheSize,
@@ -175,6 +176,19 @@ export function getCMSViewOptions(): any[] {
 			key: 'tagsProperty',
 			placeholder: 'Select property',
 			default: ''
+		},
+		{
+			type: 'slider',
+			displayName: 'Maximum tags to show',
+			key: 'maxTagsToShow',
+			min: 1,
+			max: 50,
+			step: 1,
+			default: 3,
+			showWhen: {
+				key: 'showTags',
+				value: true
+			}
 		},
 		{
 			type: 'property',

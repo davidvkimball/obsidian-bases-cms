@@ -52,6 +52,7 @@ export interface CMSSettings {
 	draftStatusReverse: boolean;
 	showTags: boolean;
 	tagsProperty: string;
+	maxTagsToShow: number;
 	customizeNewButton: boolean;
 	newNoteLocation: string;
 	thumbnailCacheSize: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited';

@@ -198,7 +198,7 @@ export class SharedCardRenderer {
 				// Tags as pills (under text preview)
 				if (settings.showTags && card.displayTags && card.displayTags.length > 0) {
 					const tagsContainer = textWrapper.createDiv('card-tags');
-					const maxTags = 3;
+					const maxTags = settings.maxTagsToShow;
 					const tagsToShow = card.displayTags.slice(0, maxTags);
 					const remainingCount = card.displayTags.length - maxTags;
 					
@@ -230,7 +230,7 @@ export class SharedCardRenderer {
 				// Tags as pills (under text preview)
 				if (settings.showTags && card.displayTags && card.displayTags.length > 0) {
 					const tagsContainer = contentContainer.createDiv('card-tags');
-					const maxTags = 3;
+					const maxTags = settings.maxTagsToShow;
 					const tagsToShow = card.displayTags.slice(0, maxTags);
 					const remainingCount = card.displayTags.length - maxTags;
 					
