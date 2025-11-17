@@ -38,6 +38,10 @@ export function readCMSSettings(
 		showDraftStatus: (config.get('showDraftStatus') as boolean) ?? false,
 		draftStatusProperty: (config.get('draftStatusProperty') as string) || 'draft',
 		draftStatusReverse: (config.get('draftStatusReverse') as boolean) ?? false,
+		showTags: (config.get('showTags') as boolean) ?? false,
+		tagsProperty: (config.get('tagsProperty') as string) || '',
+		customizeNewButton: (config.get('customizeNewButton') as boolean) ?? false,
+		newNoteLocation: (config.get('newNoteLocation') as string) || '',
 	};
 }
 
@@ -53,10 +57,10 @@ export function getCMSViewOptions(): any[] {
 			default: true
 		},
 		{
-			type: 'text',
+			type: 'property',
 			displayName: 'Title property',
 			key: 'titleProperty',
-			placeholder: 'Comma-separated if multiple',
+			placeholder: 'Select property',
 			default: 'title'
 		},
 		{
@@ -66,10 +70,10 @@ export function getCMSViewOptions(): any[] {
 			default: false
 		},
 		{
-			type: 'text',
+			type: 'property',
 			displayName: 'Date property',
 			key: 'dateProperty',
-			placeholder: 'e.g., date',
+			placeholder: 'Select property',
 			default: 'date'
 		},
 		{
@@ -79,10 +83,10 @@ export function getCMSViewOptions(): any[] {
 			default: false
 		},
 		{
-			type: 'text',
+			type: 'property',
 			displayName: 'Draft status property',
 			key: 'draftStatusProperty',
-			placeholder: 'e.g., draft',
+			placeholder: 'Select property',
 			default: 'draft'
 		},
 		{
@@ -98,10 +102,10 @@ export function getCMSViewOptions(): any[] {
 			default: true
 		},
 		{
-			type: 'text',
+			type: 'property',
 			displayName: 'Text preview property',
 			key: 'descriptionProperty',
-			placeholder: 'Comma-separated if multiple',
+			placeholder: 'Select property',
 			default: 'description'
 		},
 		{
@@ -109,6 +113,19 @@ export function getCMSViewOptions(): any[] {
 			displayName: 'Use note content if text preview property unavailable',
 			key: 'fallbackToContent',
 			default: true
+		},
+		{
+			type: 'toggle',
+			displayName: 'Show tags',
+			key: 'showTags',
+			default: false
+		},
+		{
+			type: 'property',
+			displayName: 'Tags property',
+			key: 'tagsProperty',
+			placeholder: 'Select property',
+			default: ''
 		},
 		{
 			type: 'dropdown',
@@ -122,10 +139,10 @@ export function getCMSViewOptions(): any[] {
 			default: 'thumbnail'
 		},
 		{
-			type: 'text',
+			type: 'property',
 			displayName: 'Image property',
 			key: 'imageProperty',
-			placeholder: 'e.g., image',
+			placeholder: 'Select property',
 			default: 'image'
 		},
 		{
@@ -184,6 +201,19 @@ export function getCMSViewOptions(): any[] {
 				'above': 'On top'
 			},
 			default: 'hide'
+		},
+		{
+			type: 'toggle',
+			displayName: 'Customize new button behavior',
+			key: 'customizeNewButton',
+			default: false
+		},
+		{
+			type: 'text',
+			displayName: 'Default location for new notes',
+			key: 'newNoteLocation',
+			placeholder: 'Simply use / for vault folder',
+			default: ''
 		}
 	];
 }

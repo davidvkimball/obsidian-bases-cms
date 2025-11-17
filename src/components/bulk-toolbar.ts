@@ -16,6 +16,7 @@ export class BulkToolbar {
 	private toolbarEl: HTMLElement | null = null;
 	private countEl: HTMLElement | null = null;
 	private bulkOps: BulkOperations;
+	private selectAllCallback?: () => void;
 
 	constructor(
 		private app: App,
@@ -24,10 +25,10 @@ export class BulkToolbar {
 		private getSelectedFiles: () => string[],
 		private clearSelection: () => void,
 		private refreshView: () => void,
-		private selectAll?: () => void,
-		private deselectAll?: () => void
+		selectAllCallback?: () => void
 	) {
 		this.bulkOps = new BulkOperations(app);
+		this.selectAllCallback = selectAllCallback;
 		this.createToolbar();
 	}
 
@@ -39,54 +40,56 @@ export class BulkToolbar {
 		this.countEl = this.toolbarEl.createDiv('selected-count');
 		this.countEl.setText('0 items selected');
 
-		// Select All / Deselect All buttons
-		if (this.selectAll && this.deselectAll) {
-			const selectContainer = this.toolbarEl.createDiv();
-			selectContainer.style.display = 'flex';
-			selectContainer.style.gap = '0.5rem';
-			selectContainer.style.marginRight = 'auto';
-
-			const selectAllBtn = selectContainer.createEl('button');
-			selectAllBtn.setText('Select All');
-			selectAllBtn.addEventListener('click', () => {
-				if (this.selectAll) this.selectAll();
-			});
-
-			const deselectAllBtn = selectContainer.createEl('button');
-			deselectAllBtn.setText('Deselect All');
-			deselectAllBtn.addEventListener('click', () => {
-				if (this.deselectAll) this.deselectAll();
-			});
-		}
-
 		// Buttons
 		const buttonContainer = this.toolbarEl.createDiv();
 		buttonContainer.style.display = 'flex';
 		buttonContainer.style.gap = '0.5rem';
+		buttonContainer.style.marginLeft = 'auto';
+		buttonContainer.style.flexWrap = 'wrap';
+		buttonContainer.style.minWidth = '0';
+		buttonContainer.style.flex = '1 1 auto';
+		buttonContainer.style.justifyContent = 'flex-end';
 
-		// Set to Draft
+		// Select all
+		const selectAllBtn = buttonContainer.createEl('button');
+		selectAllBtn.setText('Select all');
+		selectAllBtn.addEventListener('click', () => this.handleSelectAll());
+
+		// Clear selection
+		const clearSelectionBtn = buttonContainer.createEl('button');
+		clearSelectionBtn.setText('Clear selection');
+		clearSelectionBtn.addEventListener('click', () => this.clearSelection());
+
+		// Separator
+		const separator = buttonContainer.createDiv();
+		separator.style.width = '1px';
+		separator.style.height = '20px';
+		separator.style.backgroundColor = 'var(--background-modifier-border)';
+		separator.style.margin = '0 0.25rem';
+
+		// Mark draft
 		const draftBtn = buttonContainer.createEl('button');
-		draftBtn.setText('Set to Draft');
+		draftBtn.setText('Mark draft');
 		draftBtn.addEventListener('click', () => this.handleSetDraft());
 
-		// Publish
+		// Mark published
 		const publishBtn = buttonContainer.createEl('button');
-		publishBtn.setText('Publish');
+		publishBtn.setText('Mark published');
 		publishBtn.addEventListener('click', () => this.handlePublish());
 
-		// Manage Tags
+		// Manage tags
 		const tagsBtn = buttonContainer.createEl('button');
-		tagsBtn.setText('Manage Tags');
+		tagsBtn.setText('Manage tags');
 		tagsBtn.addEventListener('click', () => this.handleManageTags());
 
-		// Set Property
+		// Set property
 		const setPropBtn = buttonContainer.createEl('button');
-		setPropBtn.setText('Set Property');
+		setPropBtn.setText('Set property');
 		setPropBtn.addEventListener('click', () => this.handleSetProperty());
 
-		// Remove Property
+		// Remove property
 		const removePropBtn = buttonContainer.createEl('button');
-		removePropBtn.setText('Remove Property');
+		removePropBtn.setText('Remove property');
 		removePropBtn.addEventListener('click', () => this.handleRemoveProperty());
 
 		// Delete
@@ -94,16 +97,17 @@ export class BulkToolbar {
 		deleteBtn.setText('Delete');
 		deleteBtn.addClass('destructive');
 		deleteBtn.addEventListener('click', () => this.handleDelete());
-
-		// Clear selection
-		const clearBtn = buttonContainer.createEl('button');
-		clearBtn.setText('Clear Selection');
-		clearBtn.addEventListener('click', () => this.clearSelection());
 	}
 
 	updateCount(count: number): void {
 		if (this.countEl) {
 			this.countEl.setText(`${count} item${count !== 1 ? 's' : ''} selected`);
+		}
+	}
+
+	private handleSelectAll(): void {
+		if (this.selectAllCallback) {
+			this.selectAllCallback();
 		}
 	}
 
@@ -149,6 +153,9 @@ export class BulkToolbar {
 
 		const modal = new ManageTagsModal(this.app, files);
 		modal.onClose = () => {
+			// Keep toolbar visible - don't let it close
+			this.show();
+			// Refresh view - the refreshView callback will preserve selection
 			this.refreshView();
 		};
 		modal.open();
@@ -160,6 +167,9 @@ export class BulkToolbar {
 
 		const modal = new SetPropertyModal(this.app, files);
 		modal.onClose = () => {
+			// Keep toolbar visible - don't let it close
+			this.show();
+			// Refresh view - the refreshView callback will preserve selection
 			this.refreshView();
 		};
 		modal.open();
@@ -171,6 +181,9 @@ export class BulkToolbar {
 
 		const modal = new RemovePropertyModal(this.app, files);
 		modal.onClose = () => {
+			// Keep toolbar visible - don't let it close
+			this.show();
+			// Refresh view - the refreshView callback will preserve selection
 			this.refreshView();
 		};
 		modal.open();

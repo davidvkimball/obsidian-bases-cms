@@ -3,7 +3,7 @@
  * Based on Dynamic Views but with CMS-specific features
  */
 
-import { App, BasesEntry, TFile } from 'obsidian';
+import { App, BasesEntry, TFile, Menu } from 'obsidian';
 import type BasesCMSPlugin from '../main';
 import type { CardData } from '../shared/data-transform';
 import type { CMSSettings } from '../shared/data-transform';
@@ -11,12 +11,21 @@ import { resolveBasesProperty } from '../shared/data-transform';
 import { getPropertyLabel, getFirstBasesPropertyValue } from '../utils/property';
 
 export class SharedCardRenderer {
+	protected basesConfig?: { get?: (key: string) => unknown };
+	protected basesController?: { getPropertyDisplayName?: (name: string) => string };
+	
 	constructor(
 		protected app: App,
 		protected plugin: BasesCMSPlugin,
 		protected propertyObservers: ResizeObserver[],
-		protected updateLayoutRef: { current: (() => void) | null }
-	) {}
+		protected updateLayoutRef: { current: (() => void) | null },
+		basesConfig?: { get?: (key: string) => unknown },
+		basesController?: unknown
+	) {
+		this.basesConfig = basesConfig;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		this.basesController = basesController as any;
+	}
 
 	/**
 	 * Renders a complete card with CMS features
@@ -35,6 +44,8 @@ export class SharedCardRenderer {
 		const cardEl = container.createDiv('card bases-cms-card');
 		if (settings.imageFormat === 'cover') {
 			cardEl.classList.add('image-format-cover');
+		} else if (settings.imageFormat === 'thumbnail') {
+			cardEl.classList.add('image-format-thumbnail');
 		}
 		cardEl.setAttribute('data-path', card.path);
 		cardEl.setAttribute('data-href', card.path);
@@ -46,25 +57,16 @@ export class SharedCardRenderer {
 		checkbox.checked = isSelected;
 		checkbox.addEventListener('change', (e) => {
 			e.stopPropagation();
+			e.stopImmediatePropagation();
 			onSelect(card.path, checkbox.checked);
 		});
-
-		// Handle card click to open file (but not when clicking checkbox or property checkboxes)
-		cardEl.addEventListener('click', (e) => {
-			const target = e.target as HTMLElement;
-			if (
-				checkboxEl.contains(target) ||
-				target.tagName === 'INPUT' ||
-				target.closest('input') ||
-				target.closest('.bases-cms-property')
-			) {
-				return;
-			}
-			const newLeaf = e.metaKey || e.ctrlKey;
-			void this.app.workspace.openLinkText(card.path, '', newLeaf);
+		// Also handle click on checkbox to ensure it works
+		checkbox.addEventListener('click', (e) => {
+			e.stopPropagation();
+			e.stopImmediatePropagation();
 		});
 
-		// Draft status badge for non-cover formats (above title)
+		// Draft status badge for non-cover formats (positioned absolutely, aligned with checkbox)
 		if (settings.showDraftStatus && settings.draftStatusProperty && settings.imageFormat !== 'cover') {
 			const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
 			if (draftValue) {
@@ -96,6 +98,52 @@ export class SharedCardRenderer {
 				}
 			}
 		}
+
+		// Handle card click to open file (but not when clicking checkbox or property checkboxes)
+		cardEl.addEventListener('click', (e) => {
+			const target = e.target as HTMLElement;
+			if (
+				checkboxEl.contains(target) ||
+				target.tagName === 'INPUT' ||
+				target.closest('input') ||
+				target.closest('.bases-cms-property') ||
+				target.closest('.card-status-badge')
+			) {
+				return;
+			}
+			const newLeaf = e.metaKey || e.ctrlKey;
+			void this.app.workspace.openLinkText(card.path, '', newLeaf);
+		});
+
+		// Handle right-click to show context menu
+		cardEl.addEventListener('contextmenu', (e) => {
+			const target = e.target as HTMLElement;
+			// Don't show context menu for checkboxes, property checkboxes, or status badges
+			if (
+				checkboxEl.contains(target) ||
+				target.tagName === 'INPUT' ||
+				target.closest('input') ||
+				target.closest('.bases-cms-property') ||
+				target.closest('.card-status-badge')
+			) {
+				return;
+			}
+
+			// Get the file
+			const file = this.app.vault.getAbstractFileByPath(card.path);
+			if (file && file instanceof TFile) {
+				// Prevent the card click handler from firing
+				e.stopPropagation();
+				// Don't prevent default - Obsidian's menu system needs default behavior
+				
+				const menu = new Menu();
+				// Trigger file-menu with 'bases' source only (same as native Bases cards view)
+				// This includes both Bases-specific options and standard file options
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				this.app.workspace.trigger('file-menu', menu, file, 'bases');
+				menu.showAtMouseEvent(e);
+			}
+		});
 
 		// Title
 		if (settings.showTitle) {
@@ -133,13 +181,61 @@ export class SharedCardRenderer {
 
 		// Content container
 		if ((settings.showTextPreview && card.snippet) ||
+			(settings.showTags && card.displayTags && card.displayTags.length > 0) ||
 			(settings.imageFormat !== 'none' && (card.imageUrl || card.hasImageAvailable)) ||
 			(settings.imageFormat === 'cover')) {
 			const contentContainer = cardEl.createDiv('card-content');
 
-			// Text preview
-			if (settings.showTextPreview && card.snippet) {
-				contentContainer.createDiv({ cls: 'card-text-preview', text: card.snippet });
+			// For thumbnail format, create a wrapper for text + tags
+			if (settings.imageFormat === 'thumbnail') {
+				const textWrapper = contentContainer.createDiv('card-text-wrapper');
+				
+				// Text preview
+				if (settings.showTextPreview && card.snippet) {
+					textWrapper.createDiv({ cls: 'card-text-preview', text: card.snippet });
+				}
+
+				// Tags as pills (under text preview)
+				if (settings.showTags && card.displayTags && card.displayTags.length > 0) {
+					const tagsContainer = textWrapper.createDiv('card-tags');
+					const maxTags = 3;
+					const tagsToShow = card.displayTags.slice(0, maxTags);
+					const remainingCount = card.displayTags.length - maxTags;
+					
+					tagsToShow.forEach(tag => {
+						const tagEl = tagsContainer.createSpan('card-tag');
+						tagEl.appendText(tag);
+					});
+					
+					if (remainingCount > 0) {
+						const moreEl = tagsContainer.createSpan('card-tag-more');
+						moreEl.appendText(`+${remainingCount} more`);
+					}
+				}
+			} else {
+				// For cover/no-image format, stack vertically
+				// Text preview
+				if (settings.showTextPreview && card.snippet) {
+					contentContainer.createDiv({ cls: 'card-text-preview', text: card.snippet });
+				}
+
+				// Tags as pills (under text preview)
+				if (settings.showTags && card.displayTags && card.displayTags.length > 0) {
+					const tagsContainer = contentContainer.createDiv('card-tags');
+					const maxTags = 3;
+					const tagsToShow = card.displayTags.slice(0, maxTags);
+					const remainingCount = card.displayTags.length - maxTags;
+					
+					tagsToShow.forEach(tag => {
+						const tagEl = tagsContainer.createSpan('card-tag');
+						tagEl.appendText(tag);
+					});
+					
+					if (remainingCount > 0) {
+						const moreEl = tagsContainer.createSpan('card-tag-more');
+						moreEl.appendText(`+${remainingCount} more`);
+					}
+				}
 			}
 
 			// Thumbnail or cover
@@ -187,7 +283,11 @@ export class SharedCardRenderer {
 				if (imageUrls.length > 0) {
 					const imageEmbedContainer = imageEl.createDiv('image-embed');
 					const imgEl = imageEmbedContainer.createEl('img', {
-						attr: { src: imageUrls[0], alt: '' }
+						attr: { 
+							src: imageUrls[0], 
+							alt: '',
+							decoding: 'async'
+						}
 					});
 					// Set CSS variable for letterbox blur background
 					imageEmbedContainer.style.setProperty('--cover-image-url', `url("${imageUrls[0]}")`);
@@ -300,20 +400,28 @@ export class SharedCardRenderer {
 			}
 		}
 
+		// Get property label from Bases if available
+		const propertyLabel = getPropertyLabel(propertyName, this.app, this.basesConfig, this.basesController);
+		// Check if we got a custom display name (different from property name)
+		const isCustomLabel = propertyLabel.toLowerCase() !== propertyName.toLowerCase();
+
 		// Render label if property labels are enabled
 		if (settings.propertyLabels === 'above') {
 			const labelEl = container.createDiv('property-label');
-			labelEl.textContent = getPropertyLabel(propertyName);
-		}
-
-		// Add inline label if enabled
-		if (settings.propertyLabels === 'inline') {
-			const labelSpan = container.createSpan('property-label-inline');
-			labelSpan.textContent = getPropertyLabel(propertyName) + ' ';
+			if (isCustomLabel) {
+				labelEl.addClass('property-label-custom');
+			}
+			labelEl.textContent = propertyLabel;
 		}
 
 		// Universal wrapper for all content types
 		const metaContent = container.createDiv('property-content');
+
+		// Add inline label if enabled (inside metaContent)
+		if (settings.propertyLabels === 'inline') {
+			const labelSpan = metaContent.createSpan('property-label-inline');
+			labelSpan.textContent = propertyLabel + ': ';
+		}
 
 		// If no value but labels are enabled, show placeholder
 		if (!resolvedValue) {
@@ -402,12 +510,12 @@ export class SharedCardRenderer {
 
 			if (isCheckbox && onPropertyToggle) {
 				// Render as checkbox
-				const checkbox = metaContent.createEl('input', { type: 'checkbox' });
+				const checkbox = metaContent.createEl('input', { type: 'checkbox', cls: 'checkbox-input' });
 				checkbox.checked = entryValue && 'data' in entryValue ? Boolean(entryValue.data) : false;
 				
 				// Strip "note." prefix for display
 				const displayName = propertyName.startsWith('note.') ? propertyName.substring(5) : propertyName;
-				metaContent.createSpan({ text: displayName });
+				metaContent.createSpan({ cls: 'checkbox-label', text: displayName });
 				
 				checkbox.addEventListener('click', (e) => {
 					e.stopPropagation();

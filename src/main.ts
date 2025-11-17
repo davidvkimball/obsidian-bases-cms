@@ -21,7 +21,7 @@ export default class BasesCMSPlugin extends Plugin {
 				factory: (controller: QueryController, containerEl: HTMLElement) => {
 					return new BasesCMSView(controller, containerEl, this);
 				},
-				options: this.getCMSViewOptions(),
+				options: this.getCMSViewOptions()
 			});
 		} catch (error) {
 			// Base plugin not available - graceful degradation

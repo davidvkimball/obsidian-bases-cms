@@ -3,7 +3,7 @@
  * Ported from Dynamic Views
  */
 
-import type { BasesEntry } from 'obsidian';
+import type { App, BasesEntry } from 'obsidian';
 
 /**
  * Get first non-empty property value from comma-separated list (Bases)
@@ -152,29 +152,37 @@ export function resolveBasesProperty(
 
 /**
  * Convert property name to readable label
+ * Uses Bases config.getDisplayName() method (same as Dynamic Views)
+ * 
+ * @param propertyName - The property name (e.g., "formula.Slug")
+ * @param app - Obsidian app instance (unused, kept for compatibility)
+ * @param basesConfig - Bases config object that has getDisplayName method
+ * @param basesController - Optional Bases controller (unused, kept for compatibility)
  */
-export function getPropertyLabel(propertyName: string): string {
+export function getPropertyLabel(
+	propertyName: string, 
+	app?: App, 
+	basesConfig?: { get?: (key: string) => unknown },
+	basesController?: { getPropertyDisplayName?: (name: string) => string }
+): string {
 	if (!propertyName || propertyName === '') return '';
 
-	const labelMap: Record<string, string> = {
-		'file.path': 'file path',
-		'path': 'file path',
-		'file path': 'file path',
-		'file.ctime': 'created time',
-		'created time': 'created time',
-		'file.mtime': 'modified time',
-		'modified time': 'modified time',
-		'file.tags': 'file tags',
-		'file tags': 'file tags',
-		'tags': 'tags',
-		'note.tags': 'tags',
-		'file.folder': 'folder',
-		'folder': 'folder'
-	};
+	// Use Bases config.getDisplayName() method (same as Dynamic Views)
+	if (basesConfig) {
+		if (typeof (basesConfig as any).getDisplayName === 'function') {
+			try {
+				const displayName = (basesConfig as any).getDisplayName(propertyName);
+				if (displayName && typeof displayName === 'string' && displayName.trim() !== '') {
+					return displayName;
+				}
+			} catch (e) {
+				// Fall through to return property name
+			}
+		}
+	}
 
-	const mappedLabel = labelMap[propertyName.toLowerCase()];
-	if (mappedLabel) return mappedLabel;
-
+	// Fallback: return property name as-is (same as Dynamic Views)
 	return propertyName;
 }
+
 

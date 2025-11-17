@@ -32,18 +32,21 @@ export class BasesCMSView extends BasesView {
 	private propertyObservers: ResizeObserver[] = [];
 	private cardRenderer: SharedCardRenderer;
 	private bulkToolbar: BulkToolbar | null = null;
+	private isRefreshingWithSelection: boolean = false;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: BasesCMSPlugin) {
 		super(controller);
 		this.containerEl = containerEl;
 		this.plugin = plugin;
 		
-		// Initialize shared card renderer
+		// Initialize shared card renderer (config will be set later in onDataUpdated)
 		this.cardRenderer = new SharedCardRenderer(
 			this.app,
 			this.plugin,
 			this.propertyObservers,
-			this.updateLayoutRef
+			this.updateLayoutRef,
+			undefined, // Config not available in constructor
+			controller
 		);
 		
 		// Add CMS container classes
@@ -53,15 +56,262 @@ export class BasesCMSView extends BasesView {
 		this.containerEl.style.overflowX = 'hidden';
 		this.containerEl.style.height = '100%';
 		
-		// Set initial batch size
+		// Set initial batch size based on device (matches Dynamic Views)
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		this.displayedCount = (this.app as any).isMobile ? 25 : BATCH_SIZE;
+		const isMobile = (this.app as any).isMobile;
+		this.displayedCount = isMobile ? 25 : BATCH_SIZE;
+
+		// Intercept new note button clicks
+		this.setupNewNoteInterceptor();
+	}
+
+	/**
+	 * Setup interceptor for new note button
+	 */
+	private setupNewNoteInterceptor(): void {
+		const handleNewButtonClick = async (e: MouseEvent) => {
+			// Check if this is the new button - must be very specific to avoid interfering with other clicks
+			const target = e.target as HTMLElement;
+			const buttonEl = target.closest('.bases-toolbar-new-item-menu .text-icon-button, .bases-toolbar-new-item-menu');
+			
+			if (!buttonEl) {
+				return; // Not the new button, let event continue normally
+			}
+			
+			// Don't interfere with clicks inside the bulk toolbar or other CMS elements
+			if (target.closest('.bases-cms-bulk-toolbar, .bases-cms-container .card')) {
+				return; // Let these clicks work normally
+			}
+			
+			console.log('[CMS View] New button clicked!', buttonEl);
+			
+			// Check if this view is active - find the workspace leaf containing our container
+			const workspaceLeaf = this.app.workspace.getLeavesOfType(CMS_VIEW_TYPE).find(leaf => {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const view = leaf.view as any;
+				return view && view.containerEl === this.containerEl;
+			});
+			
+			// Check if this leaf is the active one
+			const activeLeaf = this.app.workspace.activeLeaf;
+			const isActive = workspaceLeaf && activeLeaf && workspaceLeaf === activeLeaf;
+			
+			if (!isActive) {
+				console.log('[CMS View] Not our active view, skipping. Active leaf:', activeLeaf, 'Our leaf:', workspaceLeaf);
+				return; // Not our view, let event continue normally
+			}
+			
+			const settings = readCMSSettings(
+				this.config,
+				this.plugin.settings
+			);
+
+			console.log('[CMS View] Settings:', {
+				customizeNewButton: settings.customizeNewButton,
+				newNoteLocation: settings.newNoteLocation
+			});
+
+			if (settings.customizeNewButton) {
+				e.preventDefault();
+				e.stopPropagation();
+				e.stopImmediatePropagation();
+				
+				const locationInput = settings.newNoteLocation?.trim() || '';
+				
+				// If location is empty, use Obsidian's default new note location
+				if (locationInput === '') {
+					console.log('[CMS View] Using Obsidian default new note location');
+					// Use Obsidian's default new note creation
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const newNotePath = (this.app as any).vault?.getConfig?.('newFileLocation') || 'folder';
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const newNoteFolderPath = (this.app as any).vault?.getConfig?.('newFileFolderPath') || '';
+					
+					// Create note in the default location
+					const defaultPath = newNotePath === 'folder' && newNoteFolderPath 
+						? newNoteFolderPath 
+						: '';
+					
+					if (defaultPath) {
+						const file = await this.app.vault.create(`${defaultPath}/Untitled.md`, '');
+						await this.app.workspace.openLinkText(file.path, '', false);
+					} else {
+						// Create in vault root
+						const file = await this.app.vault.create('Untitled.md', '');
+						await this.app.workspace.openLinkText(file.path, '', false);
+					}
+					return;
+				}
+				
+				// If location is "/", use vault root
+				if (locationInput === '/') {
+					console.log('[CMS View] Creating note in vault root');
+					try {
+						const newFile = await this.app.vault.create('Untitled.md', '');
+						await this.app.workspace.openLinkText(newFile.path, '', false);
+					} catch (error) {
+						console.error('[CMS View] Error creating new note:', error);
+					}
+					return;
+				}
+				
+				// Otherwise, use the specified folder
+				console.log('[CMS View] Intercepting and creating note in:', locationInput);
+				
+				try {
+					const folderPath = locationInput.replace(/^\/+|\/+$/g, '');
+					console.log('[CMS View] Folder path:', folderPath);
+					
+					let folder = this.app.vault.getAbstractFileByPath(folderPath);
+					
+					if (!folder || !('children' in folder)) {
+						console.log('[CMS View] Folder does not exist, creating:', folderPath);
+						await this.app.vault.createFolder(folderPath);
+						folder = this.app.vault.getAbstractFileByPath(folderPath);
+					}
+					
+					if (folder && 'children' in folder) {
+						const newFile = await this.app.vault.create(`${folderPath}/Untitled.md`, '');
+						console.log('[CMS View] Created new file:', newFile.path);
+						await this.app.workspace.openLinkText(newFile.path, '', false);
+					} else {
+						console.error('[CMS View] Failed to create or access folder:', folderPath);
+					}
+				} catch (error) {
+					console.error('[CMS View] Error creating new note:', error);
+				}
+			} else {
+				console.log('[CMS View] Custom new button not enabled');
+				// Don't prevent default if setting is not enabled
+			}
+		};
+
+		// Intercept clicks on the new button - use capture phase to catch before Bases
+		const interceptNewButton = (e: MouseEvent) => {
+			const target = e.target as HTMLElement;
+			const buttonEl = target.closest('.bases-toolbar-new-item-menu .text-icon-button, .bases-toolbar-new-item-menu');
+			
+			if (!buttonEl) {
+				return; // Not the new button
+			}
+			
+			// Don't interfere with clicks inside the bulk toolbar or other CMS elements
+			if (target.closest('.bases-cms-bulk-toolbar, .bases-cms-container .card')) {
+				return; // Let these clicks work normally
+			}
+			
+			// Check if this view is active - check if the button is within our view's container
+			// or if the active leaf contains our container
+			const activeLeaf = this.app.workspace.activeLeaf;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const activeView = activeLeaf?.view as any;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const activeLeafContainer = (activeLeaf as any)?.containerEl;
+			const isOurView = activeView && (
+				activeView.containerEl === this.containerEl ||
+				activeView === this ||
+				(buttonEl.closest('.workspace-leaf') === activeLeafContainer)
+			);
+			
+			if (!isOurView) {
+				return; // Not our view
+			}
+			
+			const settings = readCMSSettings(
+				this.config,
+				this.plugin.settings
+			);
+
+			if (settings.customizeNewButton) {
+				// Always prevent default to stop the preview popup - do this FIRST
+				e.preventDefault();
+				e.stopPropagation();
+				e.stopImmediatePropagation();
+				
+				// Handle the note creation asynchronously
+				void (async () => {
+					const locationInput = settings.newNoteLocation?.trim() || '';
+					
+					// If location is empty, use Obsidian's default new note location
+					if (locationInput === '') {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						const vault = this.app.vault as any;
+						const newNotePath = vault.getConfig?.('newFileLocation') || 'folder';
+						const newNoteFolderPath = vault.getConfig?.('newFileFolderPath') || '';
+						
+						const defaultPath = newNotePath === 'folder' && newNoteFolderPath 
+							? newNoteFolderPath 
+							: '';
+						
+						if (defaultPath) {
+							const file = await this.app.vault.create(`${defaultPath}/Untitled.md`, '');
+							await this.app.workspace.openLinkText(file.path, '', false);
+						} else {
+							const file = await this.app.vault.create('Untitled.md', '');
+							await this.app.workspace.openLinkText(file.path, '', false);
+						}
+						return;
+					}
+					
+					// If location is "/", use vault root
+					if (locationInput === '/') {
+						const newFile = await this.app.vault.create('Untitled.md', '');
+						await this.app.workspace.openLinkText(newFile.path, '', false);
+						return;
+					}
+					
+					// Otherwise, use the specified folder
+					const folderPath = locationInput.replace(/^\/+|\/+$/g, '');
+					
+					let folder = this.app.vault.getAbstractFileByPath(folderPath);
+					
+					if (!folder || !('children' in folder)) {
+						await this.app.vault.createFolder(folderPath);
+						folder = this.app.vault.getAbstractFileByPath(folderPath);
+					}
+					
+					if (folder && 'children' in folder) {
+						const newFile = await this.app.vault.create(`${folderPath}/Untitled.md`, '');
+						await this.app.workspace.openLinkText(newFile.path, '', false);
+					}
+				})();
+			}
+		};
+
+		// Add event listener to document with capture phase to intercept before Bases
+		document.addEventListener('click', interceptNewButton, true);
+		
+		// Also try to intercept on the button directly when it appears
+		const observer = new MutationObserver(() => {
+			const buttons = document.querySelectorAll('.bases-toolbar-new-item-menu .text-icon-button, .bases-toolbar-new-item-menu');
+			buttons.forEach((buttonEl) => {
+				if (!(buttonEl as any).__cmsIntercepted) {
+					(buttonEl as any).__cmsIntercepted = true;
+					buttonEl.addEventListener('click', interceptNewButton, true);
+				}
+			});
+		});
+
+		observer.observe(document.body, { childList: true, subtree: true });
+		
+		// Check immediately
+		const buttons = document.querySelectorAll('.bases-toolbar-new-item-menu .text-icon-button, .bases-toolbar-new-item-menu');
+		buttons.forEach((buttonEl) => {
+			if (!(buttonEl as any).__cmsIntercepted) {
+				(buttonEl as any).__cmsIntercepted = true;
+				buttonEl.addEventListener('click', interceptNewButton, true);
+			}
+		});
 	}
 
 	onDataUpdated(): void {
 		void (async () => {
 			const groupedData = this.data.groupedData;
 			const allEntries = this.data.data;
+
+			// Update card renderer with config (now available)
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			(this.cardRenderer as any).basesConfig = this.config;
 
 			// Read settings from Bases config
 			const settings = readCMSSettings(
@@ -107,6 +357,17 @@ export class BasesCMSView extends BasesView {
 			// Load snippets and images ONLY for displayed entries
 			await this.loadContentForEntries(visibleEntries, settings);
 
+			// Preserve toolbar element if we're refreshing with selection
+			let preservedToolbarEl: HTMLElement | null = null;
+			if (this.isRefreshingWithSelection && this.bulkToolbar) {
+				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar');
+				if (toolbarEl) {
+					preservedToolbarEl = toolbarEl as HTMLElement;
+					// Remove it from DOM temporarily but keep the reference
+					preservedToolbarEl.remove();
+				}
+			}
+			
 			// Clear and re-render
 			this.containerEl.empty();
 
@@ -182,8 +443,41 @@ export class BasesCMSView extends BasesView {
 				this.resizeObserver.observe(this.containerEl);
 			}
 
-			// Update selection UI
-			this.updateSelectionUI();
+			// Restore toolbar at the bottom if it was preserved
+			if (preservedToolbarEl && this.bulkToolbar) {
+				this.containerEl.appendChild(preservedToolbarEl);
+				// Update the BulkToolbar's reference to the element
+				(this.bulkToolbar as any).toolbarEl = preservedToolbarEl;
+			}
+			
+			// Update selection UI - but don't hide toolbar if we're refreshing with selection
+			if (!this.isRefreshingWithSelection) {
+				this.updateSelectionUI();
+			} else {
+				// Just update card states, don't touch toolbar visibility
+				const cards = this.containerEl.querySelectorAll('.card');
+				cards.forEach((cardEl) => {
+					const path = cardEl.getAttribute('data-path');
+					const checkbox = cardEl.querySelector('input[type="checkbox"].selection-checkbox') as HTMLInputElement;
+					if (path) {
+						const isSelected = this.selectedFiles.has(path);
+						if (isSelected) {
+							cardEl.addClass('selected');
+						} else {
+							cardEl.removeClass('selected');
+						}
+						if (checkbox) {
+							checkbox.checked = isSelected;
+						}
+					}
+				});
+				
+				// Ensure toolbar is visible if it was preserved
+				if (preservedToolbarEl && this.bulkToolbar) {
+					this.bulkToolbar.show();
+					this.bulkToolbar.updateCount(this.selectedFiles.size);
+				}
+			}
 
 			// Clear loading flag after async work completes
 			this.isLoading = false;
@@ -417,7 +711,8 @@ export class BasesCMSView extends BasesView {
 			}
 		});
 
-		// Show/hide bulk toolbar
+		// Show/hide bulk toolbar - ONLY hide if selection is actually empty
+		// Don't hide if we're in the middle of a refresh that will restore selection
 		if (this.selectedFiles.size > 0) {
 			if (!this.bulkToolbar) {
 				this.bulkToolbar = new BulkToolbar(
@@ -429,14 +724,60 @@ export class BasesCMSView extends BasesView {
 						this.selectedFiles.clear();
 						this.updateSelectionUI();
 					},
-					() => this.onDataUpdated(),
-					() => this.selectAll(),
-					() => this.deselectAll()
+					() => {
+						// Refresh view but preserve selection
+						const selectedPaths = Array.from(this.selectedFiles);
+						
+						// Set flag to prevent toolbar from being hidden during refresh
+						this.isRefreshingWithSelection = true;
+						
+						// Keep toolbar visible during refresh - critical to prevent it from disappearing
+						if (this.bulkToolbar && selectedPaths.length > 0) {
+							this.bulkToolbar.show();
+						}
+						
+						// Refresh the view
+						this.onDataUpdated();
+						
+						// Restore selection after refresh completes
+						// Use multiple timeouts to ensure it works even if the first one is too early
+						setTimeout(() => {
+							// Restore selection
+							selectedPaths.forEach(path => {
+								if (this.app.vault.getAbstractFileByPath(path)) {
+									this.selectedFiles.add(path);
+								}
+							});
+							
+							// Clear the flag and update UI
+							this.isRefreshingWithSelection = false;
+							this.updateSelectionUI();
+							
+							// Ensure toolbar is visible and updated
+							if (this.selectedFiles.size > 0 && this.bulkToolbar) {
+								this.bulkToolbar.show();
+								this.bulkToolbar.updateCount(this.selectedFiles.size);
+							}
+							
+							// Double-check after a bit more time
+							setTimeout(() => {
+								if (this.selectedFiles.size > 0 && this.bulkToolbar) {
+									this.bulkToolbar.show();
+									this.bulkToolbar.updateCount(this.selectedFiles.size);
+								}
+							}, 100);
+						}, 250);
+					},
+					() => {
+						// Select all callback
+						this.selectAll();
+					}
 				);
 			}
 			this.bulkToolbar.updateCount(this.selectedFiles.size);
 			this.bulkToolbar.show();
 		} else {
+			// Only hide if selection is truly empty (not during a refresh)
 			if (this.bulkToolbar) {
 				this.bulkToolbar.hide();
 			}
@@ -452,5 +793,42 @@ export class BasesCMSView extends BasesView {
 		if (this.bulkToolbar) {
 			this.bulkToolbar.destroy();
 		}
+	}
+
+	/**
+	 * Override new note creation to use custom location if configured
+	 */
+	async onNew(): Promise<boolean> {
+		const settings = readCMSSettings(
+			this.config,
+			this.plugin.settings
+		);
+
+		if (settings.customizeNewButton && settings.newNoteLocation && settings.newNoteLocation.trim() !== '') {
+			try {
+				// Create new note in the specified location
+				const folderPath = settings.newNoteLocation.trim().replace(/^\/+|\/+$/g, ''); // Remove leading/trailing slashes
+				
+				let folder = this.app.vault.getAbstractFileByPath(folderPath);
+				
+				if (!folder || !('children' in folder)) {
+					// Folder doesn't exist, create it first
+					await this.app.vault.createFolder(folderPath);
+					folder = this.app.vault.getAbstractFileByPath(folderPath);
+				}
+				
+				if (folder && 'children' in folder) {
+					// Folder exists, create note there
+					const newFile = await this.app.vault.create(`${folderPath}/Untitled.md`, '');
+					await this.app.workspace.openLinkText(newFile.path, '', false);
+					return true; // Indicate we handled it
+				}
+			} catch (error) {
+				console.error('[CMS View] Error creating new note:', error);
+			}
+		}
+		
+		// Default behavior - let Bases handle it
+		return false; // Let Bases handle it
 	}
 }

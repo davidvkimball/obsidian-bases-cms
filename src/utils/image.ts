@@ -16,6 +16,7 @@ export function hasValidImageExtension(path: string): boolean {
 
 /**
  * Validate if a URL points to a valid, loadable image
+ * NOTE: This is slow and should be avoided for performance. Only use when absolutely necessary.
  */
 export function validateImageUrl(url: string): Promise<boolean> {
 	return new Promise((resolve) => {
@@ -49,11 +50,10 @@ export async function processImagePaths(
 		if (cleanPath.length === 0) continue;
 
 		if (isExternalUrl(cleanPath)) {
+			// Don't validate external URLs - just trust they're valid (like Bases does)
+			// Validation is slow and causes performance issues
 			if (hasValidImageExtension(cleanPath) || !cleanPath.includes('.')) {
-				const isValid = await validateImageUrl(cleanPath);
-				if (isValid) {
-					externalUrls.push(cleanPath);
-				}
+				externalUrls.push(cleanPath);
 			}
 		} else {
 			if (hasValidImageExtension(cleanPath)) {

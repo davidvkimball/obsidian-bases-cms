@@ -18,6 +18,7 @@ export interface CardData {
 	snippet?: string;
 	imageUrl?: string | string[];
 	hasImageAvailable?: boolean;
+	displayTags?: string[];
 	propertyName1?: string;
 	propertyName2?: string;
 	propertyName3?: string;
@@ -49,6 +50,10 @@ export interface CMSSettings {
 	showDraftStatus: boolean;
 	draftStatusProperty: string;
 	draftStatusReverse: boolean;
+	showTags: boolean;
+	tagsProperty: string;
+	customizeNewButton: boolean;
+	newNoteLocation: string;
 }
 
 /**
@@ -114,6 +119,25 @@ export function basesEntryToCardData(
 	const ctime = entry.file.stat.ctime;
 	const mtime = entry.file.stat.mtime;
 
+	// Get tags from specified property if enabled
+	let displayTags: string[] = [];
+	if (settings.showTags && settings.tagsProperty) {
+		const tagsValue = getFirstBasesPropertyValue(entry, settings.tagsProperty) as { data?: unknown } | null;
+		if (tagsValue && tagsValue.data != null) {
+			const tagData = tagsValue.data;
+			if (Array.isArray(tagData)) {
+				displayTags = tagData.map((t: unknown) => {
+					if (t && typeof t === 'object' && 'data' in t) {
+						return String((t as { data: unknown }).data);
+					}
+					return (typeof t === 'string' || typeof t === 'number') ? String(t) : '';
+				}).filter((t): t is string => typeof t === 'string' && t.length > 0);
+			} else if (typeof tagData === 'string' || typeof tagData === 'number') {
+				displayTags = [String(tagData)];
+			}
+		}
+	}
+
 	// Create base card data
 	const cardData: CardData = {
 		path,
@@ -126,7 +150,8 @@ export function basesEntryToCardData(
 		folderPath,
 		snippet,
 		imageUrl,
-		hasImageAvailable: hasImageAvailable || false
+		hasImageAvailable: hasImageAvailable || false,
+		displayTags: displayTags.length > 0 ? displayTags : undefined
 	};
 
 	// Resolve properties
@@ -233,8 +258,22 @@ export function resolveBasesProperty(
 
 	// For non-date properties, extract .data
 	const data = valueObj.data;
-	if (data == null || data === '' || (Array.isArray(data) && data.length === 0)) {
+	if (data == null || data === '') {
 		return null;
+	}
+
+	// Handle arrays (e.g., aliases, lists)
+	if (Array.isArray(data)) {
+		if (data.length === 0) {
+			return null;
+		}
+		// Convert array items to strings and join
+		return data.map(item => {
+			if (item && typeof item === 'object' && 'data' in item) {
+				return String((item as { data: unknown }).data);
+			}
+			return String(item);
+		}).filter(item => item && item.trim() !== '').join(', ');
 	}
 
 	// Convert to string

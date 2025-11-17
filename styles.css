@@ -102,6 +102,12 @@
 	margin-top: var(--dynamic-views-element-spacing, 8px);
 }
 
+/* Exclude absolutely positioned elements from spacing */
+.card > .card-status-badge,
+.card > .bases-cms-select-checkbox {
+	margin-top: 0;
+}
+
 @media (hover: hover) {
 	.card:hover {
 		border-color: var(--dynamic-views-card-border-color-hover, var(--text-faint));
@@ -122,9 +128,10 @@
 }
 
 .bases-cms-select-checkbox input[type="checkbox"] {
-	cursor: pointer;
-	width: 18px;
-	height: 18px;
+	cursor: default;
+	margin: 0;
+	padding: 0;
+	flex-shrink: 0;
 }
 
 /* ============================================
@@ -153,8 +160,27 @@
 
 .card-content {
 	display: flex;
-	flex-direction: row;
+	flex-direction: column;
 	gap: var(--dynamic-views-element-spacing, 8px);
+}
+
+/* For thumbnail format, use row layout for thumbnail + text side by side */
+.card.image-format-thumbnail .card-content {
+	flex-direction: row;
+	align-items: flex-start;
+}
+
+.card-text-wrapper {
+	display: flex;
+	flex-direction: column;
+	gap: var(--dynamic-views-element-spacing, 8px);
+	flex: 1;
+	min-width: 0;
+}
+
+.card.image-format-thumbnail .card-text-preview {
+	flex: 0 1 auto;
+	min-width: 0;
 }
 
 .card-text-preview {
@@ -297,6 +323,7 @@
 	font-size: 0.65em;
 	font-weight: 500;
 	text-transform: uppercase;
+	cursor: default !important;
 	letter-spacing: 0.2px;
 	line-height: 1.2;
 	height: 18px;
@@ -304,7 +331,6 @@
 	align-items: center;
 	justify-content: center;
 	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-	cursor: pointer;
 	transition: background-color 0.15s ease;
 	margin-bottom: 6px;
 }
@@ -323,12 +349,20 @@
 	margin-bottom: 0;
 }
 
-/* For non-cover formats (thumbnail/none), position above title in content flow */
+/* For non-cover formats (thumbnail/none), position badge above title */
 .card:not(.image-format-cover) .card-status-badge {
-	position: relative;
-	display: inline-block;
+	position: absolute;
+	top: 8px;
+	left: 8px;
+	z-index: 10;
+	margin: 0;
 	margin-bottom: 6px;
-	width: fit-content;
+	width: auto;
+}
+
+/* Add top margin to title when badge is present so it appears below the badge */
+.card:not(.image-format-cover):has(.card-status-badge) .card-title {
+	margin-top: 26px;
 }
 
 .card-status-badge.status-draft {
@@ -373,9 +407,16 @@
 }
 
 .property-label {
-	font-size: 0.85em;
+	font-size: 0.7em;
 	color: var(--text-muted);
-	margin-bottom: 2px;
+	margin-bottom: 3px;
+	font-weight: 500;
+	letter-spacing: 0.3px;
+}
+
+/* Only apply uppercase to non-custom labels (fallback to property name) */
+.property-label:not(.property-label-custom) {
+	text-transform: uppercase;
 }
 
 .property-label-inline {
@@ -425,6 +466,45 @@
 	background-color: var(--tag-background-hover);
 }
 
+/* Card tags (pills under text preview) */
+.card-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 6px;
+	line-height: 1.2;
+}
+
+.card-tag {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	background-color: var(--background-modifier-border);
+	color: var(--text-normal);
+	font-size: 0.75em;
+	font-weight: 500;
+	white-space: nowrap;
+	transition: background-color 0.2s ease;
+	line-height: 1.4;
+}
+
+.card-tag:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.card-tag-more {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	background-color: var(--background-modifier-border);
+	color: var(--text-muted);
+	font-size: 0.75em;
+	font-weight: 500;
+	white-space: nowrap;
+	line-height: 1.4;
+	font-style: italic;
+}
+
 /* Path segments */
 .path-wrapper {
 	display: flex;
@@ -453,10 +533,58 @@
 	margin: 0 2px;
 }
 
-/* Checkbox properties */
-.property-content input[type="checkbox"] {
+/* Checkbox properties - Native Obsidian styling */
+.property-content:has(.checkbox-input) {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.property-content .checkbox-input {
 	cursor: pointer;
-	margin-right: 4px;
+	width: 16px;
+	height: 16px;
+	min-width: 16px;
+	min-height: 16px;
+	margin: 0;
+	padding: 0;
+	flex-shrink: 0;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 3px;
+	background-color: var(--background-primary);
+	appearance: none;
+	-webkit-appearance: none;
+	position: relative;
+	vertical-align: middle;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.property-content .checkbox-input:hover {
+	border-color: var(--interactive-accent);
+}
+
+.property-content .checkbox-input:checked {
+	background-color: var(--checkbox-color, var(--interactive-accent));
+	border-color: var(--checkbox-color, var(--interactive-accent));
+}
+
+.property-content .checkbox-input:checked::after {
+	content: '';
+	position: absolute;
+	left: 4px;
+	top: 1px;
+	width: 5px;
+	height: 10px;
+	border: solid white;
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+	box-sizing: border-box;
+}
+
+.property-content .checkbox-label {
+	margin: 0;
+	user-select: none;
+	line-height: 1.5;
 }
 
 /* ============================================
@@ -474,6 +602,9 @@
 	align-items: center;
 	gap: 0.5rem;
 	flex-wrap: wrap;
+	min-width: 0;
+	width: 100%;
+	box-sizing: border-box;
 }
 
 .bases-cms-bulk-toolbar .selected-count {
@@ -489,6 +620,9 @@
 	cursor: pointer;
 	font-size: 0.9em;
 	transition: background-color 0.2s, border-color 0.2s;
+	flex-shrink: 0;
+	min-width: fit-content;
+	white-space: nowrap;
 }
 
 .bases-cms-bulk-toolbar button:hover {
