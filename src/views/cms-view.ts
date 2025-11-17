@@ -321,7 +321,7 @@ export class BasesCMSView extends BasesView {
 
 			// Calculate grid columns
 			const containerWidth = this.containerEl.clientWidth;
-			const cardMinWidth = 250; // Minimum card width
+			const cardMinWidth = settings.cardSize; // Card size from settings
 			const minColumns = 1;
 			const gap = GAP_SIZE;
 			const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
@@ -330,6 +330,7 @@ export class BasesCMSView extends BasesView {
 			// Set CSS variables for grid layout
 			this.containerEl.style.setProperty('--card-min-width', `${cardWidth}px`);
 			this.containerEl.style.setProperty('--grid-columns', String(cols));
+			this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(settings.imageAspectRatio));
 
 			// Save scroll position before re-rendering
 			const savedScrollTop = this.containerEl.scrollTop;
@@ -389,7 +390,9 @@ export class BasesCMSView extends BasesView {
 						this.app,
 						this.images,
 						this.hasImageAvailable,
-						settings.thumbnailCacheSize
+						settings.thumbnailCacheSize,
+						settings.cardSize,
+						settings.imageFormat
 					);
 				}
 				
@@ -401,7 +404,9 @@ export class BasesCMSView extends BasesView {
 						this.app,
 						this.images,
 						this.hasImageAvailable,
-						settings.thumbnailCacheSize
+						settings.thumbnailCacheSize,
+						settings.cardSize,
+						settings.imageFormat
 					);
 				}
 
@@ -572,7 +577,11 @@ export class BasesCMSView extends BasesView {
 			if (!this.resizeObserver) {
 				this.resizeObserver = new ResizeObserver(() => {
 					const containerWidth = this.containerEl.clientWidth;
-					const cardMinWidth = 250;
+					const currentSettings = readCMSSettings(
+						this.config,
+						this.plugin.settings
+					);
+					const cardMinWidth = currentSettings.cardSize;
 					const minColumns = 1;
 					const gap = GAP_SIZE;
 					const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
@@ -580,6 +589,7 @@ export class BasesCMSView extends BasesView {
 
 					this.containerEl.style.setProperty('--card-min-width', `${cardWidth}px`);
 					this.containerEl.style.setProperty('--grid-columns', String(cols));
+					this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(currentSettings.imageAspectRatio));
 				});
 				this.resizeObserver.observe(this.containerEl);
 			}

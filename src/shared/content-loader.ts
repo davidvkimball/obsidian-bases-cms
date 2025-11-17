@@ -6,7 +6,7 @@
 import type { App, TFile } from 'obsidian';
 import { processImagePaths, resolveInternalImagePaths, extractEmbedImages } from '../utils/image';
 import { loadFilePreview } from '../utils/preview';
-import { generateThumbnail, generateThumbnailFromUrl, type ThumbnailCacheSize } from '../utils/thumbnail';
+import { generateThumbnail, generateThumbnailFromUrl, type ThumbnailCacheSize, calculateThumbnailSize } from '../utils/thumbnail';
 
 /**
  * Loads images for multiple entries synchronously (fast path)
@@ -23,7 +23,9 @@ export async function loadImagesForEntriesSync(
 	app: App,
 	imageCache: Record<string, string | string[]>,
 	hasImageCache: Record<string, boolean>,
-	thumbnailCacheSize: ThumbnailCacheSize = 'balanced'
+	thumbnailCacheSize: ThumbnailCacheSize = 'balanced',
+	cardSize?: number,
+	imageFormat?: 'none' | 'thumbnail' | 'cover'
 ): Promise<void> {
 	for (const entry of entries) {
 		// Skip if already in cache
@@ -49,14 +51,19 @@ export async function loadImagesForEntriesSync(
 			// Generate thumbnails for better performance (unless unlimited)
 			const thumbnailPromises: Promise<string | null>[] = [];
 			
+			// Calculate thumbnail size based on card size and image format
+			const thumbnailSize = (cardSize !== undefined && imageFormat !== undefined)
+				? calculateThumbnailSize(cardSize, imageFormat, thumbnailCacheSize)
+				: undefined;
+			
 			// Generate thumbnails for internal images
 			for (const imageFile of validImageFiles) {
-				thumbnailPromises.push(generateThumbnail(imageFile, app, thumbnailCacheSize));
+				thumbnailPromises.push(generateThumbnail(imageFile, app, thumbnailCacheSize, thumbnailSize));
 			}
 			
 			// Generate thumbnails for external URLs
 			for (const externalUrl of externalUrls) {
-				thumbnailPromises.push(generateThumbnailFromUrl(externalUrl, thumbnailCacheSize));
+				thumbnailPromises.push(generateThumbnailFromUrl(externalUrl, thumbnailCacheSize, thumbnailSize));
 			}
 			
 			// Wait for all thumbnails to be generated

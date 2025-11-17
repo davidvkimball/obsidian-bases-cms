@@ -22,21 +22,70 @@ const THUMBNAIL_SIZES: Record<ThumbnailCacheSize, ThumbnailSize> = {
 };
 
 /**
+ * Calculate appropriate thumbnail size based on card size and image format
+ * The thumbnail cache size acts as a maximum cap - thumbnails will scale with card size
+ * but never exceed the cache size limit (unless unlimited)
+ */
+export function calculateThumbnailSize(
+	cardSize: number,
+	imageFormat: 'none' | 'thumbnail' | 'cover',
+	thumbnailCacheSize: ThumbnailCacheSize
+): { maxWidth: number; maxHeight: number; quality: number } {
+	// If unlimited, return unlimited size
+	if (thumbnailCacheSize === 'unlimited') {
+		return THUMBNAIL_SIZES.unlimited;
+	}
+
+	// Get base size from cache size setting (this acts as a maximum cap)
+	const baseSize = THUMBNAIL_SIZES[thumbnailCacheSize];
+	
+	// For cover images, thumbnail should be at least as wide as the card
+	// Add some padding for high DPI displays (2x multiplier)
+	// But cap it at the cache size setting
+	if (imageFormat === 'cover') {
+		const targetWidth = Math.ceil(cardSize * 2); // 2x for retina displays
+		return {
+			maxWidth: Math.min(targetWidth, baseSize.maxWidth), // Cap at cache size
+			maxHeight: Math.min(targetWidth, baseSize.maxHeight), // Cap at cache size
+			quality: baseSize.quality
+		};
+	}
+	
+	// For thumbnail format, use a percentage of card size (thumbnail is typically smaller)
+	// Default thumbnail size in CSS is 80px, but scale with card size
+	// But cap it at the cache size setting
+	if (imageFormat === 'thumbnail') {
+		const thumbnailBaseSize = 80; // Base thumbnail size from CSS
+		const scaleFactor = cardSize / 250; // Scale based on default card size of 250
+		const targetSize = Math.ceil(thumbnailBaseSize * scaleFactor * 2); // 2x for retina
+		return {
+			maxWidth: Math.min(targetSize, baseSize.maxWidth), // Cap at cache size
+			maxHeight: Math.min(targetSize, baseSize.maxHeight), // Cap at cache size
+			quality: baseSize.quality
+		};
+	}
+	
+	// Default to base size
+	return baseSize;
+}
+
+/**
  * Generate a thumbnail data URL from an image file
  * Uses canvas to resize and compress the image
  */
 export async function generateThumbnail(
 	imageFile: TFile,
 	app: App,
-	cacheSize: ThumbnailCacheSize
+	cacheSize: ThumbnailCacheSize,
+	customSize?: { maxWidth: number; maxHeight: number; quality: number }
 ): Promise<string | null> {
 	try {
 		// For unlimited, just return the resource path (no thumbnail needed)
-		if (cacheSize === 'unlimited') {
+		if (cacheSize === 'unlimited' && !customSize) {
 			return app.vault.getResourcePath(imageFile);
 		}
 
-		const size = THUMBNAIL_SIZES[cacheSize];
+		const size = customSize || THUMBNAIL_SIZES[cacheSize];
 		
 		// Load the image file
 		const arrayBuffer = await app.vault.readBinary(imageFile);
@@ -108,15 +157,16 @@ export async function generateThumbnail(
  */
 export async function generateThumbnailFromUrl(
 	url: string,
-	cacheSize: ThumbnailCacheSize
+	cacheSize: ThumbnailCacheSize,
+	customSize?: { maxWidth: number; maxHeight: number; quality: number }
 ): Promise<string | null> {
 	try {
 		// For unlimited, just return the URL
-		if (cacheSize === 'unlimited') {
+		if (cacheSize === 'unlimited' && !customSize) {
 			return url;
 		}
 
-		const size = THUMBNAIL_SIZES[cacheSize];
+		const size = customSize || THUMBNAIL_SIZES[cacheSize];
 
 		return new Promise((resolve, reject) => {
 			const img = new Image();

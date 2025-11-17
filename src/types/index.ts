@@ -3,9 +3,6 @@
  */
 
 export interface BasesCMSSettings {
-	// Card layout settings
-	cardLayout: 'top-cover' | 'square';
-	
 	// Bulk operation settings
 	confirmBulkOperations: boolean;
 	
@@ -25,7 +22,6 @@ export interface BasesCMSSettings {
 }
 
 export const DEFAULT_SETTINGS: BasesCMSSettings = {
-	cardLayout: 'top-cover',
 	confirmBulkOperations: true,
 	deleteParentFolder: false,
 	deleteParentFolderFilename: 'index',

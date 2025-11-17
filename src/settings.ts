@@ -14,21 +14,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'Bases CMS Settings' });
-
-		// Card layout settings
-		new Setting(containerEl)
-			.setName('Card layout')
-			.setDesc('Choose the default card layout style')
-			.addDropdown(dropdown => dropdown
-				.addOption('top-cover', 'Top Cover')
-				.addOption('square', 'Square')
-				.setValue(this.plugin.settings.cardLayout)
-				.onChange(async (value: 'top-cover' | 'square') => {
-					this.plugin.settings.cardLayout = value;
-					await this.plugin.saveData(this.plugin.settings);
-				}));
-
 		// Bulk operation settings
 		new Setting(containerEl)
 			.setName('Confirm bulk operations')
@@ -41,7 +26,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				}));
 
 		// Deletion settings
-		containerEl.createEl('h3', { text: 'Deletion Settings' });
+		containerEl.createEl('h3', { text: 'Deletions' });
 
 		new Setting(containerEl)
 			.setName('Delete parent folder for specific file name')
@@ -75,9 +60,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 					await this.plugin.saveData(this.plugin.settings);
 				}));
 
-		// Confirmation settings
-		containerEl.createEl('h3', { text: 'Confirmation Settings' });
-
 		new Setting(containerEl)
 			.setName('Confirm deletions')
 			.setDesc('Show confirmation dialog before deleting files')
@@ -98,6 +80,24 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.useHomeIcon)
 				.onChange(async (value) => {
 					this.plugin.settings.useHomeIcon = value;
+					await this.plugin.saveData(this.plugin.settings);
+				}));
+
+		// Performance settings
+		containerEl.createEl('h3', { text: 'Performance' });
+
+		new Setting(containerEl)
+			.setName('Thumbnail cache size')
+			.setDesc('Maximum size for generated thumbnails. Larger sizes provide better quality but use more memory. This setting caps the thumbnail size regardless of card size.')
+			.addDropdown(dropdown => dropdown
+				.addOption('minimal', 'Minimal (100x100, fastest)')
+				.addOption('small', 'Small (200x200)')
+				.addOption('balanced', 'Balanced (400x400, recommended)')
+				.addOption('large', 'Large (800x800)')
+				.addOption('unlimited', 'Unlimited (full resolution)')
+				.setValue(this.plugin.settings.thumbnailCacheSize)
+				.onChange(async (value: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited') => {
+					this.plugin.settings.thumbnailCacheSize = value;
 					await this.plugin.saveData(this.plugin.settings);
 				}));
 	}

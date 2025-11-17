@@ -55,6 +55,8 @@ export interface CMSSettings {
 	customizeNewButton: boolean;
 	newNoteLocation: string;
 	thumbnailCacheSize: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited';
+	cardSize: number;
+	imageAspectRatio: number;
 }
 
 /**

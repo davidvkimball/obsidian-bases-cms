@@ -10,6 +10,7 @@ import { ManageTagsModal } from './manage-tags-modal';
 import { SetPropertyModal } from './set-property-modal';
 import { RemovePropertyModal } from './remove-property-modal';
 import { DeletionPreviewModal } from './deletion-preview';
+import { BulkOperationConfirmModal } from './bulk-operation-confirm';
 import { prepareDeletionPreview, executeSmartDeletion } from '../utils/smart-deletion';
 
 export class BulkToolbar {
@@ -128,11 +129,20 @@ export class BulkToolbar {
 		if (files.length === 0) return;
 
 		if (this.plugin.settings.confirmBulkOperations) {
-			// TODO: Show confirmation dialog
+			const modal = new BulkOperationConfirmModal(
+				this.app,
+				files,
+				'draft',
+				async () => {
+					await this.bulkOps.setDraft(files, true);
+					this.refreshView();
+				}
+			);
+			modal.open();
+		} else {
+			await this.bulkOps.setDraft(files, true);
+			this.refreshView();
 		}
-
-		await this.bulkOps.setDraft(files, true);
-		this.refreshView();
 	}
 
 	private async handlePublish(): Promise<void> {
@@ -140,11 +150,20 @@ export class BulkToolbar {
 		if (files.length === 0) return;
 
 		if (this.plugin.settings.confirmBulkOperations) {
-			// TODO: Show confirmation dialog
+			const modal = new BulkOperationConfirmModal(
+				this.app,
+				files,
+				'publish',
+				async () => {
+					await this.bulkOps.setDraft(files, false);
+					this.refreshView();
+				}
+			);
+			modal.open();
+		} else {
+			await this.bulkOps.setDraft(files, false);
+			this.refreshView();
 		}
-
-		await this.bulkOps.setDraft(files, false);
-		this.refreshView();
 	}
 
 	private async handleManageTags(): Promise<void> {

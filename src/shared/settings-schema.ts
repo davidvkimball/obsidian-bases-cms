@@ -42,7 +42,9 @@ export function readCMSSettings(
 		tagsProperty: (config.get('tagsProperty') as string) || '',
 		customizeNewButton: (config.get('customizeNewButton') as boolean) ?? false,
 		newNoteLocation: (config.get('newNoteLocation') as string) || '',
-		thumbnailCacheSize: (config.get('thumbnailCacheSize') as 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited') || 'balanced',
+		thumbnailCacheSize: pluginSettings.thumbnailCacheSize,
+		cardSize: (config.get('cardSize') as number) ?? 250,
+		imageAspectRatio: (config.get('imageAspectRatio') as number) ?? 0.55,
 	};
 }
 
@@ -51,6 +53,15 @@ export function readCMSSettings(
  */
 export function getCMSViewOptions(): any[] {
 	return [
+		{
+			type: 'slider',
+			displayName: 'Card size',
+			key: 'cardSize',
+			min: 50,
+			max: 800,
+			step: 10,
+			default: 250
+		},
 		{
 			type: 'toggle',
 			displayName: 'Show title',
@@ -140,6 +151,19 @@ export function getCMSViewOptions(): any[] {
 			default: 'thumbnail'
 		},
 		{
+			type: 'slider',
+			displayName: 'Image aspect ratio',
+			key: 'imageAspectRatio',
+			min: 0.1,
+			max: 2.0,
+			step: 0.05,
+			default: 0.55,
+			showWhen: {
+				key: 'imageFormat',
+				value: 'cover'
+			}
+		},
+		{
 			type: 'property',
 			displayName: 'Image property',
 			key: 'imageProperty',
@@ -215,19 +239,6 @@ export function getCMSViewOptions(): any[] {
 			key: 'newNoteLocation',
 			placeholder: 'Simply use / for vault folder',
 			default: ''
-		},
-		{
-			type: 'dropdown',
-			displayName: 'Thumbnail cache size',
-			key: 'thumbnailCacheSize',
-			options: {
-				'minimal': 'Minimal (100x100, fastest)',
-				'small': 'Small (200x200)',
-				'balanced': 'Balanced (400x400, recommended)',
-				'large': 'Large (800x800)',
-				'unlimited': 'Unlimited (full resolution)'
-			},
-			default: 'balanced'
 		}
 	];
 }
