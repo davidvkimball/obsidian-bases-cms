@@ -169,14 +169,14 @@ export class BulkToolbar {
 		// Right side container (all action buttons)
 		const rightContainer = this.toolbarEl.createDiv('bases-cms-bulk-toolbar-right');
 
-		// Right side: Draft
-		if (this.plugin.settings.showToolbarDraft) {
-			createBasesButton('book-dashed', 'Draft', () => this.handleSetDraft(), rightContainer);
-		}
-
 		// Right side: Publish
 		if (this.plugin.settings.showToolbarPublish) {
 			createBasesButton('book-check', 'Publish', () => this.handlePublish(), rightContainer);
+		}
+
+		// Right side: Draft
+		if (this.plugin.settings.showToolbarDraft) {
+			createBasesButton('book-dashed', 'Draft', () => this.handleSetDraft(), rightContainer);
 		}
 
 		// Right side: Tags

@@ -62,23 +62,23 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Show draft button')
-			.setDesc('Display the draft button in the CMS toolbar')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showToolbarDraft)
-				.onChange(async (value) => {
-					this.plugin.settings.showToolbarDraft = value;
-					await this.plugin.saveData(this.plugin.settings);
-					this.refreshActiveToolbars();
-				}));
-
-		new Setting(containerEl)
 			.setName('Show publish button')
 			.setDesc('Display the publish button in the CMS toolbar')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarPublish)
 				.onChange(async (value) => {
 					this.plugin.settings.showToolbarPublish = value;
+					await this.plugin.saveData(this.plugin.settings);
+					this.refreshActiveToolbars();
+				}));
+
+		new Setting(containerEl)
+			.setName('Show draft button')
+			.setDesc('Display the draft button in the CMS toolbar')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showToolbarDraft)
+				.onChange(async (value) => {
+					this.plugin.settings.showToolbarDraft = value;
 					await this.plugin.saveData(this.plugin.settings);
 					this.refreshActiveToolbars();
 				}));
@@ -132,7 +132,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Delete parent folder for specific file name')
-			.setDesc('When enabled, deleting a note will delete its parent folder if the note filename matches the specified name')
+			.setDesc('When enabled, deleting a note will delete its parent folder and all its contents if the note filename matches the specified name')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.deleteParentFolder)
 				.onChange(async (value) => {
@@ -208,7 +208,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				const currentCommandName = this.plugin.settings.quickEditCommandName || 
 					(this.plugin.settings.quickEditCommand ? 'Select command...' : 'No command selected');
 				button.setButtonText(currentCommandName)
-					.setCta()
 					.onClick(() => {
 						const modal = new CommandPickerModal(this.app, async (commandId: string) => {
 							// Get command name by looking it up
@@ -251,7 +250,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				if (this.plugin.settings.quickEditCommand) {
 					const clearButton = button.buttonEl.parentElement?.createEl('button', {
 						text: 'Clear',
-						cls: 'mod-cta',
 						attr: { style: 'margin-left: 8px;' }
 					});
 					clearButton?.addEventListener('click', async () => {
@@ -280,8 +278,8 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				.addOption('large', 'Large (800x800)')
 				.addOption('unlimited', 'Unlimited (full resolution)')
 				.setValue(this.plugin.settings.thumbnailCacheSize)
-				.onChange(async (value: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited') => {
-					this.plugin.settings.thumbnailCacheSize = value;
+				.onChange(async (value: string) => {
+					this.plugin.settings.thumbnailCacheSize = value as 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited';
 					await this.plugin.saveData(this.plugin.settings);
 				}));
 	}

@@ -4,7 +4,7 @@ import { BasesCMSView, CMS_VIEW_TYPE } from './views/cms-view';
 import { BasesCMSSettings, DEFAULT_SETTINGS } from './types';
 
 export default class BasesCMSPlugin extends Plugin {
-	settings: BasesCMSSettings;
+	settings!: BasesCMSSettings;
 	private activeViews: Set<BasesCMSView> = new Set();
 
 	async onload() {

@@ -33,8 +33,7 @@ export class BasesCMSView extends BasesView {
 	private cardRenderer: SharedCardRenderer;
 	private bulkToolbar: BulkToolbar | null = null;
 	private isRefreshingWithSelection: boolean = false;
-	private viewTypeCheckInterval: number | null = null;
-	private lastActiveViewType: string | null = null;
+	private currentBaseIdentifier: string | null = null;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: BasesCMSPlugin) {
 		super(controller);
@@ -71,71 +70,194 @@ export class BasesCMSView extends BasesView {
 	}
 	
 	/**
-	 * Setup listener to clear selection when switching to a different view
+	 * Setup listener to ensure toolbar hides when selection becomes empty
+	 * Uses MutationObserver to watch for card removal (view switches)
 	 */
 	private setupViewSwitchListener(): void {
-		// Simple approach: Watch for view selector changes
-		// When view type changes on the same tab, clear selection (same as "Clear" button)
-		this.viewTypeCheckInterval = window.setInterval(() => {
-			if (this.selectedFiles.size === 0) {
-				this.lastActiveViewType = null;
-				return; // No selection, nothing to clear
-			}
+		let mutationObserver: MutationObserver | null = null;
+		
+		const startObserving = () => {
+			if (mutationObserver) return; // Already observing
 			
-			// Check if our container is in the active leaf (we're on this tab)
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const activeLeaf = this.app.workspace.activeLeaf;
-			if (!activeLeaf) {
-				return;
-			}
-			
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const activeView = activeLeaf.view as any;
-			if (!activeView) {
-				return;
-			}
-			
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const activeContainer = activeView?.containerEl;
-			if (!activeContainer || !activeContainer.contains(this.containerEl)) {
-				// Our container is NOT in the active leaf - we're on a different tab
-				// Don't clear selection (preserve across tabs)
-				this.lastActiveViewType = null;
-				return;
-			}
-			
-			// We're on the same tab - check if view type changed
-			// Try to find view selector
-			const viewSelector = document.querySelector('.bases-view-selector') || 
-				this.containerEl.closest('.bases-view')?.querySelector('.bases-view-selector') ||
-				document.querySelector('[class*="view-selector"]');
-			
-			if (viewSelector) {
-				// Try multiple ways to find the active view type button
-				const activeViewButton = viewSelector.querySelector('[data-view-type].is-active') ||
-					viewSelector.querySelector('[data-view-type][aria-selected="true"]') ||
-					viewSelector.querySelector('[data-view-type].mod-active') ||
-					viewSelector.querySelector('[data-view-type][class*="active"]');
+			mutationObserver = new MutationObserver((mutations) => {
+				// Only check if we have selection
+				if (this.selectedFiles.size === 0) {
+					return;
+				}
 				
-				if (activeViewButton) {
-					const activeViewType = activeViewButton.getAttribute('data-view-type');
-					
-					// If this is the first check, just store the view type
-					if (this.lastActiveViewType === null) {
-						this.lastActiveViewType = activeViewType;
-						return;
+				// Check if any cards were removed
+				for (const mutation of mutations) {
+					if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
+						// Cards were removed - check if our selected cards are gone
+						let foundSelectedCard = false;
+						for (const path of this.selectedFiles) {
+							const card = this.containerEl.querySelector(`[data-path="${path}"]`);
+							if (card) {
+								foundSelectedCard = true;
+								break;
+							}
+						}
+						
+						// Also check if container has any cards at all
+						const allCards = this.containerEl.querySelectorAll('.card[data-path]');
+						
+						if (!foundSelectedCard || allCards.length === 0) {
+							this.selectedFiles.clear();
+							this.updateSelectionUI();
+							break;
+						}
 					}
-					
-					// If view type changed from CMS to something else, clear selection
-					if (this.lastActiveViewType === CMS_VIEW_TYPE && activeViewType && activeViewType !== CMS_VIEW_TYPE) {
-						this.selectedFiles.clear();
-						this.updateSelectionUI();
-					}
-					
-					this.lastActiveViewType = activeViewType;
+				}
+			});
+			
+			// Observe the container for child removals
+			if (this.containerEl) {
+				mutationObserver.observe(this.containerEl, {
+					childList: true,
+					subtree: true
+				});
+			}
+		};
+		
+		const stopObserving = () => {
+			if (mutationObserver) {
+				mutationObserver.disconnect();
+				mutationObserver = null;
+				
+				// When observer stops, it means selection is empty or view switched
+				// Force clear selection and hide toolbar
+				if (this.selectedFiles.size > 0) {
+					this.selectedFiles.clear();
+				}
+				this.updateSelectionUI();
+				
+				// Force hide toolbar immediately
+				if (this.bulkToolbar) {
+					this.bulkToolbar.hide();
+				}
+				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar');
+				if (toolbarEl) {
+					(toolbarEl as HTMLElement).style.display = 'none';
+					(toolbarEl as HTMLElement).style.opacity = '0';
 				}
 			}
-		}, 200);
+		};
+		
+		// Get base identifier - try multiple methods
+		const getBaseIdentifier = (): string | null => {
+			try {
+				// Try to get base name from config
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const config = this.config as any;
+				if (config?.getName) {
+					return config.getName();
+				}
+				if (config?.name) {
+					return String(config.name);
+				}
+				// Try to access controller through parent class
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const view = this as any;
+				if (view.controller) {
+					const controller = view.controller;
+					if (controller?.getBaseName) {
+						return controller.getBaseName();
+					}
+					if (controller?.baseName) {
+						return String(controller.baseName);
+					}
+				}
+				// Try to get from data
+				if (this.data) {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const data = this.data as any;
+					if (data.baseName) {
+						return String(data.baseName);
+					}
+				}
+			} catch (e) {
+				// Ignore errors
+			}
+			return null;
+		};
+		
+		// Also check periodically as backup (slower, 500ms)
+		let backupInterval: number | null = null;
+		const backupCheck = () => {
+			if (this.selectedFiles.size === 0) {
+				if (backupInterval !== null) {
+					window.clearInterval(backupInterval);
+					backupInterval = null;
+				}
+				return;
+			}
+			
+			// Check if base identifier changed
+			const currentBaseId = getBaseIdentifier();
+			if (this.currentBaseIdentifier !== null && currentBaseId !== null && 
+				this.currentBaseIdentifier !== currentBaseId) {
+				this.selectedFiles.clear();
+				this.updateSelectionUI();
+				stopObserving();
+				if (backupInterval !== null) {
+					window.clearInterval(backupInterval);
+					backupInterval = null;
+				}
+				return;
+			}
+			
+			// Check if container has cards
+			const allCards = this.containerEl.querySelectorAll('.card[data-path]');
+			if (allCards.length === 0) {
+				this.selectedFiles.clear();
+				this.updateSelectionUI();
+			}
+		};
+		
+		// Start observing when selection is made
+		const originalHandleSelectionChange = this.handleSelectionChange.bind(this);
+		this.handleSelectionChange = (path: string, selected: boolean) => {
+			originalHandleSelectionChange(path, selected);
+			
+			// Start observing if we have selection, stop if we don't
+			if (this.selectedFiles.size > 0) {
+				// Store current base identifier when selection starts
+				if (this.currentBaseIdentifier === null) {
+					this.currentBaseIdentifier = getBaseIdentifier();
+				}
+				startObserving();
+				// Also start backup interval
+				if (backupInterval === null) {
+					backupInterval = window.setInterval(backupCheck, 500);
+				}
+			} else {
+				// Clear base identifier when selection is empty
+				this.currentBaseIdentifier = null;
+				// Selection became empty - stop observing and force hide toolbar
+				stopObserving();
+				if (backupInterval !== null) {
+					window.clearInterval(backupInterval);
+					backupInterval = null;
+				}
+				// Force hide toolbar
+				if (this.bulkToolbar) {
+					this.bulkToolbar.hide();
+				}
+				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar');
+				if (toolbarEl) {
+					(toolbarEl as HTMLElement).style.display = 'none';
+					(toolbarEl as HTMLElement).style.opacity = '0';
+				}
+			}
+		};
+		
+		// Register cleanup
+		this.register(() => {
+			stopObserving();
+			if (backupInterval !== null) {
+				window.clearInterval(backupInterval);
+			}
+		});
 	}
 	
 
@@ -382,7 +504,7 @@ export class BasesCMSView extends BasesView {
 		};
 
 		// Add event listener to document with capture phase to intercept before Bases
-		document.addEventListener('click', interceptNewButton, true);
+		document.addEventListener('click', interceptNewButton as EventListener, true);
 		
 		// Also try to intercept on the button directly when it appears
 		const observer = new MutationObserver(() => {
@@ -390,7 +512,7 @@ export class BasesCMSView extends BasesView {
 			buttons.forEach((buttonEl) => {
 				if (!(buttonEl as any).__cmsIntercepted) {
 					(buttonEl as any).__cmsIntercepted = true;
-					buttonEl.addEventListener('click', interceptNewButton, true);
+					buttonEl.addEventListener('click', interceptNewButton as EventListener, true);
 				}
 			});
 		});
@@ -402,12 +524,51 @@ export class BasesCMSView extends BasesView {
 		buttons.forEach((buttonEl) => {
 			if (!(buttonEl as any).__cmsIntercepted) {
 				(buttonEl as any).__cmsIntercepted = true;
-				buttonEl.addEventListener('click', interceptNewButton, true);
+				buttonEl.addEventListener('click', interceptNewButton as EventListener, true);
 			}
+		});
+		
+		// Register cleanup
+		this.register(() => {
+			document.removeEventListener('click', interceptNewButton as EventListener, true);
+			observer.disconnect();
 		});
 	}
 
 	onDataUpdated(): void {
+		// Check if we're still the active view in the active leaf
+		// If onDataUpdated is called but we're not the active view, we've been switched away
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const activeLeaf = this.app.workspace.activeLeaf;
+		if (activeLeaf && this.selectedFiles.size > 0) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const activeView = activeLeaf.view as any;
+			// If active view is not this instance, we've been switched away
+			if (activeView && activeView !== this) {
+				// Check if our container is still visible - if hidden, definitely switched away
+				const isVisible = this.containerEl && 
+					this.containerEl.isConnected && 
+					this.containerEl.offsetParent !== null;
+				
+				if (!isVisible) {
+					this.selectedFiles.clear();
+					this.updateSelectionUI();
+					return;
+				}
+				
+				// Container is visible but we're not the active view
+				// Check if our container is in the active view's container
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const activeViewContainer = activeView.containerEl;
+				if (!activeViewContainer || !activeViewContainer.contains(this.containerEl)) {
+					// Our container is not in the active view - we've been switched away
+					this.selectedFiles.clear();
+					this.updateSelectionUI();
+					return;
+				}
+			}
+		}
+		
 		// Check if container is still visible - if not, clear selection (same as "Clear" button)
 		const isVisible = this.containerEl && 
 			this.containerEl.isConnected && 
@@ -875,7 +1036,24 @@ export class BasesCMSView extends BasesView {
 		} else {
 			this.selectedFiles.delete(path);
 		}
+		
+		// Always update UI when selection changes - this will hide toolbar if selection is empty
 		this.updateSelectionUI();
+		
+		// Force hide toolbar immediately if selection is empty
+		// Do this after updateSelectionUI to ensure it takes precedence
+		if (this.selectedFiles.size === 0) {
+			if (this.bulkToolbar) {
+				// Force immediate hide without waiting for transitions
+				this.bulkToolbar.hide();
+				// Also directly hide the element as a backup
+				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar');
+				if (toolbarEl) {
+					(toolbarEl as HTMLElement).style.display = 'none';
+					(toolbarEl as HTMLElement).style.opacity = '0';
+				}
+			}
+		}
 	}
 
 	private async handlePropertyToggle(path: string, property: string, value: unknown): Promise<void> {
@@ -955,7 +1133,7 @@ export class BasesCMSView extends BasesView {
 			}
 		});
 
-		// Show/hide bulk toolbar - ONLY hide if selection is actually empty
+		// Show/hide bulk toolbar - hide when selection is empty
 		// Don't hide if we're in the middle of a refresh that will restore selection
 		if (this.selectedFiles.size > 0) {
 			// Check if toolbar element already exists in DOM (from previous view switch)
@@ -1034,9 +1212,15 @@ export class BasesCMSView extends BasesView {
 			this.bulkToolbar.updateCount(this.selectedFiles.size);
 			this.bulkToolbar.show();
 		} else {
-			// Only hide if selection is truly empty (not during a refresh)
+			// Selection is empty - force hide toolbar immediately
 			if (this.bulkToolbar && !this.isRefreshingWithSelection) {
 				this.bulkToolbar.hide();
+				// Force immediate hide as backup
+				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar');
+				if (toolbarEl) {
+					(toolbarEl as HTMLElement).style.display = 'none';
+					(toolbarEl as HTMLElement).style.opacity = '0';
+				}
 			}
 		}
 	}
@@ -1044,10 +1228,6 @@ export class BasesCMSView extends BasesView {
 	onClose(): void {
 		if (this.resizeObserver) {
 			this.resizeObserver.disconnect();
-		}
-		if (this.viewTypeCheckInterval !== null) {
-			window.clearInterval(this.viewTypeCheckInterval);
-			this.viewTypeCheckInterval = null;
 		}
 		this.propertyObservers.forEach(obs => obs.disconnect());
 		this.propertyObservers = [];

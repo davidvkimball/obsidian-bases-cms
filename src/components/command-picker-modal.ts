@@ -100,12 +100,11 @@ export class CommandPickerModal extends FuzzySuggestModal<CommandOption> {
 		this.onSelect(item.id);
 	}
 
-	// Override to show command ID in subtitle for clarity
+	// Override to show command name only
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	renderSuggestion(match: any, el: HTMLElement): void {
 		const item = match.item as CommandOption;
 		el.createDiv({ cls: 'suggestion-title', text: item.name });
-		el.createDiv({ cls: 'suggestion-note', text: item.id });
 	}
 }
 
