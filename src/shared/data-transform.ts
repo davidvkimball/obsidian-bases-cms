@@ -50,11 +50,13 @@ export interface CMSSettings {
 	showDraftStatus: boolean;
 	draftStatusProperty: string;
 	draftStatusReverse: boolean;
+	draftStatusUseFilenamePrefix: boolean;
 	showTags: boolean;
 	tagsProperty: string;
 	maxTagsToShow: number;
 	customizeNewButton: boolean;
 	newNoteLocation: string;
+	hideQuickEditIcon: boolean;
 	thumbnailCacheSize: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited';
 	cardSize: number;
 	imageAspectRatio: number;

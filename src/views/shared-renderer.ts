@@ -67,34 +67,48 @@ export class SharedCardRenderer {
 		});
 
 		// Draft status badge for non-cover formats (positioned absolutely, aligned with checkbox)
-		if (settings.showDraftStatus && settings.draftStatusProperty && settings.imageFormat !== 'cover') {
-			const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
-			if (draftValue) {
-				const draftObj = draftValue as { data?: unknown } | null;
-				if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
-					const booleanValue = draftObj.data;
-					const isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
-					
-					const statusBadge = cardEl.createDiv('card-status-badge');
-					if (isDraft) {
-						statusBadge.addClass('status-draft');
-						statusBadge.appendText('Draft');
-					} else {
-						statusBadge.addClass('status-published');
-						statusBadge.appendText('Published');
+		if (settings.showDraftStatus && settings.imageFormat !== 'cover') {
+			let booleanValue: boolean | null = null;
+			let isDraft = false;
+			
+			// Check if using filename prefix mode
+			if (settings.draftStatusUseFilenamePrefix) {
+				const fileName = entry.file.name;
+				const startsWithUnderscore = fileName.startsWith('_');
+				booleanValue = startsWithUnderscore;
+				isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
+			} else {
+				// Use property-based detection
+				if (settings.draftStatusProperty) {
+					const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
+					if (draftValue) {
+						const draftObj = draftValue as { data?: unknown } | null;
+						if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
+							booleanValue = draftObj.data;
+							isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
+						}
 					}
-					
-					if (onPropertyToggle) {
-						statusBadge.style.cursor = 'pointer';
-						statusBadge.addEventListener('click', async (e) => {
-							e.stopPropagation();
-							const newValue = !booleanValue;
-							const cleanProperty = settings.draftStatusProperty.startsWith('note.') 
-								? settings.draftStatusProperty.substring(5) 
-								: settings.draftStatusProperty;
-							await onPropertyToggle(card.path, cleanProperty, newValue);
-						});
-					}
+				}
+			}
+			
+			// Show badge if we have a draft status determination
+			if (booleanValue !== null) {
+				const statusBadge = cardEl.createDiv('card-status-badge');
+				if (isDraft) {
+					statusBadge.addClass('status-draft');
+					statusBadge.appendText('Draft');
+				} else {
+					statusBadge.addClass('status-published');
+					statusBadge.appendText('Published');
+				}
+				
+				if (onPropertyToggle) {
+					statusBadge.style.cursor = 'pointer';
+					statusBadge.addEventListener('click', async (e) => {
+						e.stopPropagation();
+						const newValue = !booleanValue;
+						await onPropertyToggle(card.path, 'draft', newValue);
+					});
 				}
 			}
 		}
@@ -160,10 +174,11 @@ export class SharedCardRenderer {
 			const titleEl = cardEl.createDiv('card-title');
 			titleEl.appendText(card.title);
 			
-			// Quick edit icon (only if enabled, command is set, and title is shown)
+			// Quick edit icon (only if enabled, command is set, title is shown, and not hidden in this view)
 			if (this.plugin.settings.enableQuickEdit && 
 				this.plugin.settings.quickEditCommand && 
-				this.plugin.settings.quickEditCommand !== '') {
+				this.plugin.settings.quickEditCommand !== '' &&
+				!settings.hideQuickEditIcon) {
 				const quickEditIcon = titleEl.createSpan('bases-cms-quick-edit-icon');
 				quickEditIcon.style.cursor = 'default';
 				setIcon(quickEditIcon, 'pencil-line');
@@ -337,7 +352,7 @@ export class SharedCardRenderer {
 		}
 
 		// Content container
-		if ((settings.showTextPreview && card.snippet) ||
+		if (settings.showTextPreview ||
 			(settings.showTags && card.displayTags && card.displayTags.length > 0) ||
 			(settings.imageFormat !== 'none' && (card.imageUrl || card.hasImageAvailable)) ||
 			(settings.imageFormat === 'cover')) {
@@ -347,9 +362,17 @@ export class SharedCardRenderer {
 			if (settings.imageFormat === 'thumbnail') {
 				const textWrapper = contentContainer.createDiv('card-text-wrapper');
 				
-				// Text preview
-				if (settings.showTextPreview && card.snippet) {
-					textWrapper.createDiv({ cls: 'card-text-preview', text: card.snippet });
+				// Text preview - always create if showTextPreview is enabled, even if snippet isn't loaded yet
+				if (settings.showTextPreview) {
+					const textPreviewEl = textWrapper.createDiv('card-text-preview');
+					if (card.snippet) {
+						textPreviewEl.setText(card.snippet);
+					}
+					// Store reference to update later when snippet loads
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					(cardEl as any).__textPreviewEl = textPreviewEl;
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					(cardEl as any).__cardPath = card.path;
 				}
 
 				// Tags as pills (under text preview)
@@ -413,34 +436,48 @@ export class SharedCardRenderer {
 				
 				// Draft status badge (top-left, clickable to toggle)
 				// For cover images, place badge on the cover; for thumbnails/none, place on card
-				if (settings.showDraftStatus && settings.draftStatusProperty && settings.imageFormat === 'cover') {
-					const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
-					if (draftValue) {
-						const draftObj = draftValue as { data?: unknown } | null;
-						if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
-							const booleanValue = draftObj.data;
-							const isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
-							
-							const statusBadge = imageEl.createDiv('card-status-badge');
-							if (isDraft) {
-								statusBadge.addClass('status-draft');
-								statusBadge.appendText('Draft');
-							} else {
-								statusBadge.addClass('status-published');
-								statusBadge.appendText('Published');
+				if (settings.showDraftStatus && settings.imageFormat === 'cover') {
+					let booleanValue: boolean | null = null;
+					let isDraft = false;
+					
+					// Check if using filename prefix mode
+					if (settings.draftStatusUseFilenamePrefix) {
+						const fileName = entry.file.name;
+						const startsWithUnderscore = fileName.startsWith('_');
+						booleanValue = startsWithUnderscore;
+						isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
+					} else {
+						// Use property-based detection
+						if (settings.draftStatusProperty) {
+							const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
+							if (draftValue) {
+								const draftObj = draftValue as { data?: unknown } | null;
+								if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
+									booleanValue = draftObj.data;
+									isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
+								}
 							}
-							
-							if (onPropertyToggle) {
-								statusBadge.style.cursor = 'pointer';
-								statusBadge.addEventListener('click', async (e) => {
-									e.stopPropagation();
-									const newValue = !booleanValue;
-									const cleanProperty = settings.draftStatusProperty.startsWith('note.') 
-										? settings.draftStatusProperty.substring(5) 
-										: settings.draftStatusProperty;
-									await onPropertyToggle(card.path, cleanProperty, newValue);
-								});
-							}
+						}
+					}
+					
+					// Show badge if we have a draft status determination
+					if (booleanValue !== null) {
+						const statusBadge = imageEl.createDiv('card-status-badge');
+						if (isDraft) {
+							statusBadge.addClass('status-draft');
+							statusBadge.appendText('Draft');
+						} else {
+							statusBadge.addClass('status-published');
+							statusBadge.appendText('Published');
+						}
+						
+						if (onPropertyToggle) {
+							statusBadge.style.cursor = 'pointer';
+							statusBadge.addEventListener('click', async (e) => {
+								e.stopPropagation();
+								const newValue = !booleanValue;
+								await onPropertyToggle(card.path, 'draft', newValue);
+							});
 						}
 					}
 				}
@@ -469,34 +506,48 @@ export class SharedCardRenderer {
 				const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
 				
 				// Draft status badge on placeholder (top-left, clickable to toggle)
-				if (settings.showDraftStatus && settings.draftStatusProperty) {
-					const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
-					if (draftValue) {
-						const draftObj = draftValue as { data?: unknown } | null;
-						if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
-							const booleanValue = draftObj.data;
-							const isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
-							
-							const statusBadge = placeholderEl.createDiv('card-status-badge');
-							if (isDraft) {
-								statusBadge.addClass('status-draft');
-								statusBadge.appendText('Draft');
-							} else {
-								statusBadge.addClass('status-published');
-								statusBadge.appendText('Published');
+				if (settings.showDraftStatus) {
+					let booleanValue: boolean | null = null;
+					let isDraft = false;
+					
+					// Check if using filename prefix mode
+					if (settings.draftStatusUseFilenamePrefix) {
+						const fileName = entry.file.name;
+						const startsWithUnderscore = fileName.startsWith('_');
+						booleanValue = startsWithUnderscore;
+						isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
+					} else {
+						// Use property-based detection
+						if (settings.draftStatusProperty) {
+							const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
+							if (draftValue) {
+								const draftObj = draftValue as { data?: unknown } | null;
+								if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
+									booleanValue = draftObj.data;
+									isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
+								}
 							}
-							
-							if (onPropertyToggle) {
-								statusBadge.style.cursor = 'pointer';
-								statusBadge.addEventListener('click', async (e) => {
-									e.stopPropagation();
-									const newValue = !booleanValue;
-									const cleanProperty = settings.draftStatusProperty.startsWith('note.') 
-										? settings.draftStatusProperty.substring(5) 
-										: settings.draftStatusProperty;
-									await onPropertyToggle(card.path, cleanProperty, newValue);
-								});
-							}
+						}
+					}
+					
+					// Show badge if we have a draft status determination
+					if (booleanValue !== null) {
+						const statusBadge = placeholderEl.createDiv('card-status-badge');
+						if (isDraft) {
+							statusBadge.addClass('status-draft');
+							statusBadge.appendText('Draft');
+						} else {
+							statusBadge.addClass('status-published');
+							statusBadge.appendText('Published');
+						}
+						
+						if (onPropertyToggle) {
+							statusBadge.style.cursor = 'pointer';
+							statusBadge.addEventListener('click', async (e) => {
+								e.stopPropagation();
+								const newValue = !booleanValue;
+								await onPropertyToggle(card.path, 'draft', newValue);
+							});
 						}
 					}
 				}

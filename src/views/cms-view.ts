@@ -770,7 +770,8 @@ export class BasesCMSView extends BasesView {
 							if (cardEl) {
 								// eslint-disable-next-line @typescript-eslint/no-explicit-any
 								const textPreviewEl = (cardEl as any).__textPreviewEl;
-								if (textPreviewEl && !textPreviewEl.textContent) {
+								// Update if element exists and is empty (no text content or only whitespace)
+								if (textPreviewEl && (!textPreviewEl.textContent || textPreviewEl.textContent.trim().length === 0)) {
 									textPreviewEl.setText(this.snippets[entry.path]);
 								}
 							}
@@ -1064,20 +1065,79 @@ export class BasesCMSView extends BasesView {
 			// Strip "note." prefix if present (Bases uses "note.property" but frontmatter uses just "property")
 			const cleanProperty = property.startsWith('note.') ? property.substring(5) : property;
 
-			await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-				frontmatter[cleanProperty] = value;
-			});
+			// Read settings to check if this is the draft property
+			const settings = readCMSSettings(
+				this.config,
+				this.plugin.settings
+			);
 
-			// Wait for metadata cache to update, then refresh view
-			requestAnimationFrame(() => {
-				setTimeout(() => {
-					try {
-						this.onDataUpdated();
-					} catch (error) {
-						console.error('Error refreshing view after property toggle:', error);
+			// Check if this is the draft status property
+			const isDraftProperty = settings.showDraftStatus && cleanProperty === 'draft';
+			let shouldRefresh = false;
+
+			if (isDraftProperty) {
+				// Check if using filename prefix mode
+				if (settings.draftStatusUseFilenamePrefix) {
+					// Always use filename-based detection when this setting is enabled
+					const fileName = file.basename; // basename excludes extension
+					const startsWithUnderscore = fileName.startsWith('_');
+					const currentPath = file.path;
+					const pathParts = currentPath.split('/');
+					
+					// Toggle based on desired state: if value is true (draft), ensure underscore; if false (published), remove it
+					if (value === true) {
+						// Toggling to draft - add underscore if not present
+						if (!startsWithUnderscore) {
+							const newName = `_${fileName}${file.extension ? `.${file.extension}` : ''}`;
+							pathParts[pathParts.length - 1] = newName;
+							const newPath = pathParts.join('/');
+							await this.app.fileManager.renameFile(file, newPath);
+							shouldRefresh = true;
+						}
+					} else {
+						// Toggling to published - remove underscore if present
+						if (startsWithUnderscore) {
+							const newName = fileName.substring(1) + (file.extension ? `.${file.extension}` : '');
+							pathParts[pathParts.length - 1] = newName;
+							const newPath = pathParts.join('/');
+							await this.app.fileManager.renameFile(file, newPath);
+							shouldRefresh = true;
+						}
 					}
-				}, 100);
-			});
+				} else {
+					// Use property-based detection (frontmatter)
+					const cleanConfigProperty = settings.draftStatusProperty && settings.draftStatusProperty.trim()
+						? (settings.draftStatusProperty.startsWith('note.') 
+							? settings.draftStatusProperty.substring(5) 
+							: settings.draftStatusProperty)
+						: 'draft';
+					
+					await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+						frontmatter[cleanConfigProperty] = value;
+					});
+					shouldRefresh = true;
+				}
+			} else {
+				// Normal property toggle - update frontmatter
+				await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+					frontmatter[cleanProperty] = value;
+				});
+				shouldRefresh = true;
+			}
+
+			// Only refresh if we actually made a change
+			if (shouldRefresh) {
+				// Wait for metadata cache to update, then refresh view
+				requestAnimationFrame(() => {
+					setTimeout(() => {
+						try {
+							this.onDataUpdated();
+						} catch (error) {
+							console.error('Error refreshing view after property toggle:', error);
+						}
+					}, 100);
+				});
+			}
 		} catch (error) {
 			console.error('Error toggling property:', error);
 		}

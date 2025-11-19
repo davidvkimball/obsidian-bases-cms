@@ -18,12 +18,12 @@ export function readCMSSettings(
 	pluginSettings: BasesCMSSettings
 ): CMSSettings {
 	return {
-		titleProperty: (config.get('titleProperty') as string) || 'title',
-		descriptionProperty: (config.get('descriptionProperty') as string) || 'description',
-		imageProperty: (config.get('imageProperty') as string) || 'image',
+		titleProperty: (config.get('titleProperty') as string) || '',
+		descriptionProperty: (config.get('descriptionProperty') as string) || '',
+		imageProperty: (config.get('imageProperty') as string) || '',
 		showTitle: (config.get('showTitle') as boolean) ?? true,
 		showDate: (config.get('showDate') as boolean) ?? false,
-		dateProperty: (config.get('dateProperty') as string) || 'date',
+		dateProperty: (config.get('dateProperty') as string) || '',
 		showTextPreview: (config.get('showTextPreview') as boolean) ?? true,
 		fallbackToContent: (config.get('fallbackToContent') as boolean) ?? true,
 		fallbackToEmbeds: (config.get('fallbackToEmbeds') as boolean) ?? false,
@@ -36,13 +36,15 @@ export function readCMSSettings(
 		imageFormat: (config.get('imageFormat') as 'none' | 'thumbnail' | 'cover') || 'thumbnail',
 		propertyLabels: (config.get('propertyLabels') as 'hide' | 'inline' | 'above') || 'hide',
 		showDraftStatus: (config.get('showDraftStatus') as boolean) ?? false,
-		draftStatusProperty: (config.get('draftStatusProperty') as string) || 'draft',
+		draftStatusProperty: (config.get('draftStatusProperty') as string) || '',
 		draftStatusReverse: (config.get('draftStatusReverse') as boolean) ?? false,
+		draftStatusUseFilenamePrefix: (config.get('draftStatusUseFilenamePrefix') as boolean) ?? false,
 		showTags: (config.get('showTags') as boolean) ?? false,
 		tagsProperty: (config.get('tagsProperty') as string) || '',
 		maxTagsToShow: (config.get('maxTagsToShow') as number) ?? 3,
 		customizeNewButton: (config.get('customizeNewButton') as boolean) ?? false,
 		newNoteLocation: (config.get('newNoteLocation') as string) || '',
+		hideQuickEditIcon: (config.get('hideQuickEditIcon') as boolean) ?? false,
 		thumbnailCacheSize: pluginSettings.thumbnailCacheSize,
 		cardSize: (config.get('cardSize') as number) ?? 250,
 		imageAspectRatio: (config.get('imageAspectRatio') as number) ?? 0.55,
@@ -92,7 +94,7 @@ export function getCMSViewOptions(): any[] {
 			displayName: 'Image property',
 			key: 'imageProperty',
 			placeholder: 'Select property',
-			default: 'image'
+			default: ''
 		},
 		{
 			type: 'toggle',
@@ -111,7 +113,7 @@ export function getCMSViewOptions(): any[] {
 			displayName: 'Title property',
 			key: 'titleProperty',
 			placeholder: 'Select property',
-			default: 'title'
+			default: ''
 		},
 		{
 			type: 'toggle',
@@ -124,7 +126,7 @@ export function getCMSViewOptions(): any[] {
 			displayName: 'Date property',
 			key: 'dateProperty',
 			placeholder: 'Select property',
-			default: 'date'
+			default: ''
 		},
 		{
 			type: 'toggle',
@@ -137,12 +139,18 @@ export function getCMSViewOptions(): any[] {
 			displayName: 'Draft status property',
 			key: 'draftStatusProperty',
 			placeholder: 'Select property',
-			default: 'draft'
+			default: ''
 		},
 		{
 			type: 'toggle',
 			displayName: 'Reverse logic',
 			key: 'draftStatusReverse',
+			default: false
+		},
+		{
+			type: 'toggle',
+			displayName: 'Filename underscore prefix as draft indicator',
+			key: 'draftStatusUseFilenamePrefix',
 			default: false
 		},
 		{
@@ -156,7 +164,7 @@ export function getCMSViewOptions(): any[] {
 			displayName: 'Text preview property',
 			key: 'descriptionProperty',
 			placeholder: 'Select property',
-			default: 'description'
+			default: ''
 		},
 		{
 			type: 'toggle',
@@ -253,6 +261,12 @@ export function getCMSViewOptions(): any[] {
 			key: 'newNoteLocation',
 			placeholder: 'Simply use / for vault folder',
 			default: ''
+		},
+		{
+			type: 'toggle',
+			displayName: 'Hide quick edit icon',
+			key: 'hideQuickEditIcon',
+			default: false
 		}
 	];
 }
