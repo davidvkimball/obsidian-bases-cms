@@ -71,27 +71,35 @@ export class SharedCardRenderer {
 			let booleanValue: boolean | null = null;
 			let isDraft = false;
 			
-			// Check if using filename prefix mode
-			if (settings.draftStatusUseFilenamePrefix) {
+			console.log('[Bases CMS] Badge render check:', {
+				showDraftStatus: settings.showDraftStatus,
+				imageFormat: settings.imageFormat,
+				draftStatusUseFilenamePrefix: settings.draftStatusUseFilenamePrefix,
+				draftStatusProperty: settings.draftStatusProperty,
+				hasFile: !!entry.file,
+				fileName: entry.file?.name
+			});
+			
+			// Check if using filename prefix mode - this always provides a value
+			if (settings.draftStatusUseFilenamePrefix && entry.file && entry.file.name) {
 				const fileName = entry.file.name;
 				const startsWithUnderscore = fileName.startsWith('_');
 				booleanValue = startsWithUnderscore;
 				isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
-			} else {
+			} else if (settings.draftStatusProperty) {
 				// Use property-based detection
-				if (settings.draftStatusProperty) {
-					const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
-					if (draftValue) {
-						const draftObj = draftValue as { data?: unknown } | null;
-						if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
-							booleanValue = draftObj.data;
-							isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
-						}
+				const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
+				if (draftValue) {
+					const draftObj = draftValue as { data?: unknown } | null;
+					if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
+						booleanValue = draftObj.data;
+						isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
 					}
 				}
 			}
 			
 			// Show badge if we have a draft status determination
+			// When filename prefix is enabled, booleanValue is always set, so badge always shows
 			if (booleanValue !== null) {
 				const statusBadge = cardEl.createDiv('card-status-badge');
 				if (isDraft) {
@@ -433,54 +441,6 @@ export class SharedCardRenderer {
 
 				const imageClassName = settings.imageFormat === 'cover' ? 'card-cover' : 'card-thumbnail';
 				const imageEl = contentContainer.createDiv(imageClassName);
-				
-				// Draft status badge (top-left, clickable to toggle)
-				// For cover images, place badge on the cover; for thumbnails/none, place on card
-				if (settings.showDraftStatus && settings.imageFormat === 'cover') {
-					let booleanValue: boolean | null = null;
-					let isDraft = false;
-					
-					// Check if using filename prefix mode
-					if (settings.draftStatusUseFilenamePrefix) {
-						const fileName = entry.file.name;
-						const startsWithUnderscore = fileName.startsWith('_');
-						booleanValue = startsWithUnderscore;
-						isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
-					} else {
-						// Use property-based detection
-						if (settings.draftStatusProperty) {
-							const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
-							if (draftValue) {
-								const draftObj = draftValue as { data?: unknown } | null;
-								if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
-									booleanValue = draftObj.data;
-									isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
-								}
-							}
-						}
-					}
-					
-					// Show badge if we have a draft status determination
-					if (booleanValue !== null) {
-						const statusBadge = imageEl.createDiv('card-status-badge');
-						if (isDraft) {
-							statusBadge.addClass('status-draft');
-							statusBadge.appendText('Draft');
-						} else {
-							statusBadge.addClass('status-published');
-							statusBadge.appendText('Published');
-						}
-						
-						if (onPropertyToggle) {
-							statusBadge.style.cursor = 'pointer';
-							statusBadge.addEventListener('click', async (e) => {
-								e.stopPropagation();
-								const newValue = !booleanValue;
-								await onPropertyToggle(card.path, 'draft', newValue);
-							});
-						}
-					}
-				}
 
 				if (imageUrls.length > 0) {
 					const imageEmbedContainer = imageEl.createDiv('image-embed');
@@ -495,8 +455,56 @@ export class SharedCardRenderer {
 					// Set CSS variable for letterbox blur background
 					imageEmbedContainer.style.setProperty('--cover-image-url', `url("${imageUrls[0]}")`);
 					
+					// Draft status badge (top-left, clickable to toggle)
+					// For cover images, place badge on the cover AFTER image-embed is created
+					if (settings.showDraftStatus && settings.imageFormat === 'cover') {
+						let booleanValue: boolean | null = null;
+						let isDraft = false;
+						
+						// Check if using filename prefix mode - this always provides a value
+						if (settings.draftStatusUseFilenamePrefix && entry.file && entry.file.name) {
+							const fileName = entry.file.name;
+							const startsWithUnderscore = fileName.startsWith('_');
+							booleanValue = startsWithUnderscore;
+							isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
+						} else if (settings.draftStatusProperty) {
+							// Use property-based detection
+							const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
+							if (draftValue) {
+								const draftObj = draftValue as { data?: unknown } | null;
+								if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
+									booleanValue = draftObj.data;
+									isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
+								}
+							}
+						}
+						
+						// Show badge if we have a draft status determination
+						// When filename prefix is enabled, booleanValue is always set, so badge always shows
+						if (booleanValue !== null) {
+							const statusBadge = imageEl.createDiv('card-status-badge');
+							if (isDraft) {
+								statusBadge.addClass('status-draft');
+								statusBadge.appendText('Draft');
+							} else {
+								statusBadge.addClass('status-published');
+								statusBadge.appendText('Published');
+							}
+							
+							if (onPropertyToggle) {
+								statusBadge.style.cursor = 'pointer';
+								statusBadge.addEventListener('click', async (e) => {
+									e.stopPropagation();
+									const newValue = !booleanValue;
+									await onPropertyToggle(card.path, 'draft', newValue);
+								});
+							}
+						}
+					}
+					
 					// Properties - MUST be called before returning
 					this.renderProperties(cardEl, card, entry, settings, onPropertyToggle);
+					
 					
 					// Return image element and src for batch loading
 					return { img: imgEl, src: imageUrls[0] };
@@ -510,27 +518,26 @@ export class SharedCardRenderer {
 					let booleanValue: boolean | null = null;
 					let isDraft = false;
 					
-					// Check if using filename prefix mode
-					if (settings.draftStatusUseFilenamePrefix) {
+					// Check if using filename prefix mode - this always provides a value
+					if (settings.draftStatusUseFilenamePrefix && entry.file && entry.file.name) {
 						const fileName = entry.file.name;
 						const startsWithUnderscore = fileName.startsWith('_');
 						booleanValue = startsWithUnderscore;
 						isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
-					} else {
+					} else if (settings.draftStatusProperty) {
 						// Use property-based detection
-						if (settings.draftStatusProperty) {
-							const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
-							if (draftValue) {
-								const draftObj = draftValue as { data?: unknown } | null;
-								if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
-									booleanValue = draftObj.data;
-									isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
-								}
+						const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
+						if (draftValue) {
+							const draftObj = draftValue as { data?: unknown } | null;
+							if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
+								booleanValue = draftObj.data;
+								isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
 							}
 						}
 					}
 					
 					// Show badge if we have a draft status determination
+					// When filename prefix is enabled, booleanValue is always set, so badge always shows
 					if (booleanValue !== null) {
 						const statusBadge = placeholderEl.createDiv('card-status-badge');
 						if (isDraft) {

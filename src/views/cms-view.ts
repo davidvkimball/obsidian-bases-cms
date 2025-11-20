@@ -705,6 +705,9 @@ export class BasesCMSView extends BasesView {
 												// No image element - need to create it (replace placeholder)
 												const placeholder = cardEl.querySelector('.card-cover-placeholder, .card-thumbnail-placeholder');
 												if (placeholder) {
+													// Preserve badge if it exists on placeholder
+													const existingBadge = placeholder.querySelector('.card-status-badge');
+													
 													const imageClassName = placeholder.classList.contains('card-cover-placeholder') ? 'card-cover' : 'card-thumbnail';
 													const imageEl = placeholder.parentElement?.createDiv(imageClassName);
 													if (imageEl) {
@@ -717,6 +720,12 @@ export class BasesCMSView extends BasesView {
 															}
 														});
 														imageEmbedContainer.style.setProperty('--cover-image-url', `url("${url}")`);
+														
+														// Move badge from placeholder to new image element if it exists
+														if (existingBadge) {
+															imageEl.appendChild(existingBadge);
+														}
+														
 														placeholder.remove();
 													}
 												}
@@ -1210,6 +1219,10 @@ export class BasesCMSView extends BasesView {
 			
 			// If toolbar doesn't exist, create it
 			if (!this.bulkToolbar) {
+				const settings = readCMSSettings(
+					this.config,
+					this.plugin.settings
+				);
 				this.bulkToolbar = new BulkToolbar(
 					this.app,
 					this.plugin,
@@ -1266,8 +1279,16 @@ export class BasesCMSView extends BasesView {
 					() => {
 						// Select all callback
 						this.selectAll();
-					}
+					},
+					settings
 				);
+			} else {
+				// Update settings if toolbar already exists
+				const settings = readCMSSettings(
+					this.config,
+					this.plugin.settings
+				);
+				this.bulkToolbar.updateSettings(settings);
 			}
 			this.bulkToolbar.updateCount(this.selectedFiles.size);
 			this.bulkToolbar.show();

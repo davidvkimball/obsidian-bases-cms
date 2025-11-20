@@ -5,18 +5,75 @@
 import { App, TFile, Notice } from 'obsidian';
 import { addProperties, removeProperties } from './frontmatter';
 import { NewPropData } from './frontmatter';
+import type { CMSSettings } from '../shared/data-transform';
 
 export class BulkOperations {
 	constructor(private app: App) {}
 
 	/**
 	 * Set draft status for multiple files
+	 * Respects filename prefix mode and reverse logic settings
 	 */
-	async setDraft(files: string[], draft: boolean): Promise<void> {
+	async setDraft(files: string[], draft: boolean, settings?: CMSSettings): Promise<void> {
 		await this.batchProcessFiles(files, async (file) => {
-			await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-				frontmatter.draft = draft;
-			});
+			// If settings provided, use the same logic as handlePropertyToggle
+			if (settings) {
+				// Check if using filename prefix mode
+				if (settings.draftStatusUseFilenamePrefix) {
+					// Always use filename-based detection when this setting is enabled
+					const fileName = file.basename; // basename excludes extension
+					const startsWithUnderscore = fileName.startsWith('_');
+					const currentPath = file.path;
+					const pathParts = currentPath.split('/');
+					
+					// Apply reverse logic if enabled
+					let targetValue = draft;
+					if (settings.draftStatusReverse) {
+						targetValue = !draft;
+					}
+					
+					// Toggle based on desired state: if targetValue is true (draft), ensure underscore; if false (published), remove it
+					if (targetValue === true) {
+						// Setting to draft - add underscore if not present
+						if (!startsWithUnderscore) {
+							const newName = `_${fileName}${file.extension ? `.${file.extension}` : ''}`;
+							pathParts[pathParts.length - 1] = newName;
+							const newPath = pathParts.join('/');
+							await this.app.fileManager.renameFile(file, newPath);
+						}
+					} else {
+						// Setting to published - remove underscore if present
+						if (startsWithUnderscore) {
+							const newName = fileName.substring(1) + (file.extension ? `.${file.extension}` : '');
+							pathParts[pathParts.length - 1] = newName;
+							const newPath = pathParts.join('/');
+							await this.app.fileManager.renameFile(file, newPath);
+						}
+					}
+				} else {
+					// Use property-based detection (frontmatter)
+					const cleanConfigProperty = settings.draftStatusProperty && settings.draftStatusProperty.trim()
+						? (settings.draftStatusProperty.startsWith('note.') 
+							? settings.draftStatusProperty.substring(5) 
+							: settings.draftStatusProperty)
+						: 'draft';
+					
+					// Apply reverse logic if enabled
+					let targetValue = draft;
+					if (settings.draftStatusReverse) {
+						targetValue = !draft;
+					}
+					
+					await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+						frontmatter[cleanConfigProperty] = targetValue;
+					});
+				}
+			} else {
+				// Fallback: use default behavior (set draft property)
+				await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+					frontmatter.draft = draft;
+				});
+			}
 		});
 
 		new Notice(`Set ${files.length} file${files.length !== 1 ? 's' : ''} to ${draft ? 'draft' : 'published'}`);

@@ -12,6 +12,7 @@ import { RemovePropertyModal } from './remove-property-modal';
 import { DeletionPreviewModal } from './deletion-preview';
 import { BulkOperationConfirmModal } from './bulk-operation-confirm';
 import { prepareDeletionPreview, executeSmartDeletion } from '../utils/smart-deletion';
+import type { CMSSettings } from '../shared/data-transform';
 
 export class BulkToolbar {
 	private toolbarEl: HTMLElement | null = null;
@@ -19,6 +20,7 @@ export class BulkToolbar {
 	private bulkOps: BulkOperations;
 	private selectAllCallback?: () => void;
 	private resizeObserver: ResizeObserver | null = null;
+	private settings?: CMSSettings;
 
 	constructor(
 		private app: App,
@@ -27,11 +29,20 @@ export class BulkToolbar {
 		private getSelectedFiles: () => string[],
 		private clearSelection: () => void,
 		private refreshView: () => void,
-		selectAllCallback?: () => void
+		selectAllCallback?: () => void,
+		settings?: CMSSettings
 	) {
 		this.bulkOps = new BulkOperations(app);
 		this.selectAllCallback = selectAllCallback;
+		this.settings = settings;
 		this.createToolbar();
+	}
+
+	/**
+	 * Update settings (called when view settings change)
+	 */
+	updateSettings(settings: CMSSettings): void {
+		this.settings = settings;
 	}
 
 	private createToolbar(): void {
@@ -323,13 +334,13 @@ export class BulkToolbar {
 				files,
 				'draft',
 				async () => {
-					await this.bulkOps.setDraft(files, true);
+					await this.bulkOps.setDraft(files, true, this.settings);
 					this.refreshView();
 				}
 			);
 			modal.open();
 		} else {
-			await this.bulkOps.setDraft(files, true);
+			await this.bulkOps.setDraft(files, true, this.settings);
 			this.refreshView();
 		}
 	}
@@ -344,13 +355,13 @@ export class BulkToolbar {
 				files,
 				'publish',
 				async () => {
-					await this.bulkOps.setDraft(files, false);
+					await this.bulkOps.setDraft(files, false, this.settings);
 					this.refreshView();
 				}
 			);
 			modal.open();
 		} else {
-			await this.bulkOps.setDraft(files, false);
+			await this.bulkOps.setDraft(files, false, this.settings);
 			this.refreshView();
 		}
 	}
