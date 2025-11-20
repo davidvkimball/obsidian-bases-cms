@@ -48,7 +48,7 @@ export class CommandPickerModal extends FuzzySuggestModal<CommandOption> {
 		try {
 			const registry = commandRegistry?.commands;
 			if (registry && typeof registry === 'object') {
-				const allCommands = Object.values(registry) as CommandOption[];
+				const allCommands = Object.values(registry);
 				for (const command of allCommands) {
 					if (command && command.id && command.name && !commandMap.has(command.id)) {
 						commandMap.set(command.id, {
@@ -66,7 +66,7 @@ export class CommandPickerModal extends FuzzySuggestModal<CommandOption> {
 		try {
 			const internalRegistry = commandRegistry?.commandRegistry;
 			if (internalRegistry && typeof internalRegistry === 'object') {
-				const allCommands = Object.values(internalRegistry) as CommandOption[];
+				const allCommands = Object.values(internalRegistry);
 				for (const command of allCommands) {
 					if (command && command.id && command.name && !commandMap.has(command.id)) {
 						commandMap.set(command.id, {

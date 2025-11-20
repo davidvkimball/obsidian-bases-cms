@@ -28,7 +28,7 @@ export class ManageTagsModal extends Modal {
 		// Add tags input
 		new Setting(contentEl)
 			.setName('Add tags')
-			.setDesc('Enter tags to add (comma-separated)')
+			.setDesc('Enter tags to add (comma-separated).')
 			.addText(text => {
 				text
 					.setPlaceholder('tag1, tag2, tag3')

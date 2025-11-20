@@ -29,7 +29,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		// Bulk operation settings
 		new Setting(containerEl)
 			.setName('Confirm bulk operations')
-			.setDesc('Show confirmation dialogs before performing bulk operations')
+			.setDesc('Show confirmation dialogs before performing bulk operations.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.confirmBulkOperations)
 				.onChange((value) => {
@@ -44,7 +44,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Show select all button')
-			.setDesc('Display the select all button in the CMS toolbar')
+			.setDesc('Display the select all button in the CMS toolbar.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarSelectAll)
 				.onChange((value) => {
@@ -57,7 +57,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Show clear button')
-			.setDesc('Display the clear selection button in the CMS toolbar')
+			.setDesc('Display the clear selection button in the CMS toolbar.')
 				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarClear)
 				.onChange((value) => {
@@ -70,7 +70,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Show publish button')
-			.setDesc('Display the publish button in the CMS toolbar')
+			.setDesc('Display the publish button in the CMS toolbar.')
 				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarPublish)
 				.onChange((value) => {
@@ -83,7 +83,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Show draft button')
-			.setDesc('Display the draft button in the CMS toolbar')
+			.setDesc('Display the draft button in the CMS toolbar.')
 				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarDraft)
 				.onChange((value) => {
@@ -96,7 +96,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Show tags button')
-			.setDesc('Display the tags button in the CMS toolbar')
+			.setDesc('Display the tags button in the CMS toolbar.')
 				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarTags)
 				.onChange((value) => {
@@ -109,7 +109,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Show set button')
-			.setDesc('Display the set property button in the CMS toolbar')
+			.setDesc('Display the set property button in the CMS toolbar.')
 				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarSet)
 				.onChange((value) => {
@@ -122,7 +122,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Show remove button')
-			.setDesc('Display the remove property button in the CMS toolbar')
+			.setDesc('Display the remove property button in the CMS toolbar.')
 				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarRemove)
 				.onChange((value) => {
@@ -135,7 +135,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Show delete button')
-			.setDesc('Display the delete button in the CMS toolbar')
+			.setDesc('Display the delete button in the CMS toolbar.')
 				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarDelete)
 				.onChange((value) => {
@@ -151,7 +151,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Delete parent folder for specific file name')
-			.setDesc('When enabled, deleting a note will delete its parent folder and all its contents if the note filename matches the specified name')
+			.setDesc('When enabled, deleting a note will delete its parent folder and all its contents if the note file name matches the specified name.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.deleteParentFolder)
 				.onChange((value) => {
@@ -162,8 +162,8 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Folder deletion filename')
-			.setDesc('Filename that triggers parent folder deletion (e.g., "index")')
+			.setName('Folder deletion file name')
+			.setDesc('File name that triggers parent folder deletion.')
 			.addText(text => text
 				.setPlaceholder('index')
 				.setValue(this.plugin.settings.deleteParentFolderFilename)
@@ -189,7 +189,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Confirm deletions')
-			.setDesc('Show confirmation dialog before deleting files')
+			.setDesc('Show confirmation dialog before deleting files.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.confirmDeletions)
 				.onChange((value) => {
@@ -219,7 +219,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Enable quick edit')
-			.setDesc('Show a pencil icon on card titles that launches a command when clicked')
+			.setDesc('Show a pencil icon on card titles that launches a command when clicked.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableQuickEdit)
 				.onChange((value) => {
@@ -234,7 +234,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		// Command picker setting
 		const quickEditCommandSetting = new Setting(containerEl)
 			.setName('Quick edit command')
-			.setDesc('The Obsidian command to execute when clicking the quick edit icon on a card title')
+			.setDesc('The command to execute when clicking the quick edit icon on a card title.')
 			.addButton(button => {
 				const currentCommandName = this.plugin.settings.quickEditCommandName || 
 					(this.plugin.settings.quickEditCommand ? 'Select command...' : 'No command selected');

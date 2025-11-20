@@ -96,10 +96,9 @@ export function setupQuickEditIcon(
 								.join('') + 'ByPath';
 							
 							// Check if the plugin exposes this helper function
-							const pluginWithMethod = sourcePlugin as Record<string, unknown>;
-							if (typeof pluginWithMethod[methodName] === 'function') {
+							if (sourcePlugin && typeof sourcePlugin[methodName] === 'function') {
 								// Call the helper function directly - no need to open file!
-								await (pluginWithMethod[methodName] as (path: string) => Promise<void>)(cardPath);
+								await (sourcePlugin[methodName] as (path: string) => Promise<void>)(cardPath);
 								helperCalled = true;
 								return; // Success, exit early
 							}

@@ -52,8 +52,8 @@ export async function prepareDeletionPreview(
 				
 				// Get all files in folder for deletion
 				const folderFiles = parentFolder.children.filter(
-					child => child instanceof TFile
-				) as TFile[];
+					(child): child is TFile => child instanceof TFile
+				);
 				filesToDelete.push(...folderFiles);
 			}
 		} else {

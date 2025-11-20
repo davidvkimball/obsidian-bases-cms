@@ -241,8 +241,10 @@ export class CardRenderer {
 				} else if (propertyValue !== null && propertyValue !== undefined) {
 					if (typeof propertyValue === 'object' && propertyValue !== null && !Array.isArray(propertyValue)) {
 						value.setText(JSON.stringify(propertyValue));
-					} else {
+					} else if (typeof propertyValue === 'string' || typeof propertyValue === 'number' || typeof propertyValue === 'boolean') {
 						value.setText(String(propertyValue));
+					} else {
+						value.setText(JSON.stringify(propertyValue));
 					}
 				} else {
 					value.setText('…');

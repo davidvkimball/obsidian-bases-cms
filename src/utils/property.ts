@@ -100,7 +100,10 @@ export function resolveBasesProperty(
 		if (tags && typeof tags === 'object' && tags !== null && !Array.isArray(tags)) {
 			return JSON.stringify(tags);
 		}
-		return tags !== null && tags !== undefined ? String(tags) : null;
+		if (tags !== null && tags !== undefined && (typeof tags === 'string' || typeof tags === 'number' || typeof tags === 'boolean')) {
+			return String(tags);
+		}
+		return null;
 	}
 
 	if (propertyName === 'tags' || propertyName === 'note.tags') {
@@ -111,7 +114,10 @@ export function resolveBasesProperty(
 		if (tags && typeof tags === 'object' && tags !== null && !Array.isArray(tags)) {
 			return JSON.stringify(tags);
 		}
-		return tags !== null && tags !== undefined ? String(tags) : null;
+		if (tags !== null && tags !== undefined && (typeof tags === 'string' || typeof tags === 'number' || typeof tags === 'boolean')) {
+			return String(tags);
+		}
+		return null;
 	}
 
 	// Get value from BasesEntry
@@ -135,7 +141,10 @@ export function resolveBasesProperty(
 			if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
 				return JSON.stringify(data);
 			}
-			return String(data);
+			if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') {
+				return String(data);
+			}
+			return JSON.stringify(data);
 		}
 		}
 
@@ -153,7 +162,10 @@ export function resolveBasesProperty(
 			if (typeof propValue === 'object' && propValue !== null) {
 				return JSON.stringify(propValue);
 			}
-			return String(propValue);
+			if (typeof propValue === 'string' || typeof propValue === 'number' || typeof propValue === 'boolean') {
+				return String(propValue);
+			}
+			return JSON.stringify(propValue);
 		}
 		return null;
 	}

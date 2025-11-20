@@ -69,7 +69,7 @@ export class DeletionPreviewModal extends Modal {
 
 		// Warning
 		contentEl.createEl('p', {
-			text: '⚠️ This action cannot be undone.',
+			text: 'This action cannot be undone.',
 			cls: 'bases-cms-deletion-warning'
 		});
 
