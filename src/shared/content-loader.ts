@@ -1,17 +1,121 @@
 /**
  * Content loading utilities
  * Handles loading images and snippets for entries
+ * Optimized for performance with parallel loading and caching
  */
 
 import type { App, TFile } from 'obsidian';
 import { processImagePaths, resolveInternalImagePaths, extractEmbedImages } from '../utils/image';
 import { loadFilePreview } from '../utils/preview';
-import { generateThumbnail, generateThumbnailFromUrl, type ThumbnailCacheSize, calculateThumbnailSize } from '../utils/thumbnail';
+
+/**
+ * Loads images for an entry
+ * Handles property images, fallback to embeds, and caching
+ * Based on Dynamic Views' fast parallel loading approach
+ *
+ * @param path - File path for the entry
+ * @param file - TFile object
+ * @param app - Obsidian app instance
+ * @param imagePropertyValues - Array of image property values
+ * @param fallbackToEmbeds - Whether to extract embedded images if no property images
+ * @param imageCache - Cache object to store loaded images
+ * @param hasImageCache - Cache object to track image availability
+ */
+export async function loadImageForEntry(
+	path: string,
+	file: TFile,
+	app: App,
+	imagePropertyValues: unknown[],
+	fallbackToEmbeds: boolean,
+	imageCache: Record<string, string | string[]>,
+	hasImageCache: Record<string, boolean>
+): Promise<void> {
+	// Skip if already in cache - CRITICAL for performance
+	if (path in imageCache) {
+		return;
+	}
+
+	try {
+		// Process and validate image paths using shared utility
+		const { internalPaths, externalUrls } = await processImagePaths(imagePropertyValues as string[]);
+
+		// Convert internal paths to resource URLs using shared utility
+		let validImages: string[] = [
+			...resolveInternalImagePaths(internalPaths, path, app),
+			...externalUrls  // External URLs already validated by processImagePaths
+		];
+
+		// If no property images and fallback enabled, extract embed images
+		if (validImages.length === 0 && fallbackToEmbeds) {
+			validImages = await extractEmbedImages(file, app);
+		}
+
+		if (validImages.length > 0) {
+			// Store as array if multiple, string if single
+			imageCache[path] = validImages.length > 1 ? validImages : validImages[0];
+			hasImageCache[path] = true;
+		}
+	} catch (error) {
+		console.error(`Failed to load image for ${path}:`, error);
+	}
+}
+
+/**
+ * Loads images for multiple entries in parallel batches
+ * Uses batching to avoid overwhelming the browser with too many concurrent requests
+ * Based on Dynamic Views' approach but with batching for large datasets
+ *
+ * @param entries - Array of entries with path, file, and imagePropertyValues
+ * @param fallbackToEmbeds - Whether to extract embedded images if no property images
+ * @param app - Obsidian app instance
+ * @param imageCache - Cache object to store loaded images
+ * @param hasImageCache - Cache object to track image availability
+ */
+export async function loadImagesForEntries(
+	entries: Array<{
+		path: string;
+		file: TFile;
+		imagePropertyValues: unknown[];
+	}>,
+	fallbackToEmbeds: boolean,
+	app: App,
+	imageCache: Record<string, string | string[]>,
+	hasImageCache: Record<string, boolean>
+): Promise<void> {
+	// Filter out entries already in cache BEFORE processing
+	const uncachedEntries = entries.filter(entry => !(entry.path in imageCache));
+	
+	// Batch size: process 50 images at a time to avoid overwhelming the browser
+	// This balances performance (parallel loading) with browser limits
+	const BATCH_SIZE = 50;
+	
+	// Process in batches
+	for (let i = 0; i < uncachedEntries.length; i += BATCH_SIZE) {
+		const batch = uncachedEntries.slice(i, i + BATCH_SIZE);
+		
+		// Load batch in parallel
+		await Promise.all(
+			batch.map(async (entry) => {
+				await loadImageForEntry(
+					entry.path,
+					entry.file,
+					app,
+					entry.imagePropertyValues,
+					fallbackToEmbeds,
+					imageCache,
+					hasImageCache
+				);
+			})
+		);
+	}
+}
 
 /**
  * Loads images for multiple entries synchronously (fast path)
  * Resolves image file references immediately for instant rendering
- * Generates thumbnails based on cache size setting for better performance
+ * Uses parallel loading like Dynamic Views for better performance
+ * 
+ * @deprecated Use loadImagesForEntries instead - it's faster with parallel loading
  */
 export async function loadImagesForEntriesSync(
 	entries: Array<{
@@ -22,66 +126,10 @@ export async function loadImagesForEntriesSync(
 	fallbackToEmbeds: boolean,
 	app: App,
 	imageCache: Record<string, string | string[]>,
-	hasImageCache: Record<string, boolean>,
-	thumbnailCacheSize: ThumbnailCacheSize = 'balanced',
-	cardSize?: number,
-	imageFormat?: 'none' | 'thumbnail' | 'cover'
+	hasImageCache: Record<string, boolean>
 ): Promise<void> {
-	for (const entry of entries) {
-		// Skip if already in cache
-		if (entry.path in imageCache) {
-			continue;
-		}
-
-		try {
-			// Process image paths synchronously (no validation for performance)
-			const { internalPaths, externalUrls } = processImagePaths(entry.imagePropertyValues as string[]);
-
-			// Resolve internal paths to TFile references first, then convert to resource URLs
-			const validImageFiles: TFile[] = [];
-			const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
-			
-			for (const propPath of internalPaths) {
-				const imageFile = app.metadataCache.getFirstLinkpathDest(propPath, entry.path);
-				if (imageFile && validImageExtensions.includes(imageFile.extension)) {
-					validImageFiles.push(imageFile);
-				}
-			}
-
-			// Generate thumbnails for better performance (unless unlimited)
-			const thumbnailPromises: Promise<string | null>[] = [];
-			
-			// Calculate thumbnail size based on card size and image format
-			const thumbnailSize = (cardSize !== undefined && imageFormat !== undefined)
-				? calculateThumbnailSize(cardSize, imageFormat, thumbnailCacheSize)
-				: undefined;
-			
-			// Generate thumbnails for internal images
-			for (const imageFile of validImageFiles) {
-				thumbnailPromises.push(generateThumbnail(imageFile, app, thumbnailCacheSize, thumbnailSize));
-			}
-			
-			// Generate thumbnails for external URLs
-			for (const externalUrl of externalUrls) {
-				thumbnailPromises.push(generateThumbnailFromUrl(externalUrl, thumbnailCacheSize, thumbnailSize));
-			}
-			
-			// Wait for all thumbnails to be generated
-			const thumbnails = await Promise.all(thumbnailPromises);
-			const validThumbnails = thumbnails.filter((thumb): thumb is string => thumb !== null);
-
-			if (validThumbnails.length > 0) {
-				// Store thumbnails as data URLs (served from memory cache like Bases)
-				imageCache[entry.path] = validThumbnails.length > 1 ? validThumbnails : validThumbnails[0];
-				hasImageCache[entry.path] = true;
-			} else if (fallbackToEmbeds) {
-				// Mark for async embed extraction (don't block rendering)
-				hasImageCache[entry.path] = false;
-			}
-		} catch (error) {
-			console.error(`Failed to load image for ${entry.path}:`, error);
-		}
-	}
+	// Use the parallel loading approach for better performance
+	await loadImagesForEntries(entries, fallbackToEmbeds, app, imageCache, hasImageCache);
 }
 
 /**

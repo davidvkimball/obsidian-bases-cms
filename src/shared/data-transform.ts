@@ -57,7 +57,6 @@ export interface CMSSettings {
 	customizeNewButton: boolean;
 	newNoteLocation: string;
 	hideQuickEditIcon: boolean;
-	thumbnailCacheSize: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited';
 	cardSize: number;
 	imageAspectRatio: number;
 }

@@ -265,23 +265,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		// Hide command selector if quick edit is disabled
 		quickEditCommandSetting.settingEl.style.display = this.plugin.settings.enableQuickEdit ? '' : 'none';
 
-		// Performance settings
-		containerEl.createEl('h3', { text: 'Performance' });
-
-		new Setting(containerEl)
-			.setName('Thumbnail cache size')
-			.setDesc('Maximum size for generated thumbnails. Larger sizes provide better quality but use more memory. This setting caps the thumbnail size regardless of card size.')
-			.addDropdown(dropdown => dropdown
-				.addOption('minimal', 'Minimal (100x100, fastest)')
-				.addOption('small', 'Small (200x200)')
-				.addOption('balanced', 'Balanced (400x400, recommended)')
-				.addOption('large', 'Large (800x800)')
-				.addOption('unlimited', 'Unlimited (full resolution)')
-				.setValue(this.plugin.settings.thumbnailCacheSize)
-				.onChange(async (value: string) => {
-					this.plugin.settings.thumbnailCacheSize = value as 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited';
-					await this.plugin.saveData(this.plugin.settings);
-				}));
 	}
 }
 

@@ -38,30 +38,44 @@ export function stripWikilinkSyntax(path: string): string {
 
 /**
  * Process and validate image paths from property values
- * Synchronous version for performance - no async validation
+ * Handles wikilink stripping, URL validation, and path separation
+ * Based on Dynamic Views' approach with parallel validation for performance
+ * 
+ * @param imagePaths - Raw image paths from properties (may contain wikilinks)
+ * @returns Promise resolving to object with validated internal paths and external URLs
  */
-export function processImagePaths(
+export async function processImagePaths(
 	imagePaths: string[]
-): { internalPaths: string[]; externalUrls: string[] } {
+): Promise<{ internalPaths: string[]; externalUrls: string[] }> {
 	const internalPaths: string[] = [];
-	const externalUrls: string[] = [];
+	const externalUrlCandidates: string[] = [];
 
+	// First pass: separate internal paths and external URL candidates
 	for (const imgPath of imagePaths) {
+		// Strip wikilink syntax
 		const cleanPath = stripWikilinkSyntax(imgPath);
+
 		if (cleanPath.length === 0) continue;
 
 		if (isExternalUrl(cleanPath)) {
-			// Don't validate external URLs - just trust they're valid (like Bases does)
-			// Validation is slow and causes performance issues
+			// External URL - validate extension if present
 			if (hasValidImageExtension(cleanPath) || !cleanPath.includes('.')) {
-				externalUrls.push(cleanPath);
+				externalUrlCandidates.push(cleanPath);
 			}
 		} else {
+			// Internal path - validate extension
 			if (hasValidImageExtension(cleanPath)) {
 				internalPaths.push(cleanPath);
 			}
 		}
 	}
+
+	// Second pass: validate external URLs in parallel (much faster)
+	const validationPromises = externalUrlCandidates.map(url => 
+		validateImageUrl(url).then(isValid => isValid ? url : null)
+	);
+	const validatedUrls = await Promise.all(validationPromises);
+	const externalUrls = validatedUrls.filter((url): url is string => url !== null);
 
 	return { internalPaths, externalUrls };
 }
@@ -90,6 +104,7 @@ export function resolveInternalImagePaths(
 
 /**
  * Extract image URLs from file embeds
+ * Validates external URLs in parallel for better performance
  */
 export async function extractEmbedImages(
 	file: TFile,
@@ -101,13 +116,14 @@ export async function extractEmbedImages(
 	if (!metadata?.embeds) return [];
 
 	const bodyResourcePaths: string[] = [];
-	const bodyExternalUrls: string[] = [];
+	const bodyExternalUrlCandidates: string[] = [];
 
+	// First pass: separate internal paths and external URL candidates
 	for (const embed of metadata.embeds) {
 		const embedLink = embed.link;
 		if (isExternalUrl(embedLink)) {
 			if (hasValidImageExtension(embedLink) || !embedLink.includes('.')) {
-				bodyExternalUrls.push(embedLink);
+				bodyExternalUrlCandidates.push(embedLink);
 			}
 		} else {
 			const targetFile = app.metadataCache.getFirstLinkpathDest(embedLink, file.path);
@@ -117,6 +133,13 @@ export async function extractEmbedImages(
 			}
 		}
 	}
+
+	// Second pass: validate external URLs in parallel (much faster)
+	const validationPromises = bodyExternalUrlCandidates.map(url => 
+		validateImageUrl(url).then(isValid => isValid ? url : null)
+	);
+	const validatedUrls = await Promise.all(validationPromises);
+	const bodyExternalUrls = validatedUrls.filter((url): url is string => url !== null);
 
 	return [...bodyResourcePaths, ...bodyExternalUrls];
 }

@@ -17,9 +17,6 @@ export interface BasesCMSSettings {
 	// Icon settings
 	useHomeIcon: boolean;
 	
-	// Image performance settings
-	thumbnailCacheSize: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited';
-	
 	// Quick edit settings
 	enableQuickEdit: boolean;
 	quickEditCommand: string;
@@ -43,7 +40,6 @@ export const DEFAULT_SETTINGS: BasesCMSSettings = {
 	deleteUniqueAttachments: false,
 	confirmDeletions: true,
 	useHomeIcon: false,
-	thumbnailCacheSize: 'balanced',
 	enableQuickEdit: false,
 	quickEditCommand: '',
 	quickEditCommandName: '',

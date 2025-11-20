@@ -1,11 +1,13 @@
-import { Plugin, QueryController } from 'obsidian';
+import { Plugin } from 'obsidian';
 import { BasesCMSSettingTab } from './settings';
-import { BasesCMSView, CMS_VIEW_TYPE } from './views/cms-view';
+import { BasesCMSView } from './views/cms-view';
 import { BasesCMSSettings, DEFAULT_SETTINGS } from './types';
+import { registerBasesCMSView } from './utils/view-registration';
 
 export default class BasesCMSPlugin extends Plugin {
 	settings!: BasesCMSSettings;
-	private activeViews: Set<BasesCMSView> = new Set();
+	activeViews: Set<BasesCMSView> = new Set();
+	registrationTimeout: number | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -16,39 +18,18 @@ export default class BasesCMSPlugin extends Plugin {
 		// Register CMS view with Base plugin
 		// Graceful degradation: if Base plugin not installed, this will simply do nothing
 		// On mobile, Bases plugin may not be loaded yet, so we wait a bit
-		this.registerBasesCMSView();
-	}
-
-	private registerBasesCMSView(retries = 5): void {
-		try {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			if (typeof (this as any).registerBasesView === 'function') {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				(this as any).registerBasesView(CMS_VIEW_TYPE, {
-					name: 'CMS',
-					icon: this.settings.useHomeIcon ? 'lucide-home' : 'lucide-blocks',
-					factory: (controller: QueryController, containerEl: HTMLElement) => {
-						const view = new BasesCMSView(controller, containerEl, this);
-						this.activeViews.add(view);
-						return view;
-					},
-					options: this.getCMSViewOptions()
-				});
-			} else if (retries > 0) {
-				// Method not available yet, retry after a short delay (common on mobile)
-				setTimeout(() => {
-					this.registerBasesCMSView(retries - 1);
-				}, 200);
-			} else {
-				console.warn('Bases CMS: registerBasesView not available. Is Bases plugin installed?');
-			}
-		} catch (error) {
-			console.error('Bases CMS: Error registering view:', error);
-		}
+		registerBasesCMSView(this);
 	}
 
 	onunload() {
-		// Cleanup
+		// Clear any pending registration timeout
+		if (this.registrationTimeout !== null) {
+			window.clearTimeout(this.registrationTimeout);
+			this.registrationTimeout = null;
+		}
+		
+		// Clean up active views
+		this.activeViews.clear();
 	}
 
 	async loadSettings() {
@@ -92,12 +73,5 @@ export default class BasesCMSPlugin extends Plugin {
 		this.activeViews.delete(view);
 	}
 
-	/**
-	 * Get CMS view options for Base plugin configuration
-	 */
-	private getCMSViewOptions(): () => any[] {
-		const { getCMSViewOptions } = require('./shared/settings-schema');
-		return getCMSViewOptions;
-	}
 }
 

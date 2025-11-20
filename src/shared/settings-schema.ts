@@ -45,7 +45,6 @@ export function readCMSSettings(
 		customizeNewButton: (config.get('customizeNewButton') as boolean) ?? false,
 		newNoteLocation: (config.get('newNoteLocation') as string) || '',
 		hideQuickEditIcon: (config.get('hideQuickEditIcon') as boolean) ?? false,
-		thumbnailCacheSize: pluginSettings.thumbnailCacheSize,
 		cardSize: (config.get('cardSize') as number) ?? 250,
 		imageAspectRatio: (config.get('imageAspectRatio') as number) ?? 0.55,
 	};
