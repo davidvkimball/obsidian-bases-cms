@@ -2,6 +2,22 @@
 
 A fork of [Dynamic Views](https://github.com/greetclammy/dynamic-views) that provides CMS-like functionality to Obsidian bases. Inspired by the [Multi-Properties](https://github.com/technohiker/obsidian-multi-properties) plugin.
 
+## Installation
+
+Bases CMS is not yet available in the Community plugins section. Install using [BRAT](https://github.com/TfTHacker/obsidian42-brat) or manually:
+
+### BRAT
+
+1. Download the [Beta Reviewers Auto-update Tester (BRAT)](https://github.com/TfTHacker/obsidian42-brat) plugin from the [Obsidian community plugins directory](https://obsidian.md/plugins?id=obsidian42-brat) and enable it.
+2. In the BRAT plugin settings, select `Add beta plugin`.
+3. Paste the following: `https://github.com/davidvkimball/obsidian-bases-cms` and select `Add plugin`.
+
+### Manual
+
+1. Download the latest release from the [Releases page](https://github.com/davidvkimball/obsidian-bases-cms/releases) and navigate to your Obsidian vault's `.obsidian/plugins/` directory.
+2. Create a new folder called `bases-cms` and ensure `manifest.json`, `main.js` and `styles.css` are in there.
+3. In Obsidian, go to Settings > Community plugins (enable it if you haven't already) and then enable "Bases CMS."
+
 ## Quick Edit Feature
 
 The Quick Edit feature allows you to execute Obsidian commands directly from card titles without opening the file first. When enabled, a pencil icon appears on card titles that launches a selected command when clicked.
