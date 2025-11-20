@@ -25,7 +25,6 @@ export class SharedCardRenderer {
 		basesController?: unknown
 	) {
 		this.basesConfig = basesConfig;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- BasesController type not fully defined
 		this.basesController = basesController as { getPropertyDisplayName?: (name: string) => string };
 	}
 
@@ -40,7 +39,7 @@ export class SharedCardRenderer {
 		hoverParent: unknown,
 		isSelected: boolean,
 		onSelect: (path: string, selected: boolean) => void,
-		onPropertyToggle?: (path: string, property: string, value: unknown) => void
+		onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>
 	): { img: HTMLImageElement; src: string } | null {
 		// Create card element
 		const cardEl = container.createDiv('card bases-cms-card');
@@ -123,7 +122,6 @@ export class SharedCardRenderer {
 				const menu = new Menu();
 				// Trigger file-menu with 'bases' source only (same as native Bases cards view)
 				// This includes both Bases-specific options and standard file options
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Workspace.trigger accepts string event name
 				this.app.workspace.trigger('file-menu', menu, file, 'bases');
 				menu.showAtMouseEvent(e);
 			}
@@ -184,9 +182,7 @@ export class SharedCardRenderer {
 						textPreviewEl.setText(card.snippet);
 					}
 					// Store reference to update later when snippet loads
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Store reference on element for later update
 					(cardEl as { __textPreviewEl?: HTMLElement; __cardPath?: string }).__textPreviewEl = textPreviewEl;
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Store reference on element for later update
 					(cardEl as { __textPreviewEl?: HTMLElement; __cardPath?: string }).__cardPath = card.path;
 				}
 
@@ -216,9 +212,7 @@ export class SharedCardRenderer {
 						textPreviewEl.setText(card.snippet);
 					}
 					// Store reference to update later when snippet loads
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Store reference on element for later update
 					(cardEl as { __textPreviewEl?: HTMLElement; __cardPath?: string }).__textPreviewEl = textPreviewEl;
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Store reference on element for later update
 					(cardEl as { __textPreviewEl?: HTMLElement; __cardPath?: string }).__cardPath = card.path;
 				}
 
@@ -300,7 +294,7 @@ export class SharedCardRenderer {
 		card: CardData,
 		entry: BasesEntry,
 		settings: CMSSettings,
-		onPropertyToggle?: (path: string, property: string, value: unknown) => void
+		onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>
 	): void {
 		const props = [
 			settings.propertyDisplay1,
@@ -366,7 +360,7 @@ export class SharedCardRenderer {
 		card: CardData,
 		entry: BasesEntry,
 		settings: CMSSettings,
-		onPropertyToggle?: (path: string, property: string, value: unknown) => void
+		onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>
 	): void {
 		if (propertyName === '') return;
 
@@ -435,7 +429,6 @@ export class SharedCardRenderer {
 				});
 				tagEl.addEventListener('click', (e) => {
 					e.preventDefault();
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.internalPlugins structure not fully typed
 					const searchPlugin = (this.app as { internalPlugins?: { plugins?: Record<string, { instance?: { openGlobalSearch?: (query: string) => void } }> } }).internalPlugins?.plugins?.["global-search"];
 					if (searchPlugin?.instance?.openGlobalSearch) {
 						searchPlugin.instance.openGlobalSearch("tag:" + tag);
@@ -453,7 +446,6 @@ export class SharedCardRenderer {
 				});
 				tagEl.addEventListener('click', (e) => {
 					e.preventDefault();
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.internalPlugins structure not fully typed
 					const searchPlugin = (this.app as { internalPlugins?: { plugins?: Record<string, { instance?: { openGlobalSearch?: (query: string) => void } }> } }).internalPlugins?.plugins?.["global-search"];
 					if (searchPlugin?.instance?.openGlobalSearch) {
 						searchPlugin.instance.openGlobalSearch("tag:" + tag);
@@ -483,7 +475,6 @@ export class SharedCardRenderer {
 			});
 		} else {
 			// Check if this is a checkbox property
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- MetadataCache may have getAllPropertyInfos method
 			const metadataCache = this.app.metadataCache as unknown as Record<string, unknown>;
 			const propertyInfos = (typeof metadataCache.getAllPropertyInfos === 'function' 
 				? metadataCache.getAllPropertyInfos() 
@@ -491,7 +482,6 @@ export class SharedCardRenderer {
 			const propInfo = propertyInfos[propertyName.toLowerCase()];
 			
 			// Try to get value from entry to check if it's boolean
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- BasesEntry.getValue accepts string
 			const entryValue = entry.getValue(propertyName as `note.${string}` | `formula.${string}` | `file.${string}`) as { data?: unknown } | null;
 			const isCheckbox = propInfo?.widget === 'checkbox' || 
 				(entryValue && 'data' in entryValue && typeof entryValue.data === 'boolean');

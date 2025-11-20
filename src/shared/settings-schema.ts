@@ -53,7 +53,7 @@ export function readCMSSettings(
 /**
  * CMS view options for Bases configuration
  */
-export function getCMSViewOptions(): any[] {
+export function getCMSViewOptions(): unknown[] {
 	return [
 		{
 			type: 'slider',

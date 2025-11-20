@@ -77,11 +77,13 @@ export class SetPropertyModal extends Modal {
 		const applyBtn = buttonContainer.createEl('button');
 		applyBtn.setText('Apply');
 		applyBtn.addClass('mod-cta');
-		applyBtn.addEventListener('click', async () => {
-			if (this.propertyName && this.propertyValue) {
-				await this.applyChanges();
-				this.close();
-			}
+		applyBtn.addEventListener('click', () => {
+			void (async () => {
+				if (this.propertyName && this.propertyValue) {
+					await this.applyChanges();
+					this.close();
+				}
+			})();
 		});
 	}
 

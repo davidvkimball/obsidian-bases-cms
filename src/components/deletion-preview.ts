@@ -69,7 +69,7 @@ export class DeletionPreviewModal extends Modal {
 
 		// Warning
 		contentEl.createEl('p', {
-			text: '⚠️ This action cannot be undone!',
+			text: '⚠️ This action cannot be undone.',
 			cls: 'bases-cms-deletion-warning'
 		});
 
@@ -85,10 +85,12 @@ export class DeletionPreviewModal extends Modal {
 		deleteBtn.setText('Delete');
 		deleteBtn.addClass('mod-cta');
 		deleteBtn.addClass('destructive');
-		deleteBtn.addEventListener('click', async () => {
-			await executeSmartDeletion(this.app, this.preview);
-			this.onConfirm();
-			this.close();
+		deleteBtn.addEventListener('click', () => {
+			void (async () => {
+				await executeSmartDeletion(this.app, this.preview);
+				this.onConfirm();
+				this.close();
+			})();
 		});
 	}
 

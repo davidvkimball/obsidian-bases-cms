@@ -15,7 +15,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 	 */
 	private refreshActiveToolbars(): void {
 		// Use the plugin's method to refresh all toolbars
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Plugin has refreshAllToolbars method
 		const pluginWithMethod = this.plugin as { refreshAllToolbars?: () => void };
 		if (pluginWithMethod && typeof pluginWithMethod.refreshAllToolbars === 'function') {
 			pluginWithMethod.refreshAllToolbars();
@@ -33,9 +32,11 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 			.setDesc('Show confirmation dialogs before performing bulk operations')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.confirmBulkOperations)
-				.onChange(async (value) => {
-					this.plugin.settings.confirmBulkOperations = value;
-					await this.plugin.saveData(this.plugin.settings);
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.confirmBulkOperations = value;
+						await this.plugin.saveData(this.plugin.settings);
+					})();
 				}));
 
 		// Toolbar button visibility settings
@@ -46,87 +47,103 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 			.setDesc('Display the select all button in the CMS toolbar')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarSelectAll)
-				.onChange(async (value) => {
-					this.plugin.settings.showToolbarSelectAll = value;
-					await this.plugin.saveData(this.plugin.settings);
-					this.refreshActiveToolbars();
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.showToolbarSelectAll = value;
+						await this.plugin.saveData(this.plugin.settings);
+						this.refreshActiveToolbars();
+					})();
 				}));
 
 		new Setting(containerEl)
 			.setName('Show clear button')
 			.setDesc('Display the clear selection button in the CMS toolbar')
-			.addToggle(toggle => toggle
+				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarClear)
-				.onChange(async (value) => {
-					this.plugin.settings.showToolbarClear = value;
-					await this.plugin.saveData(this.plugin.settings);
-					this.refreshActiveToolbars();
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.showToolbarClear = value;
+						await this.plugin.saveData(this.plugin.settings);
+						this.refreshActiveToolbars();
+					})();
 				}));
 
 		new Setting(containerEl)
 			.setName('Show publish button')
 			.setDesc('Display the publish button in the CMS toolbar')
-			.addToggle(toggle => toggle
+				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarPublish)
-				.onChange(async (value) => {
-					this.plugin.settings.showToolbarPublish = value;
-					await this.plugin.saveData(this.plugin.settings);
-					this.refreshActiveToolbars();
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.showToolbarPublish = value;
+						await this.plugin.saveData(this.plugin.settings);
+						this.refreshActiveToolbars();
+					})();
 				}));
 
 		new Setting(containerEl)
 			.setName('Show draft button')
 			.setDesc('Display the draft button in the CMS toolbar')
-			.addToggle(toggle => toggle
+				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarDraft)
-				.onChange(async (value) => {
-					this.plugin.settings.showToolbarDraft = value;
-					await this.plugin.saveData(this.plugin.settings);
-					this.refreshActiveToolbars();
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.showToolbarDraft = value;
+						await this.plugin.saveData(this.plugin.settings);
+						this.refreshActiveToolbars();
+					})();
 				}));
 
 		new Setting(containerEl)
 			.setName('Show tags button')
 			.setDesc('Display the tags button in the CMS toolbar')
-			.addToggle(toggle => toggle
+				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarTags)
-				.onChange(async (value) => {
-					this.plugin.settings.showToolbarTags = value;
-					await this.plugin.saveData(this.plugin.settings);
-					this.refreshActiveToolbars();
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.showToolbarTags = value;
+						await this.plugin.saveData(this.plugin.settings);
+						this.refreshActiveToolbars();
+					})();
 				}));
 
 		new Setting(containerEl)
 			.setName('Show set button')
 			.setDesc('Display the set property button in the CMS toolbar')
-			.addToggle(toggle => toggle
+				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarSet)
-				.onChange(async (value) => {
-					this.plugin.settings.showToolbarSet = value;
-					await this.plugin.saveData(this.plugin.settings);
-					this.refreshActiveToolbars();
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.showToolbarSet = value;
+						await this.plugin.saveData(this.plugin.settings);
+						this.refreshActiveToolbars();
+					})();
 				}));
 
 		new Setting(containerEl)
 			.setName('Show remove button')
 			.setDesc('Display the remove property button in the CMS toolbar')
-			.addToggle(toggle => toggle
+				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarRemove)
-				.onChange(async (value) => {
-					this.plugin.settings.showToolbarRemove = value;
-					await this.plugin.saveData(this.plugin.settings);
-					this.refreshActiveToolbars();
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.showToolbarRemove = value;
+						await this.plugin.saveData(this.plugin.settings);
+						this.refreshActiveToolbars();
+					})();
 				}));
 
 		new Setting(containerEl)
 			.setName('Show delete button')
 			.setDesc('Display the delete button in the CMS toolbar')
-			.addToggle(toggle => toggle
+				.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showToolbarDelete)
-				.onChange(async (value) => {
-					this.plugin.settings.showToolbarDelete = value;
-					await this.plugin.saveData(this.plugin.settings);
-					this.refreshActiveToolbars();
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.showToolbarDelete = value;
+						await this.plugin.saveData(this.plugin.settings);
+						this.refreshActiveToolbars();
+					})();
 				}));
 
 		// Deletion settings
@@ -137,9 +154,11 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 			.setDesc('When enabled, deleting a note will delete its parent folder and all its contents if the note filename matches the specified name')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.deleteParentFolder)
-				.onChange(async (value) => {
-					this.plugin.settings.deleteParentFolder = value;
-					await this.plugin.saveData(this.plugin.settings);
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.deleteParentFolder = value;
+						await this.plugin.saveData(this.plugin.settings);
+					})();
 				}));
 
 		new Setting(containerEl)
@@ -148,9 +167,11 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 			.addText(text => text
 				.setPlaceholder('index')
 				.setValue(this.plugin.settings.deleteParentFolderFilename)
-				.onChange(async (value) => {
-					this.plugin.settings.deleteParentFolderFilename = value;
-					await this.plugin.saveData(this.plugin.settings);
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.deleteParentFolderFilename = value;
+						await this.plugin.saveData(this.plugin.settings);
+					})();
 				}))
 			.setDisabled(!this.plugin.settings.deleteParentFolder);
 
@@ -159,9 +180,11 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 			.setDesc('When deleting a note, automatically delete attachments that are only used by that note. Attachments used by other notes will be preserved.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.deleteUniqueAttachments)
-				.onChange(async (value) => {
-					this.plugin.settings.deleteUniqueAttachments = value;
-					await this.plugin.saveData(this.plugin.settings);
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.deleteUniqueAttachments = value;
+						await this.plugin.saveData(this.plugin.settings);
+					})();
 				}));
 
 		new Setting(containerEl)
@@ -169,9 +192,11 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 			.setDesc('Show confirmation dialog before deleting files')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.confirmDeletions)
-				.onChange(async (value) => {
-					this.plugin.settings.confirmDeletions = value;
-					await this.plugin.saveData(this.plugin.settings);
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.confirmDeletions = value;
+						await this.plugin.saveData(this.plugin.settings);
+					})();
 				}));
 
 		// Icon settings
@@ -182,9 +207,11 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 			.setDesc('Use the home icon instead of blocks icon for the CMS view in the Bases view selector. Restart Obsidian for this change to take effect.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.useHomeIcon)
-				.onChange(async (value) => {
-					this.plugin.settings.useHomeIcon = value;
-					await this.plugin.saveData(this.plugin.settings);
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.useHomeIcon = value;
+						await this.plugin.saveData(this.plugin.settings);
+					})();
 				}));
 
 		// Quick edit settings
@@ -195,11 +222,13 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 			.setDesc('Show a pencil icon on card titles that launches a command when clicked')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableQuickEdit)
-				.onChange(async (value) => {
-					this.plugin.settings.enableQuickEdit = value;
-					await this.plugin.saveData(this.plugin.settings);
-					// Show/hide command selector based on toggle
-					quickEditCommandSetting.settingEl.toggleClass('bases-cms-setting-hidden', !value);
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.enableQuickEdit = value;
+						await this.plugin.saveData(this.plugin.settings);
+						// Show/hide command selector based on toggle
+						quickEditCommandSetting.settingEl.toggleClass('bases-cms-setting-hidden', !value);
+					})();
 				}));
 
 		// Command picker setting
@@ -214,7 +243,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 						const modal = new CommandPickerModal(this.app, (commandId: string) => {
 							void (async () => {
 								// Get command name by looking it up
-								// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.commands structure not fully typed
 								const commandRegistry = (this.app as { commands?: { listCommands?: () => Array<{ id: string; name: string }>; commands?: Record<string, { name?: string }> } }).commands;
 								let commandName = '';
 								
@@ -255,12 +283,14 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 						text: 'Clear',
 						attr: { style: 'margin-left: 8px;' }
 					});
-					clearButton?.addEventListener('click', async () => {
-						this.plugin.settings.quickEditCommand = '';
-						this.plugin.settings.quickEditCommandName = '';
-						await this.plugin.saveData(this.plugin.settings);
-						// Re-render to update the UI
-						this.display();
+					clearButton?.addEventListener('click', () => {
+						void (async () => {
+							this.plugin.settings.quickEditCommand = '';
+							this.plugin.settings.quickEditCommandName = '';
+							await this.plugin.saveData(this.plugin.settings);
+							// Re-render to update the UI
+							this.display();
+						})();
 					});
 				}
 			});

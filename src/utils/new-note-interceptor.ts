@@ -1,6 +1,5 @@
 import { App } from 'obsidian';
 import { readCMSSettings } from '../shared/settings-schema';
-import { CMS_VIEW_TYPE } from '../views/cms-view';
 import type { BasesCMSSettings } from '../types';
 
 // Bases config object interface
@@ -36,9 +35,7 @@ export function setupNewNoteInterceptor(
 		// Check if this view is active - check if the button is within our view's container
 		// or if the active leaf contains our container
 		// Use activeLeaf for compatibility (deprecated but necessary here)
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- activeLeaf is deprecated but needed for Bases views
 		const activeLeaf = (app.workspace as unknown as { activeLeaf?: { view?: unknown } }).activeLeaf;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Need to access containerEl from view
 		const activeView = activeLeaf?.view as { containerEl?: HTMLElement } | undefined;
 		const activeViewContainer = activeView ? activeView.containerEl : null;
 		const isOurView = activeView && activeViewContainer && (
@@ -66,7 +63,6 @@ export function setupNewNoteInterceptor(
 				if (locationInput === '') {
 					// Use Obsidian's default new note creation behavior
 					// Access Obsidian's vault config directly
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vault config is not in public API
 					const vaultConfig = (app.vault as { config?: { newFileLocation?: string; newFileFolderPath?: string } }).config;
 					const newFileLocation = vaultConfig?.newFileLocation || 'folder';
 					const newFileFolderPath = vaultConfig?.newFileFolderPath || '';
@@ -131,8 +127,9 @@ export function setupNewNoteInterceptor(
 	const observer = new MutationObserver(() => {
 		const buttons = document.querySelectorAll('.bases-toolbar-new-item-menu .text-icon-button, .bases-toolbar-new-item-menu');
 		buttons.forEach((buttonEl) => {
-			if (!(buttonEl as any).__cmsIntercepted) {
-				(buttonEl as any).__cmsIntercepted = true;
+			const buttonWithFlag = buttonEl as unknown as { __cmsIntercepted?: boolean };
+			if (!buttonWithFlag.__cmsIntercepted) {
+				buttonWithFlag.__cmsIntercepted = true;
 				buttonEl.addEventListener('click', interceptNewButton as EventListener, true);
 			}
 		});
@@ -143,8 +140,9 @@ export function setupNewNoteInterceptor(
 	// Check immediately
 	const buttons = document.querySelectorAll('.bases-toolbar-new-item-menu .text-icon-button, .bases-toolbar-new-item-menu');
 	buttons.forEach((buttonEl) => {
-		if (!(buttonEl as any).__cmsIntercepted) {
-			(buttonEl as any).__cmsIntercepted = true;
+		const buttonWithFlag = buttonEl as unknown as { __cmsIntercepted?: boolean };
+		if (!buttonWithFlag.__cmsIntercepted) {
+			buttonWithFlag.__cmsIntercepted = true;
 			buttonEl.addEventListener('click', interceptNewButton as EventListener, true);
 		}
 	});

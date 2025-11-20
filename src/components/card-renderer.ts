@@ -181,13 +181,12 @@ export class CardRenderer {
 		container: HTMLElement,
 		card: CardData,
 		entry: BasesEntry,
-		onPropertyToggle?: (path: string, property: string, value: unknown) => void
+		onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>
 	): void {
 		// Render ALL properties from card.properties
 		let hasProperties = false;
 
 		// Get property type info to determine if it's a checkbox
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- MetadataCache may have getAllPropertyInfos method
 		const metadataCache = this.app.metadataCache as unknown as Record<string, unknown>;
 		const propertyInfos = (typeof metadataCache.getAllPropertyInfos === 'function' 
 			? metadataCache.getAllPropertyInfos() 
@@ -240,7 +239,7 @@ export class CardRenderer {
 				if (Array.isArray(propertyValue)) {
 					value.setText(propertyValue.join(', '));
 				} else if (propertyValue !== null && propertyValue !== undefined) {
-					if (typeof propertyValue === 'object') {
+					if (typeof propertyValue === 'object' && propertyValue !== null && !Array.isArray(propertyValue)) {
 						value.setText(JSON.stringify(propertyValue));
 					} else {
 						value.setText(String(propertyValue));

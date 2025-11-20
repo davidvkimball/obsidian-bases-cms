@@ -74,11 +74,13 @@ export class RemovePropertyModal extends Modal {
 		const applyBtn = buttonContainer.createEl('button');
 		applyBtn.setText('Apply');
 		applyBtn.addClass('mod-cta');
-		applyBtn.addEventListener('click', async () => {
-			if (this.propertiesToRemove.size > 0) {
-				await this.applyChanges();
-				this.close();
-			}
+		applyBtn.addEventListener('click', () => {
+			void (async () => {
+				if (this.propertiesToRemove.size > 0) {
+					await this.applyChanges();
+					this.close();
+				}
+			})();
 		});
 	}
 

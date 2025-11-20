@@ -14,7 +14,6 @@ export function getFirstBasesPropertyValue(entry: BasesEntry, propertyString: st
 	const properties = propertyString.split(',').map(p => p.trim()).filter(p => p);
 
 	for (const prop of properties) {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- BasesEntry.getValue accepts string but prop may be typed differently
 		const value = entry.getValue(prop as `note.${string}` | `formula.${string}` | `file.${string}`);
 
 		// Check if property exists and has a value
@@ -44,7 +43,6 @@ export function getAllBasesImagePropertyValues(entry: BasesEntry, propertyString
 	const prop = propertyString.split(',')[0].trim();
 	if (!prop) return [];
 
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- BasesEntry.getValue accepts string
 	const value = entry.getValue(prop as `note.${string}` | `formula.${string}` | `file.${string}`) as { data?: unknown; date?: Date } | null;
 
 	// Skip if property doesn't exist or is not text/list type
@@ -99,10 +97,10 @@ export function resolveBasesProperty(
 		if (Array.isArray(tags)) {
 			return tags.join(', ');
 		}
-		if (tags && typeof tags === 'object') {
+		if (tags && typeof tags === 'object' && tags !== null && !Array.isArray(tags)) {
 			return JSON.stringify(tags);
 		}
-		return tags ? String(tags) : null;
+		return tags !== null && tags !== undefined ? String(tags) : null;
 	}
 
 	if (propertyName === 'tags' || propertyName === 'note.tags') {
@@ -110,15 +108,14 @@ export function resolveBasesProperty(
 		if (Array.isArray(tags)) {
 			return tags.join(', ');
 		}
-		if (tags && typeof tags === 'object') {
+		if (tags && typeof tags === 'object' && tags !== null && !Array.isArray(tags)) {
 			return JSON.stringify(tags);
 		}
-		return tags ? String(tags) : null;
+		return tags !== null && tags !== undefined ? String(tags) : null;
 	}
 
 	// Get value from BasesEntry
 	try {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- BasesEntry.getValue accepts string
 		const value = entry.getValue(propertyName as `note.${string}` | `formula.${string}` | `file.${string}`) as { data?: unknown; date?: Date } | null;
 		
 		if (!value) return null;
@@ -134,12 +131,12 @@ export function resolveBasesProperty(
 			if (Array.isArray(data)) {
 				return data.map(String).join(', ');
 			}
-			if (data != null && data !== '') {
-				if (typeof data === 'object') {
-					return JSON.stringify(data);
-				}
-				return String(data);
+		if (data != null && data !== '') {
+			if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+				return JSON.stringify(data);
 			}
+			return String(data);
+		}
 		}
 
 		return null;
@@ -153,7 +150,7 @@ export function resolveBasesProperty(
 			if (typeof propValue === 'boolean') {
 				return propValue ? 'Yes' : 'No';
 			}
-			if (typeof propValue === 'object') {
+			if (typeof propValue === 'object' && propValue !== null) {
 				return JSON.stringify(propValue);
 			}
 			return String(propValue);

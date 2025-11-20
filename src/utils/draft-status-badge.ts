@@ -41,7 +41,7 @@ export function renderDraftStatusBadge(
 	entry: BasesEntry,
 	cardPath: string,
 	settings: CMSSettings,
-	onPropertyToggle?: (path: string, property: string, value: unknown) => void
+	onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>
 ): void {
 	if (!settings.showDraftStatus) {
 		return;

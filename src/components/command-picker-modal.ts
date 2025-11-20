@@ -21,7 +21,6 @@ export class CommandPickerModal extends FuzzySuggestModal<CommandOption> {
 	getItems(): CommandOption[] {
 		// Get all available commands
 		// Try multiple methods to ensure we get ALL commands, not just context-filtered ones
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.commands is not fully typed
 		const commandRegistry = (this.app as { commands?: { listCommands?: () => CommandOption[]; commands?: Record<string, CommandOption>; commandRegistry?: Record<string, CommandOption> } }).commands;
 		
 		// Use a Set to deduplicate by command ID
@@ -98,7 +97,6 @@ export class CommandPickerModal extends FuzzySuggestModal<CommandOption> {
 	}
 
 	// Override to show command name only
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- FuzzySuggestModal match type is not fully typed
 	renderSuggestion(match: { item: CommandOption }, el: HTMLElement): void {
 		const item = match.item;
 		el.createDiv({ cls: 'suggestion-title', text: item.name });

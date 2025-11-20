@@ -85,9 +85,11 @@ export class ManageTagsModal extends Modal {
 		const applyBtn = buttonContainer.createEl('button');
 		applyBtn.setText('Apply');
 		applyBtn.addClass('mod-cta');
-		applyBtn.addEventListener('click', async () => {
-			await this.applyChanges();
-			this.close();
+		applyBtn.addEventListener('click', () => {
+			void (async () => {
+				await this.applyChanges();
+				this.close();
+			})();
 		});
 	}
 

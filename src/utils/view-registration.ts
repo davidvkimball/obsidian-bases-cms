@@ -9,7 +9,6 @@ import { BasesCMSView, CMS_VIEW_TYPE } from '../views/cms-view';
  */
 export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void {
 	try {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Bases plugin API not fully typed
 		const basesPlugin = plugin as { registerBasesView?: (type: string, config: { name: string; icon: string; factory: (controller: QueryController, containerEl: HTMLElement) => BasesCMSView; options: () => unknown[] }) => void };
 		if (typeof basesPlugin.registerBasesView === 'function') {
 			basesPlugin.registerBasesView(CMS_VIEW_TYPE, {
@@ -18,7 +17,6 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 				factory: (controller: QueryController, containerEl: HTMLElement) => {
 					const view = new BasesCMSView(controller, containerEl, plugin);
 					// Add view to plugin's active views tracking
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Plugin has activeViews property
 					const pluginWithViews = plugin as { activeViews?: Set<BasesCMSView> };
 					if (pluginWithViews.activeViews) {
 						pluginWithViews.activeViews.add(view);
@@ -30,7 +28,6 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 		} else if (retries > 0) {
 			// Method not available yet, retry after a short delay (common on mobile)
 			// Clear any existing timeout before setting a new one
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Plugin has registrationTimeout property
 			const pluginWithTimeout = plugin as { registrationTimeout?: number | null };
 			const registrationTimeout = pluginWithTimeout.registrationTimeout;
 			if (registrationTimeout !== null && registrationTimeout !== undefined) {

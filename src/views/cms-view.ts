@@ -5,7 +5,7 @@
 
 import { BasesView, BasesEntry, QueryController, TFile } from 'obsidian';
 import type BasesCMSPlugin from '../main';
-import { transformBasesEntries } from '../shared/data-transform';
+import { transformBasesEntries, type CardData, type CMSSettings } from '../shared/data-transform';
 import { readCMSSettings } from '../shared/settings-schema';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
 import { loadSnippetsForEntries, loadImagesForEntries, loadEmbedImagesForEntries } from '../shared/content-loader';
@@ -57,7 +57,6 @@ export class BasesCMSView extends BasesView {
 		this.containerEl.addClass('bases-cms-container');
 		
 		// Set initial batch size based on device (matches Dynamic Views)
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.isMobile not in public API
 		const isMobile = (this.app as { isMobile?: boolean }).isMobile ?? false;
 		this.displayedCount = isMobile ? 25 : BATCH_SIZE;
 
@@ -140,8 +139,8 @@ export class BasesCMSView extends BasesView {
 				if (this.bulkToolbar) {
 					this.bulkToolbar.hide();
 				}
-				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar') as HTMLElement | null;
-				if (toolbarEl) {
+				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar');
+				if (toolbarEl instanceof HTMLElement) {
 					toolbarEl.removeClass('bases-cms-bulk-toolbar-visible');
 					toolbarEl.addClass('bases-cms-bulk-toolbar-hidden');
 				}
@@ -152,7 +151,6 @@ export class BasesCMSView extends BasesView {
 		const getBaseIdentifier = (): string | null => {
 			try {
 			// Try to get base name from config
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Config structure not fully typed
 			const config = this.config as { getName?: () => string; name?: string };
 				if (config?.getName) {
 					return config.getName();
@@ -161,7 +159,6 @@ export class BasesCMSView extends BasesView {
 					return String(config.name);
 				}
 				// Try to access controller through parent class
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- BasesView structure not fully typed
 				const view = this as { controller?: { getBaseName?: () => string; baseName?: string } };
 				if (view.controller) {
 					const controller = view.controller;
@@ -174,13 +171,12 @@ export class BasesCMSView extends BasesView {
 				}
 				// Try to get from data
 				if (this.data) {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Data structure not fully typed
 					const data = this.data as { baseName?: string };
 					if (data.baseName) {
 						return String(data.baseName);
 					}
 				}
-			} catch (e) {
+			} catch {
 				// Ignore errors
 			}
 			return null;
@@ -247,8 +243,8 @@ export class BasesCMSView extends BasesView {
 				if (this.bulkToolbar) {
 					this.bulkToolbar.hide();
 				}
-				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar') as HTMLElement | null;
-				if (toolbarEl) {
+				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar');
+				if (toolbarEl instanceof HTMLElement) {
 					toolbarEl.removeClass('bases-cms-bulk-toolbar-visible');
 					toolbarEl.addClass('bases-cms-bulk-toolbar-hidden');
 				}
@@ -269,7 +265,6 @@ export class BasesCMSView extends BasesView {
 		// Check if we're still the active view
 		// If onDataUpdated is called but we're not the active view, we've been switched away
 		// Use activeLeaf for compatibility (deprecated but necessary here since BasesCMSView doesn't extend View)
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- activeLeaf is deprecated but needed for Bases views
 		const activeLeaf = (this.app.workspace as unknown as { activeLeaf?: { view?: unknown } }).activeLeaf;
 		const activeView = activeLeaf?.view as BasesCMSView | undefined;
 		if (activeView && this.selectedFiles.size > 0) {
@@ -288,7 +283,6 @@ export class BasesCMSView extends BasesView {
 				
 				// Container is visible but we're not the active view
 				// Check if our container is in the active view's container
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- BasesCMSView has containerEl property
 				const activeViewContainer = (activeView as unknown as { containerEl?: HTMLElement }).containerEl;
 				if (!activeViewContainer || !activeViewContainer.contains(this.containerEl)) {
 					// Our container is not in the active view - we've been switched away
@@ -315,9 +309,6 @@ export class BasesCMSView extends BasesView {
 			const allEntries = this.data.data;
 
 			// Update card renderer with config (now available)
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- SharedCardRenderer has basesConfig property
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- SharedCardRenderer has basesConfig property
 			(this.cardRenderer as unknown as { basesConfig?: { get?: (key: string) => unknown } }).basesConfig = this.config;
 
 			// Read settings from Bases config
@@ -503,7 +494,6 @@ export class BasesCMSView extends BasesView {
 						if (entry.path in this.snippets && this.snippets[entry.path]) {
 							const cardEl = this.containerEl.querySelector(`[data-path="${entry.path}"]`);
 							if (cardEl) {
-								// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Element has stored reference
 								const textPreviewEl = (cardEl as { __textPreviewEl?: HTMLElement }).__textPreviewEl;
 								// Update if element exists and is empty (no text content or only whitespace)
 								if (textPreviewEl && (!textPreviewEl.textContent || textPreviewEl.textContent.trim().length === 0)) {
@@ -519,8 +509,8 @@ export class BasesCMSView extends BasesView {
 			let preservedToolbarEl: HTMLElement | null = null;
 			if (this.isRefreshingWithSelection && this.bulkToolbar) {
 				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar');
-				if (toolbarEl) {
-					preservedToolbarEl = toolbarEl as HTMLElement;
+				if (toolbarEl instanceof HTMLElement) {
+					preservedToolbarEl = toolbarEl;
 					// Remove it from DOM temporarily but keep the reference
 					preservedToolbarEl.remove();
 				}
@@ -624,7 +614,6 @@ export class BasesCMSView extends BasesView {
 			if (preservedToolbarEl && this.bulkToolbar) {
 				this.containerEl.appendChild(preservedToolbarEl);
 				// Update the BulkToolbar's reference to the element
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- BulkToolbar has toolbarEl property
 				(this.bulkToolbar as unknown as { toolbarEl?: HTMLElement }).toolbarEl = preservedToolbarEl;
 			}
 			
@@ -664,10 +653,10 @@ export class BasesCMSView extends BasesView {
 
 	private renderCard(
 		container: HTMLElement,
-		card: any,
+		card: CardData,
 		entry: BasesEntry,
 		index: number,
-		settings: any
+		settings: CMSSettings
 	): { img: HTMLImageElement; src: string } | null {
 		const isSelected = this.selectedFiles.has(card.path);
 		return this.cardRenderer.renderCard(
@@ -734,8 +723,7 @@ export class BasesCMSView extends BasesView {
 			const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 
 			// Dynamic threshold based on viewport and device
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const isMobile = (this.app as any).isMobile;
+			const isMobile = (this.app as { isMobile?: boolean }).isMobile ?? false;
 			const viewportMultiplier = isMobile ? 1 : 2;
 			const threshold = clientHeight * viewportMultiplier;
 
@@ -784,8 +772,8 @@ export class BasesCMSView extends BasesView {
 				// Force immediate hide without waiting for transitions
 				this.bulkToolbar.hide();
 				// Also directly hide the element as a backup
-				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar') as HTMLElement | null;
-				if (toolbarEl) {
+				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar');
+				if (toolbarEl instanceof HTMLElement) {
 					toolbarEl.removeClass('bases-cms-bulk-toolbar-visible');
 					toolbarEl.addClass('bases-cms-bulk-toolbar-hidden');
 				}
@@ -937,8 +925,7 @@ export class BasesCMSView extends BasesView {
 			const orphanedToolbars = document.querySelectorAll('.bases-cms-bulk-toolbar');
 			orphanedToolbars.forEach(toolbar => {
 				// Only remove if it's not our current toolbar
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				const toolbarInstance = (toolbar as any).__bulkToolbarInstance;
+				const toolbarInstance = (toolbar as unknown as { __bulkToolbarInstance?: BulkToolbar }).__bulkToolbarInstance;
 				if (!toolbarInstance || toolbarInstance !== this.bulkToolbar) {
 					toolbar.remove();
 				}
@@ -1024,8 +1011,8 @@ export class BasesCMSView extends BasesView {
 			if (this.bulkToolbar && !this.isRefreshingWithSelection) {
 				this.bulkToolbar.hide();
 				// Force immediate hide as backup
-				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar') as HTMLElement | null;
-				if (toolbarEl) {
+				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar');
+				if (toolbarEl instanceof HTMLElement) {
 					toolbarEl.removeClass('bases-cms-bulk-toolbar-visible');
 					toolbarEl.addClass('bases-cms-bulk-toolbar-hidden');
 				}
@@ -1048,7 +1035,6 @@ export class BasesCMSView extends BasesView {
 		orphanedToolbars.forEach(toolbar => toolbar.remove());
 		
 		// Remove from plugin tracking
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Plugin has removeView method
 		const pluginWithMethod = this.plugin as { removeView?: (view: BasesCMSView) => void };
 		if (pluginWithMethod && typeof pluginWithMethod.removeView === 'function') {
 			pluginWithMethod.removeView(this);

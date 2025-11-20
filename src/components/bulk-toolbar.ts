@@ -50,8 +50,7 @@ export class BulkToolbar {
 		this.toolbarEl = document.createElement('div');
 		this.toolbarEl.className = 'bases-toolbar bases-cms-bulk-toolbar bases-cms-bulk-toolbar-hidden';
 		// Store reference to this instance on the element for cleanup checks
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Need to store instance reference for cleanup
-		(this.toolbarEl as any).__bulkToolbarInstance = this;
+		(this.toolbarEl as unknown as { __bulkToolbarInstance?: BulkToolbar }).__bulkToolbarInstance = this;
 
 		// Create the toolbar content
 		this.createToolbarContent();
@@ -68,13 +67,13 @@ export class BulkToolbar {
 
 		// Find the bases-header - it should be a sibling of our container
 		// The structure should be: bases-header, then bulk toolbar, then bases-view bases-cms bases-cms-container
-		let basesHeader = this.container.closest('.bases-header') as HTMLElement | null;
+		let basesHeader = this.container.closest('.bases-header');
 		if (!basesHeader) {
 			// Try finding it in the parent hierarchy
 			let parent = this.container.parentElement;
 			while (parent && !basesHeader) {
 				if (parent.classList.contains('bases-header')) {
-					basesHeader = parent as HTMLElement;
+					basesHeader = parent;
 					break;
 				}
 				parent = parent.parentElement;
@@ -82,7 +81,7 @@ export class BulkToolbar {
 		}
 		if (!basesHeader) {
 			// Try querying from document - look for one that contains our container
-			const allHeaders = Array.from(document.querySelectorAll('.bases-header')) as HTMLElement[];
+			const allHeaders = Array.from(document.querySelectorAll('.bases-header'));
 			for (const header of allHeaders) {
 				if (header.contains(this.container)) {
 					basesHeader = header;
@@ -93,7 +92,7 @@ export class BulkToolbar {
 		
 		// Find the view-content container that should contain both bases-header and our container
 		// The structure should be: view-content > bases-header > bases-toolbar, then our bulk toolbar, then bases-view
-		const viewContent = this.container.closest('.view-content') as HTMLElement | null;
+		const viewContent = this.container.closest('.view-content');
 		
 		if (viewContent) {
 			// Position toolbar as a sibling of bases-header, right after it, before bases-view container
@@ -178,12 +177,16 @@ export class BulkToolbar {
 
 		// Right side: Publish
 		if (this.plugin.settings.showToolbarPublish) {
-			createBasesButton('book-check', 'Publish', () => this.handlePublish(), rightContainer);
+			createBasesButton('book-check', 'Publish', () => {
+				void this.handlePublish();
+			}, rightContainer);
 		}
 
 		// Right side: Draft
 		if (this.plugin.settings.showToolbarDraft) {
-			createBasesButton('book-dashed', 'Draft', () => this.handleSetDraft(), rightContainer);
+			createBasesButton('book-dashed', 'Draft', () => {
+				void this.handleSetDraft();
+			}, rightContainer);
 		}
 
 		// Right side: Tags
@@ -203,7 +206,9 @@ export class BulkToolbar {
 
 		// Right side: Delete
 		if (this.plugin.settings.showToolbarDelete) {
-			createBasesButton('trash-2', 'Delete', () => this.handleDelete(), rightContainer, true);
+			createBasesButton('trash-2', 'Delete', () => {
+				void this.handleDelete();
+			}, rightContainer, true);
 		}
 
 		// Set up responsive behavior - detect collapsed state
@@ -239,7 +244,7 @@ export class BulkToolbar {
 			containerObserver.observe(container);
 			
 			// Store for cleanup
-			(this as any).containerObserver = containerObserver;
+			(this as unknown as { containerObserver?: ResizeObserver }).containerObserver = containerObserver;
 		}
 	}
 
@@ -353,12 +358,10 @@ export class BulkToolbar {
 				files,
 				'publish',
 				() => {
-					void (				() => {
 					void (async () => {
 						await this.bulkOps.setDraft(files, false, this.settings);
 						this.refreshView();
 					})();
-				})();
 				}
 			);
 			modal.open();
@@ -478,12 +481,10 @@ export class BulkToolbar {
 			this.resizeObserver = null;
 		}
 		// Clean up container observer if it exists
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Container observer stored dynamically
-		const containerObserver = (this as any).containerObserver;
+		const containerObserver = (this as unknown as { containerObserver?: ResizeObserver }).containerObserver;
 		if (containerObserver) {
 			containerObserver.disconnect();
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Container observer stored dynamically
-			(this as any).containerObserver = null;
+			(this as unknown as { containerObserver?: ResizeObserver }).containerObserver = undefined;
 		}
 		if (this.toolbarEl) {
 			this.toolbarEl.remove();
