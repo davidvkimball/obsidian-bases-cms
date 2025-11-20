@@ -26,7 +26,7 @@ export async function addProperties(
 			// Tags should always be a List, even if there is just one tag.
 			if (
 				key === 'tags' &&
-				!frontmatter.hasOwnProperty('tags') &&
+				!Object.prototype.hasOwnProperty.call(frontmatter, 'tags') &&
 				!Array.isArray(value.data)
 			) {
 				frontmatter[key] = [value.data];

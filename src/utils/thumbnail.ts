@@ -135,7 +135,7 @@ export async function generateThumbnail(
 					resolve(dataUrl);
 				} catch (error) {
 					URL.revokeObjectURL(imageUrl);
-					reject(error);
+					reject(error instanceof Error ? error : new Error(String(error)));
 				}
 			};
 			
@@ -208,7 +208,7 @@ export async function generateThumbnailFromUrl(
 					
 					resolve(dataUrl);
 				} catch (error) {
-					reject(error);
+					reject(error instanceof Error ? error : new Error(String(error)));
 				}
 			};
 			

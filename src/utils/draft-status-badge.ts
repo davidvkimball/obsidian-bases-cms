@@ -62,11 +62,11 @@ export function renderDraftStatusBadge(
 		}
 		
 		if (onPropertyToggle) {
-			statusBadge.style.cursor = 'pointer';
-			statusBadge.addEventListener('click', async (e) => {
+			statusBadge.addClass('bases-cms-cursor-pointer');
+			statusBadge.addEventListener('click', (e) => {
 				e.stopPropagation();
 				const newValue = !booleanValue;
-				await onPropertyToggle(cardPath, 'draft', newValue);
+				void onPropertyToggle(cardPath, 'draft', newValue);
 			});
 		}
 	}

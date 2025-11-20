@@ -3,7 +3,7 @@
  * Searchable modal for selecting an Obsidian command
  */
 
-import { Modal, App, FuzzySuggestModal } from 'obsidian';
+import { App, FuzzySuggestModal } from 'obsidian';
 
 interface CommandOption {
 	id: string;
@@ -21,8 +21,8 @@ export class CommandPickerModal extends FuzzySuggestModal<CommandOption> {
 	getItems(): CommandOption[] {
 		// Get all available commands
 		// Try multiple methods to ensure we get ALL commands, not just context-filtered ones
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const commandRegistry = (this.app as any).commands;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.commands is not fully typed
+		const commandRegistry = (this.app as { commands?: { listCommands?: () => CommandOption[]; commands?: Record<string, CommandOption>; commandRegistry?: Record<string, CommandOption> } }).commands;
 		
 		// Use a Set to deduplicate by command ID
 		const commandMap = new Map<string, CommandOption>();
@@ -47,10 +47,9 @@ export class CommandPickerModal extends FuzzySuggestModal<CommandOption> {
 		// Method 2: Try accessing the internal commands registry directly
 		// This should give us ALL commands regardless of context
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const registry = (commandRegistry as any).commands;
+			const registry = commandRegistry?.commands;
 			if (registry && typeof registry === 'object') {
-				const allCommands = Object.values(registry) as any[];
+				const allCommands = Object.values(registry) as CommandOption[];
 				for (const command of allCommands) {
 					if (command && command.id && command.name && !commandMap.has(command.id)) {
 						commandMap.set(command.id, {
@@ -66,11 +65,9 @@ export class CommandPickerModal extends FuzzySuggestModal<CommandOption> {
 		
 		// Method 3: Try accessing via internal structure (fallback)
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const internalRegistry = (commandRegistry as any).commandRegistry;
+			const internalRegistry = commandRegistry?.commandRegistry;
 			if (internalRegistry && typeof internalRegistry === 'object') {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				const allCommands = Object.values(internalRegistry) as any[];
+				const allCommands = Object.values(internalRegistry) as CommandOption[];
 				for (const command of allCommands) {
 					if (command && command.id && command.name && !commandMap.has(command.id)) {
 						commandMap.set(command.id, {
@@ -101,9 +98,9 @@ export class CommandPickerModal extends FuzzySuggestModal<CommandOption> {
 	}
 
 	// Override to show command name only
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	renderSuggestion(match: any, el: HTMLElement): void {
-		const item = match.item as CommandOption;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- FuzzySuggestModal match type is not fully typed
+	renderSuggestion(match: { item: CommandOption }, el: HTMLElement): void {
+		const item = match.item;
 		el.createDiv({ cls: 'suggestion-title', text: item.name });
 	}
 }

@@ -103,7 +103,7 @@ export async function executeSmartDeletion(
 	// Delete files
 	for (const file of preview.filesToDelete) {
 		try {
-			await app.vault.delete(file);
+			await app.fileManager.trashFile(file);
 			deletedCount++;
 		} catch (error) {
 			console.error(`Error deleting file ${file.path}:`, error);
@@ -114,7 +114,7 @@ export async function executeSmartDeletion(
 	// Delete attachments
 	for (const attachment of preview.attachmentsToDelete) {
 		try {
-			await app.vault.delete(attachment);
+			await app.fileManager.trashFile(attachment);
 			deletedCount++;
 		} catch (error) {
 			console.error(`Error deleting attachment ${attachment.path}:`, error);
@@ -125,7 +125,7 @@ export async function executeSmartDeletion(
 	// Delete folders (recursive)
 	for (const folder of preview.foldersToDelete) {
 		try {
-			await app.vault.delete(folder, true);
+			await app.fileManager.trashFile(folder);
 			deletedCount++;
 		} catch (error) {
 			console.error(`Error deleting folder ${folder.path}:`, error);

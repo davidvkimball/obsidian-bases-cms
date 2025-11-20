@@ -3,7 +3,7 @@
  * Shows confirmation dialog before performing bulk operations
  */
 
-import { Modal, App } from 'obsidian';
+import { Modal, App, Setting } from 'obsidian';
 
 export class BulkOperationConfirmModal extends Modal {
 	private files: string[];
@@ -28,7 +28,8 @@ export class BulkOperationConfirmModal extends Modal {
 		contentEl.empty();
 
 		const operationName = this.operation === 'draft' ? 'mark as draft' : 'mark as published';
-		contentEl.createEl('h2', { text: `Confirm ${operationName.charAt(0).toUpperCase() + operationName.slice(1)}` });
+		const headingText = operationName.charAt(0).toUpperCase() + operationName.slice(1);
+		new Setting(contentEl).setName(`Confirm ${headingText}`).setHeading();
 
 		contentEl.createEl('p', {
 			text: `Are you sure you want to ${operationName} ${this.files.length} file${this.files.length !== 1 ? 's' : ''}?`
@@ -50,10 +51,7 @@ export class BulkOperationConfirmModal extends Modal {
 
 		// Buttons
 		const buttonContainer = contentEl.createDiv();
-		buttonContainer.style.display = 'flex';
-		buttonContainer.style.gap = '0.5rem';
-		buttonContainer.style.justifyContent = 'flex-end';
-		buttonContainer.style.marginTop = '1rem';
+		buttonContainer.addClass('bases-cms-modal-button-container');
 
 		const cancelBtn = buttonContainer.createEl('button');
 		cancelBtn.setText('Cancel');

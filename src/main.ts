@@ -48,8 +48,8 @@ export default class BasesCMSPlugin extends Plugin {
 		const viewsToRemove: BasesCMSView[] = [];
 		this.activeViews.forEach(view => {
 			// Check if view is still in DOM
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const containerEl = (view as any).containerEl;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- BasesCMSView has containerEl property
+			const containerEl = (view as unknown as { containerEl?: HTMLElement }).containerEl;
 			if (!containerEl || !containerEl.parentElement) {
 				viewsToRemove.push(view);
 			}

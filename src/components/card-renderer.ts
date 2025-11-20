@@ -5,7 +5,7 @@
 
 import { App, BasesEntry, TFile } from 'obsidian';
 import { CardData } from '../types';
-import { getAllBasesImagePropertyValues, resolveBasesProperty } from '../utils/property';
+import { getAllBasesImagePropertyValues } from '../utils/property';
 
 export class CardRenderer {
 	constructor(
@@ -187,8 +187,8 @@ export class CardRenderer {
 		let hasProperties = false;
 
 		// Get property type info to determine if it's a checkbox
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const metadataCache = this.app.metadataCache as any;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- MetadataCache may have getAllPropertyInfos method
+		const metadataCache = this.app.metadataCache as unknown as Record<string, unknown>;
 		const propertyInfos = (typeof metadataCache.getAllPropertyInfos === 'function' 
 			? metadataCache.getAllPropertyInfos() 
 			: {}) || {};
@@ -218,15 +218,17 @@ export class CardRenderer {
 						// Don't prevent default - let the checkbox toggle naturally
 					});
 					
-					checkbox.addEventListener('change', async (e) => {
+					checkbox.addEventListener('change', (e) => {
 						e.stopPropagation();
-						try {
-							await onPropertyToggle(card.path, propertyName, checkbox.checked);
-						} catch (error) {
-							console.error('Error toggling property:', error);
-							// Revert checkbox state on error
-							checkbox.checked = !checkbox.checked;
-						}
+						void (async () => {
+							try {
+								await onPropertyToggle(card.path, propertyName, checkbox.checked);
+							} catch (error) {
+								console.error('Error toggling property:', error);
+								// Revert checkbox state on error
+								checkbox.checked = !checkbox.checked;
+							}
+						})();
 					});
 				}
 			} else {
@@ -238,7 +240,11 @@ export class CardRenderer {
 				if (Array.isArray(propertyValue)) {
 					value.setText(propertyValue.join(', '));
 				} else if (propertyValue !== null && propertyValue !== undefined) {
-					value.setText(String(propertyValue));
+					if (typeof propertyValue === 'object') {
+						value.setText(JSON.stringify(propertyValue));
+					} else {
+						value.setText(String(propertyValue));
+					}
 				} else {
 					value.setText('…');
 				}
@@ -257,7 +263,7 @@ export class CardRenderer {
 		}
 
 		if (!hasProperties) {
-			container.style.display = 'none';
+			container.addClass('bases-cms-properties-hidden');
 		}
 	}
 }

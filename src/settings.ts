@@ -1,5 +1,5 @@
 import { PluginSettingTab, Setting, App, Plugin } from 'obsidian';
-import { BasesCMSSettings, DEFAULT_SETTINGS } from './types';
+import { BasesCMSSettings } from './types';
 import { CommandPickerModal } from './components/command-picker-modal';
 
 export class BasesCMSSettingTab extends PluginSettingTab {
@@ -15,8 +15,10 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 	 */
 	private refreshActiveToolbars(): void {
 		// Use the plugin's method to refresh all toolbars
-		if (this.plugin && typeof (this.plugin as any).refreshAllToolbars === 'function') {
-			(this.plugin as any).refreshAllToolbars();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Plugin has refreshAllToolbars method
+		const pluginWithMethod = this.plugin as { refreshAllToolbars?: () => void };
+		if (pluginWithMethod && typeof pluginWithMethod.refreshAllToolbars === 'function') {
+			pluginWithMethod.refreshAllToolbars();
 		}
 	}
 
@@ -37,7 +39,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				}));
 
 		// Toolbar button visibility settings
-		containerEl.createEl('h3', { text: 'Toolbar buttons' });
+		new Setting(containerEl).setName('Toolbar buttons').setHeading();
 
 		new Setting(containerEl)
 			.setName('Show select all button')
@@ -128,7 +130,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				}));
 
 		// Deletion settings
-		containerEl.createEl('h3', { text: 'Deletions' });
+		new Setting(containerEl).setName('Deletions').setHeading();
 
 		new Setting(containerEl)
 			.setName('Delete parent folder for specific file name')
@@ -173,7 +175,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				}));
 
 		// Icon settings
-		containerEl.createEl('h3', { text: 'Appearance' });
+		new Setting(containerEl).setName('Appearance').setHeading();
 
 		new Setting(containerEl)
 			.setName('Use home icon for CMS view')
@@ -186,9 +188,9 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				}));
 
 		// Quick edit settings
-		containerEl.createEl('h3', { text: 'Quick edit' });
+		new Setting(containerEl).setName('Quick edit').setHeading();
 
-		const quickEditToggleSetting = new Setting(containerEl)
+		new Setting(containerEl)
 			.setName('Enable quick edit')
 			.setDesc('Show a pencil icon on card titles that launches a command when clicked')
 			.addToggle(toggle => toggle
@@ -197,7 +199,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 					this.plugin.settings.enableQuickEdit = value;
 					await this.plugin.saveData(this.plugin.settings);
 					// Show/hide command selector based on toggle
-					quickEditCommandSetting.settingEl.style.display = value ? '' : 'none';
+					quickEditCommandSetting.settingEl.toggleClass('bases-cms-setting-hidden', !value);
 				}));
 
 		// Command picker setting
@@ -209,39 +211,40 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 					(this.plugin.settings.quickEditCommand ? 'Select command...' : 'No command selected');
 				button.setButtonText(currentCommandName)
 					.onClick(() => {
-						const modal = new CommandPickerModal(this.app, async (commandId: string) => {
-							// Get command name by looking it up
-							// eslint-disable-next-line @typescript-eslint/no-explicit-any
-							const commandRegistry = (this.app as any).commands;
-							let commandName = '';
-							
-							// Try to find the command name
-							if (commandRegistry) {
-								// Try listCommands()
-								if (typeof commandRegistry.listCommands === 'function') {
-									const commands = commandRegistry.listCommands();
-									const command = commands.find((cmd: any) => cmd.id === commandId);
-									if (command) {
-										commandName = command.name;
+						const modal = new CommandPickerModal(this.app, (commandId: string) => {
+							void (async () => {
+								// Get command name by looking it up
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.commands structure not fully typed
+								const commandRegistry = (this.app as { commands?: { listCommands?: () => Array<{ id: string; name: string }>; commands?: Record<string, { name?: string }> } }).commands;
+								let commandName = '';
+								
+								// Try to find the command name
+								if (commandRegistry) {
+									// Try listCommands()
+									if (typeof commandRegistry.listCommands === 'function') {
+										const commands = commandRegistry.listCommands();
+										const command = commands.find((cmd) => cmd.id === commandId);
+										if (command) {
+											commandName = command.name;
+										}
+									}
+									
+									// Fallback: try direct registry access
+									if (!commandName) {
+										const registry = commandRegistry.commands;
+										if (registry && registry[commandId]) {
+											commandName = registry[commandId].name || '';
+										}
 									}
 								}
 								
-								// Fallback: try direct registry access
-								if (!commandName) {
-									// eslint-disable-next-line @typescript-eslint/no-explicit-any
-									const registry = (commandRegistry as any).commands;
-									if (registry && registry[commandId]) {
-										commandName = registry[commandId].name || '';
-									}
-								}
-							}
-							
-							this.plugin.settings.quickEditCommand = commandId;
-							this.plugin.settings.quickEditCommandName = commandName;
-							await this.plugin.saveData(this.plugin.settings);
-							
-							// Re-render to update the UI
-							this.display();
+								this.plugin.settings.quickEditCommand = commandId;
+								this.plugin.settings.quickEditCommandName = commandName;
+								await this.plugin.saveData(this.plugin.settings);
+								
+								// Re-render to update the UI
+								this.display();
+							})();
 						});
 						modal.open();
 					});
@@ -263,7 +266,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 			});
 		
 		// Hide command selector if quick edit is disabled
-		quickEditCommandSetting.settingEl.style.display = this.plugin.settings.enableQuickEdit ? '' : 'none';
+		quickEditCommandSetting.settingEl.toggleClass('bases-cms-setting-hidden', !this.plugin.settings.enableQuickEdit);
 
 	}
 }

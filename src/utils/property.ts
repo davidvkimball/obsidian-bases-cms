@@ -14,8 +14,8 @@ export function getFirstBasesPropertyValue(entry: BasesEntry, propertyString: st
 	const properties = propertyString.split(',').map(p => p.trim()).filter(p => p);
 
 	for (const prop of properties) {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-		const value = entry.getValue(prop as any);
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- BasesEntry.getValue accepts string but prop may be typed differently
+		const value = entry.getValue(prop as `note.${string}` | `formula.${string}` | `file.${string}`);
 
 		// Check if property exists and has a value
 		const valueObj = value as { date?: Date; data?: unknown } | null;
@@ -44,8 +44,8 @@ export function getAllBasesImagePropertyValues(entry: BasesEntry, propertyString
 	const prop = propertyString.split(',')[0].trim();
 	if (!prop) return [];
 
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-	const value = entry.getValue(prop as any) as { data?: unknown; date?: Date } | null;
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- BasesEntry.getValue accepts string
+	const value = entry.getValue(prop as `note.${string}` | `formula.${string}` | `file.${string}`) as { data?: unknown; date?: Date } | null;
 
 	// Skip if property doesn't exist or is not text/list type
 	if (!value || !('data' in value)) return [];
@@ -99,6 +99,9 @@ export function resolveBasesProperty(
 		if (Array.isArray(tags)) {
 			return tags.join(', ');
 		}
+		if (tags && typeof tags === 'object') {
+			return JSON.stringify(tags);
+		}
 		return tags ? String(tags) : null;
 	}
 
@@ -107,13 +110,16 @@ export function resolveBasesProperty(
 		if (Array.isArray(tags)) {
 			return tags.join(', ');
 		}
+		if (tags && typeof tags === 'object') {
+			return JSON.stringify(tags);
+		}
 		return tags ? String(tags) : null;
 	}
 
 	// Get value from BasesEntry
 	try {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-		const value = entry.getValue(propertyName as any) as { data?: unknown; date?: Date } | null;
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- BasesEntry.getValue accepts string
+		const value = entry.getValue(propertyName as `note.${string}` | `formula.${string}` | `file.${string}`) as { data?: unknown; date?: Date } | null;
 		
 		if (!value) return null;
 
@@ -129,6 +135,9 @@ export function resolveBasesProperty(
 				return data.map(String).join(', ');
 			}
 			if (data != null && data !== '') {
+				if (typeof data === 'object') {
+					return JSON.stringify(data);
+				}
 				return String(data);
 			}
 		}
@@ -143,6 +152,9 @@ export function resolveBasesProperty(
 			}
 			if (typeof propValue === 'boolean') {
 				return propValue ? 'Yes' : 'No';
+			}
+			if (typeof propValue === 'object') {
+				return JSON.stringify(propValue);
 			}
 			return String(propValue);
 		}
@@ -169,13 +181,14 @@ export function getPropertyLabel(
 
 	// Use Bases config.getDisplayName() method (same as Dynamic Views)
 	if (basesConfig) {
-		if (typeof (basesConfig as any).getDisplayName === 'function') {
+		const configWithDisplayName = basesConfig as { getDisplayName?: (name: string) => string };
+		if (typeof configWithDisplayName.getDisplayName === 'function') {
 			try {
-				const displayName = (basesConfig as any).getDisplayName(propertyName);
+				const displayName = configWithDisplayName.getDisplayName(propertyName);
 				if (displayName && typeof displayName === 'string' && displayName.trim() !== '') {
 					return displayName;
 				}
-			} catch (e) {
+			} catch {
 				// Fall through to return property name
 			}
 		}

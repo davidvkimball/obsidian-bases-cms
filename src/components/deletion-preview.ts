@@ -3,7 +3,7 @@
  * Shows preview of what will be deleted before confirmation
  */
 
-import { Modal, App, TFile, TFolder } from 'obsidian';
+import { Modal, App, Setting } from 'obsidian';
 import { DeletionPreview } from '../utils/smart-deletion';
 import { executeSmartDeletion } from '../utils/smart-deletion';
 
@@ -21,7 +21,7 @@ export class DeletionPreviewModal extends Modal {
 		const { contentEl } = this;
 
 		contentEl.empty();
-		contentEl.createEl('h2', { text: 'Confirm Deletion' });
+		new Setting(contentEl).setName('Confirm deletion').setHeading();
 		contentEl.createEl('p', { 
 			text: 'The following items will be deleted:',
 			cls: 'bases-cms-deletion-warning'
@@ -75,10 +75,7 @@ export class DeletionPreviewModal extends Modal {
 
 		// Buttons
 		const buttonContainer = contentEl.createDiv();
-		buttonContainer.style.display = 'flex';
-		buttonContainer.style.gap = '0.5rem';
-		buttonContainer.style.justifyContent = 'flex-end';
-		buttonContainer.style.marginTop = '1rem';
+		buttonContainer.addClass('bases-cms-modal-button-container');
 
 		const cancelBtn = buttonContainer.createEl('button');
 		cancelBtn.setText('Cancel');

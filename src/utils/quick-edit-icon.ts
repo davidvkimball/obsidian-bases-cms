@@ -22,7 +22,7 @@ export function setupQuickEditIcon(
 	}
 	
 	const quickEditIcon = titleEl.createSpan('bases-cms-quick-edit-icon');
-	quickEditIcon.style.cursor = 'default';
+	quickEditIcon.addClass('bases-cms-cursor-default');
 	setIcon(quickEditIcon, 'pencil-line');
 	
 	// Prevent title from being clickable when clicking icon
@@ -66,27 +66,24 @@ export function setupQuickEditIcon(
 					baseCommandId = parts.slice(1).join(':');
 				} else {
 					// Try to get plugin from command registry
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const commandRegistry = (app as any).commands;
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const command = commandRegistry?.commands?.[commandId];
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.commands structure not fully typed
+					const appWithCommands = app as { commands?: { commands?: Record<string, unknown> } };
+					const commandRegistry = appWithCommands.commands;
+					const command = commandRegistry?.commands?.[commandId] as { plugin?: { manifest?: { id?: string }; pluginId?: string }; sourcePlugin?: { manifest?: { id?: string }; pluginId?: string } } | undefined;
 					if (command) {
 						// Try multiple ways to get the plugin
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						const sourcePlugin = (command as any).plugin || (command as any).sourcePlugin;
+						const sourcePlugin = command.plugin || command.sourcePlugin;
 						if (sourcePlugin) {
 							// Try to get plugin ID from plugin instance
-							// eslint-disable-next-line @typescript-eslint/no-explicit-any
-							pluginId = (sourcePlugin as any).manifest?.id || (sourcePlugin as any).pluginId;
+							pluginId = sourcePlugin.manifest?.id || sourcePlugin.pluginId || null;
 						}
 					}
 				}
 				
 				// If we have a plugin ID, try to get the plugin instance
 				if (pluginId) {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const plugins = (app as any).plugins;
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.plugins structure not fully typed
+					const plugins = (app as { plugins?: { plugins?: Record<string, Record<string, unknown>> } }).plugins;
 					const sourcePlugin = plugins?.plugins?.[pluginId];
 					
 					if (sourcePlugin) {
@@ -100,15 +97,16 @@ export function setupQuickEditIcon(
 							.join('') + 'ByPath';
 						
 						// Check if the plugin exposes this helper function
-						if (typeof sourcePlugin[methodName] === 'function') {
+						const pluginWithMethod = sourcePlugin as Record<string, unknown>;
+						if (typeof pluginWithMethod[methodName] === 'function') {
 							// Call the helper function directly - no need to open file!
-							await sourcePlugin[methodName](cardPath);
+							await (pluginWithMethod[methodName] as (path: string) => Promise<void>)(cardPath);
 							helperCalled = true;
 							return; // Success, exit early
 						}
 					}
 				}
-			} catch (error) {
+			} catch {
 				// Fall through to try regular command execution
 			}
 			
@@ -116,10 +114,10 @@ export function setupQuickEditIcon(
 			// Many commands work without the file being open
 			if (!helperCalled) {
 				try {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					await (app as any).commands.executeCommandById(plugin.settings.quickEditCommand);
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.commands.executeCommandById not in public API
+					await (app as { commands?: { executeCommandById?: (id: string) => Promise<void> } }).commands?.executeCommandById?.(plugin.settings.quickEditCommand);
 					return; // Success, no need to open file
-				} catch (error) {
+				} catch {
 					// Command failed - it might need the file open
 					// Open file as a last resort
 					
@@ -132,14 +130,15 @@ export function setupQuickEditIcon(
 					// Some commands need the editor context
 					const checkEditorReady = () => {
 						const view = leaf.view;
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						if (view && 'editor' in view && (view as any).editor) {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any -- View may have editor property
+						const viewWithEditor = view as { editor?: unknown };
+						if (view && 'editor' in view && viewWithEditor.editor) {
 							// Editor is ready, execute command
 							setTimeout(async () => {
 								try {
-									// eslint-disable-next-line @typescript-eslint/no-explicit-any
-									await (app as any).commands.executeCommandById(plugin.settings.quickEditCommand);
-								} catch (error) {
+									// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.commands.executeCommandById not in public API
+									await (app as { commands?: { executeCommandById?: (id: string) => Promise<void> } }).commands?.executeCommandById?.(plugin.settings.quickEditCommand);
+								} catch {
 									// Command execution failed
 								}
 							}, 100);

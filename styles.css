@@ -666,7 +666,6 @@
 }
 
 .bases-cms-bulk-toolbar {
-	display: none;
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
@@ -745,6 +744,53 @@
 .bases-cms-bulk-toolbar .text-icon-button.destructive:hover .text-button-icon svg {
 	color: var(--text-error);
 	stroke: var(--text-error);
+}
+
+/* Modal button container */
+.bases-cms-modal-button-container {
+	display: flex;
+	gap: 0.5rem;
+	justify-content: flex-end;
+	margin-top: 1rem;
+}
+
+/* Bulk toolbar visibility states */
+
+.bases-cms-bulk-toolbar-hidden {
+	display: none !important;
+}
+
+.bases-cms-bulk-toolbar-visible {
+	display: flex !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+	transform: translateY(0) !important;
+}
+
+.bases-cms-bulk-toolbar-animating-in {
+	opacity: 1 !important;
+	transform: translateY(0) !important;
+}
+
+.bases-cms-bulk-toolbar-animating-out {
+	opacity: 0 !important;
+	transform: translateY(-10px) !important;
+}
+
+.bases-cms-properties-hidden {
+	display: none;
+}
+
+.bases-cms-setting-hidden {
+	display: none;
+}
+
+.bases-cms-cursor-default {
+	cursor: default;
+}
+
+.bases-cms-cursor-pointer {
+	cursor: pointer;
 }
 
 /* Responsive: Hide text labels on icon buttons when collapsed, but keep count visible */

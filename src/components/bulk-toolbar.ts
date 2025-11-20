@@ -48,13 +48,9 @@ export class BulkToolbar {
 	private createToolbar(): void {
 		// Create toolbar element matching Bases structure
 		this.toolbarEl = document.createElement('div');
-		this.toolbarEl.className = 'bases-toolbar bases-cms-bulk-toolbar';
-		this.toolbarEl.style.display = 'none';
-		this.toolbarEl.style.opacity = '0';
-		this.toolbarEl.style.transform = 'translateY(-10px)';
-		this.toolbarEl.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+		this.toolbarEl.className = 'bases-toolbar bases-cms-bulk-toolbar bases-cms-bulk-toolbar-hidden';
 		// Store reference to this instance on the element for cleanup checks
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Need to store instance reference for cleanup
 		(this.toolbarEl as any).__bulkToolbarInstance = this;
 
 		// Create the toolbar content
@@ -291,9 +287,8 @@ export class BulkToolbar {
 			}
 			
 			// Show it with flex display
-			this.toolbarEl.style.display = 'flex';
-			// Remove any inline styles that might interfere
-			this.toolbarEl.style.visibility = 'visible';
+			this.toolbarEl.removeClass('bases-cms-bulk-toolbar-hidden');
+			this.toolbarEl.addClass('bases-cms-bulk-toolbar-visible');
 			
 			// Force reflow to ensure transition works
 			void this.toolbarEl.offsetHeight;
@@ -301,8 +296,8 @@ export class BulkToolbar {
 			// Animate in - use setTimeout instead of requestAnimationFrame for more reliability
 			setTimeout(() => {
 				if (this.toolbarEl) {
-					this.toolbarEl.style.opacity = '1';
-					this.toolbarEl.style.transform = 'translateY(0)';
+					this.toolbarEl.removeClass('bases-cms-bulk-toolbar-animating-out');
+					this.toolbarEl.addClass('bases-cms-bulk-toolbar-animating-in');
 				}
 			}, 10);
 		} else {
@@ -313,12 +308,13 @@ export class BulkToolbar {
 	hide(): void {
 		if (this.toolbarEl) {
 			// Animate out
-			this.toolbarEl.style.opacity = '0';
-			this.toolbarEl.style.transform = 'translateY(-10px)';
+			this.toolbarEl.removeClass('bases-cms-bulk-toolbar-animating-in');
+			this.toolbarEl.addClass('bases-cms-bulk-toolbar-animating-out');
 			// Wait for transition to complete before hiding
 			setTimeout(() => {
 				if (this.toolbarEl) {
-					this.toolbarEl.style.display = 'none';
+					this.toolbarEl.removeClass('bases-cms-bulk-toolbar-visible');
+					this.toolbarEl.addClass('bases-cms-bulk-toolbar-hidden');
 				}
 			}, 200);
 		}
@@ -333,9 +329,11 @@ export class BulkToolbar {
 				this.app,
 				files,
 				'draft',
-				async () => {
-					await this.bulkOps.setDraft(files, true, this.settings);
-					this.refreshView();
+				() => {
+					void (async () => {
+						await this.bulkOps.setDraft(files, true, this.settings);
+						this.refreshView();
+					})();
 				}
 			);
 			modal.open();
@@ -354,9 +352,13 @@ export class BulkToolbar {
 				this.app,
 				files,
 				'publish',
-				async () => {
-					await this.bulkOps.setDraft(files, false, this.settings);
-					this.refreshView();
+				() => {
+					void (				() => {
+					void (async () => {
+						await this.bulkOps.setDraft(files, false, this.settings);
+						this.refreshView();
+					})();
+				})();
 				}
 			);
 			modal.open();
@@ -366,7 +368,7 @@ export class BulkToolbar {
 		}
 	}
 
-	private async handleManageTags(): Promise<void> {
+	private handleManageTags(): void {
 		const files = this.getSelectedFiles();
 		if (files.length === 0) return;
 
@@ -380,7 +382,7 @@ export class BulkToolbar {
 		modal.open();
 	}
 
-	private async handleSetProperty(): Promise<void> {
+	private handleSetProperty(): void {
 		const files = this.getSelectedFiles();
 		if (files.length === 0) return;
 
@@ -394,7 +396,7 @@ export class BulkToolbar {
 		modal.open();
 	}
 
-	private async handleRemoveProperty(): Promise<void> {
+	private handleRemoveProperty(): void {
 		const files = this.getSelectedFiles();
 		if (files.length === 0) return;
 
@@ -446,7 +448,7 @@ export class BulkToolbar {
 	 * Preserves visibility state and count
 	 */
 	recreate(): void {
-		const wasVisible = this.toolbarEl && this.toolbarEl.style.display !== 'none' && this.toolbarEl.style.opacity !== '0';
+		const wasVisible = this.toolbarEl && !this.toolbarEl.hasClass('bases-cms-bulk-toolbar-hidden');
 		let currentCount = 0;
 		
 		// Get current count before destroying
@@ -476,9 +478,11 @@ export class BulkToolbar {
 			this.resizeObserver = null;
 		}
 		// Clean up container observer if it exists
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Container observer stored dynamically
 		const containerObserver = (this as any).containerObserver;
 		if (containerObserver) {
 			containerObserver.disconnect();
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Container observer stored dynamically
 			(this as any).containerObserver = null;
 		}
 		if (this.toolbarEl) {

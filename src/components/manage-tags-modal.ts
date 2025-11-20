@@ -22,7 +22,7 @@ export class ManageTagsModal extends Modal {
 		const { contentEl } = this;
 
 		contentEl.empty();
-		contentEl.createEl('h2', { text: 'Manage Tags' });
+		new Setting(contentEl).setName('Manage tags').setHeading();
 		contentEl.createEl('p', { text: `Managing tags for ${this.files.length} file${this.files.length !== 1 ? 's' : ''}` });
 
 		// Add tags input
@@ -38,7 +38,7 @@ export class ManageTagsModal extends Modal {
 			});
 
 		// Remove tags section
-		contentEl.createEl('h3', { text: 'Remove tags' });
+		contentEl.createEl('h3', { text: 'Remove tags' }); // Keep h3 for section heading
 		const removeContainer = contentEl.createDiv();
 
 		// Get all unique tags from selected files
@@ -76,10 +76,7 @@ export class ManageTagsModal extends Modal {
 
 		// Buttons
 		const buttonContainer = contentEl.createDiv();
-		buttonContainer.style.display = 'flex';
-		buttonContainer.style.gap = '0.5rem';
-		buttonContainer.style.justifyContent = 'flex-end';
-		buttonContainer.style.marginTop = '1rem';
+		buttonContainer.addClass('bases-cms-modal-button-container');
 
 		const cancelBtn = buttonContainer.createEl('button');
 		cancelBtn.setText('Cancel');

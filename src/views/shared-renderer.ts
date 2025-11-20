@@ -3,7 +3,7 @@
  * Based on Dynamic Views but with CMS-specific features
  */
 
-import { App, BasesEntry, TFile, Menu, setIcon, Notice } from 'obsidian';
+import { App, BasesEntry, TFile, Menu } from 'obsidian';
 import type BasesCMSPlugin from '../main';
 import type { CardData } from '../shared/data-transform';
 import type { CMSSettings } from '../shared/data-transform';
@@ -25,8 +25,8 @@ export class SharedCardRenderer {
 		basesController?: unknown
 	) {
 		this.basesConfig = basesConfig;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		this.basesController = basesController as any;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- BasesController type not fully defined
+		this.basesController = basesController as { getPropertyDisplayName?: (name: string) => string };
 	}
 
 	/**
@@ -51,7 +51,7 @@ export class SharedCardRenderer {
 		}
 		cardEl.setAttribute('data-path', card.path);
 		cardEl.setAttribute('data-href', card.path);
-		cardEl.style.cursor = 'pointer';
+		cardEl.addClass('bases-cms-cursor-pointer');
 
 		// Selection checkbox
 		const checkboxEl = cardEl.createDiv('bases-cms-select-checkbox');
@@ -123,7 +123,7 @@ export class SharedCardRenderer {
 				const menu = new Menu();
 				// Trigger file-menu with 'bases' source only (same as native Bases cards view)
 				// This includes both Bases-specific options and standard file options
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Workspace.trigger accepts string event name
 				this.app.workspace.trigger('file-menu', menu, file, 'bases');
 				menu.showAtMouseEvent(e);
 			}
@@ -184,10 +184,10 @@ export class SharedCardRenderer {
 						textPreviewEl.setText(card.snippet);
 					}
 					// Store reference to update later when snippet loads
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					(cardEl as any).__textPreviewEl = textPreviewEl;
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					(cardEl as any).__cardPath = card.path;
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Store reference on element for later update
+					(cardEl as { __textPreviewEl?: HTMLElement; __cardPath?: string }).__textPreviewEl = textPreviewEl;
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Store reference on element for later update
+					(cardEl as { __textPreviewEl?: HTMLElement; __cardPath?: string }).__cardPath = card.path;
 				}
 
 				// Tags as pills (under text preview)
@@ -216,10 +216,10 @@ export class SharedCardRenderer {
 						textPreviewEl.setText(card.snippet);
 					}
 					// Store reference to update later when snippet loads
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					(cardEl as any).__textPreviewEl = textPreviewEl;
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					(cardEl as any).__cardPath = card.path;
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Store reference on element for later update
+					(cardEl as { __textPreviewEl?: HTMLElement; __cardPath?: string }).__textPreviewEl = textPreviewEl;
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Store reference on element for later update
+					(cardEl as { __textPreviewEl?: HTMLElement; __cardPath?: string }).__cardPath = card.path;
 				}
 
 				// Tags as pills (under text preview)
@@ -435,8 +435,8 @@ export class SharedCardRenderer {
 				});
 				tagEl.addEventListener('click', (e) => {
 					e.preventDefault();
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const searchPlugin = (this.app as any).internalPlugins?.plugins?.["global-search"];
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.internalPlugins structure not fully typed
+					const searchPlugin = (this.app as { internalPlugins?: { plugins?: Record<string, { instance?: { openGlobalSearch?: (query: string) => void } }> } }).internalPlugins?.plugins?.["global-search"];
 					if (searchPlugin?.instance?.openGlobalSearch) {
 						searchPlugin.instance.openGlobalSearch("tag:" + tag);
 					}
@@ -453,8 +453,8 @@ export class SharedCardRenderer {
 				});
 				tagEl.addEventListener('click', (e) => {
 					e.preventDefault();
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const searchPlugin = (this.app as any).internalPlugins?.plugins?.["global-search"];
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- App.internalPlugins structure not fully typed
+					const searchPlugin = (this.app as { internalPlugins?: { plugins?: Record<string, { instance?: { openGlobalSearch?: (query: string) => void } }> } }).internalPlugins?.plugins?.["global-search"];
 					if (searchPlugin?.instance?.openGlobalSearch) {
 						searchPlugin.instance.openGlobalSearch("tag:" + tag);
 					}
@@ -483,16 +483,16 @@ export class SharedCardRenderer {
 			});
 		} else {
 			// Check if this is a checkbox property
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const metadataCache = this.app.metadataCache as any;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- MetadataCache may have getAllPropertyInfos method
+			const metadataCache = this.app.metadataCache as unknown as Record<string, unknown>;
 			const propertyInfos = (typeof metadataCache.getAllPropertyInfos === 'function' 
 				? metadataCache.getAllPropertyInfos() 
-				: {}) || {};
+				: {}) as Record<string, { widget?: string }>;
 			const propInfo = propertyInfos[propertyName.toLowerCase()];
 			
 			// Try to get value from entry to check if it's boolean
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-			const entryValue = entry.getValue(propertyName as any) as { data?: unknown } | null;
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- BasesEntry.getValue accepts string
+			const entryValue = entry.getValue(propertyName as `note.${string}` | `formula.${string}` | `file.${string}`) as { data?: unknown } | null;
 			const isCheckbox = propInfo?.widget === 'checkbox' || 
 				(entryValue && 'data' in entryValue && typeof entryValue.data === 'boolean');
 
@@ -509,16 +509,18 @@ export class SharedCardRenderer {
 					e.stopPropagation();
 				});
 				
-				checkbox.addEventListener('change', async (e) => {
+				checkbox.addEventListener('change', (e) => {
 					e.stopPropagation();
-					try {
-						// Strip "note." prefix before toggling
-						const cleanProperty = propertyName.startsWith('note.') ? propertyName.substring(5) : propertyName;
-						await onPropertyToggle(card.path, cleanProperty, checkbox.checked);
-					} catch (error) {
-						console.error('Error toggling property:', error);
-						checkbox.checked = !checkbox.checked;
-					}
+					void (async () => {
+						try {
+							// Strip "note." prefix before toggling
+							const cleanProperty = propertyName.startsWith('note.') ? propertyName.substring(5) : propertyName;
+							await onPropertyToggle(card.path, cleanProperty, checkbox.checked);
+						} catch (error) {
+							console.error('Error toggling property:', error);
+							checkbox.checked = !checkbox.checked;
+						}
+					})();
 				});
 			} else {
 				// Generic property - wrap in div for proper scrolling

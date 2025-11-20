@@ -21,7 +21,7 @@ export class RemovePropertyModal extends Modal {
 		const { contentEl } = this;
 
 		contentEl.empty();
-		contentEl.createEl('h2', { text: 'Remove Property' });
+		new Setting(contentEl).setName('Remove property').setHeading();
 		contentEl.createEl('p', { text: `Removing properties from ${this.files.length} file${this.files.length !== 1 ? 's' : ''}` });
 
 		// Get all unique properties from selected files
@@ -65,10 +65,7 @@ export class RemovePropertyModal extends Modal {
 
 		// Buttons
 		const buttonContainer = contentEl.createDiv();
-		buttonContainer.style.display = 'flex';
-		buttonContainer.style.gap = '0.5rem';
-		buttonContainer.style.justifyContent = 'flex-end';
-		buttonContainer.style.marginTop = '1rem';
+		buttonContainer.addClass('bases-cms-modal-button-container');
 
 		const cancelBtn = buttonContainer.createEl('button');
 		cancelBtn.setText('Cancel');
