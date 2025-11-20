@@ -15,20 +15,35 @@ export default class BasesCMSPlugin extends Plugin {
 
 		// Register CMS view with Base plugin
 		// Graceful degradation: if Base plugin not installed, this will simply do nothing
+		// On mobile, Bases plugin may not be loaded yet, so we wait a bit
+		this.registerBasesCMSView();
+	}
+
+	private registerBasesCMSView(retries = 5): void {
 		try {
-			this.registerBasesView(CMS_VIEW_TYPE, {
-				name: 'CMS',
-				icon: this.settings.useHomeIcon ? 'lucide-home' : 'lucide-blocks',
-				factory: (controller: QueryController, containerEl: HTMLElement) => {
-					const view = new BasesCMSView(controller, containerEl, this);
-					this.activeViews.add(view);
-					return view;
-				},
-				options: this.getCMSViewOptions()
-			});
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			if (typeof (this as any).registerBasesView === 'function') {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				(this as any).registerBasesView(CMS_VIEW_TYPE, {
+					name: 'CMS',
+					icon: this.settings.useHomeIcon ? 'lucide-home' : 'lucide-blocks',
+					factory: (controller: QueryController, containerEl: HTMLElement) => {
+						const view = new BasesCMSView(controller, containerEl, this);
+						this.activeViews.add(view);
+						return view;
+					},
+					options: this.getCMSViewOptions()
+				});
+			} else if (retries > 0) {
+				// Method not available yet, retry after a short delay (common on mobile)
+				setTimeout(() => {
+					this.registerBasesCMSView(retries - 1);
+				}, 200);
+			} else {
+				console.warn('Bases CMS: registerBasesView not available. Is Bases plugin installed?');
+			}
 		} catch (error) {
-			// Base plugin not available - graceful degradation
-			console.log('Bases CMS: Base plugin not available');
+			console.error('Bases CMS: Error registering view:', error);
 		}
 	}
 
