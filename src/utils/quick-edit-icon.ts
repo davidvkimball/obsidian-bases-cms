@@ -23,7 +23,7 @@ export function setupQuickEditIcon(
 	
 	const quickEditIcon = titleEl.createSpan('bases-cms-quick-edit-icon');
 	quickEditIcon.addClass('bases-cms-cursor-default');
-	setIcon(quickEditIcon, 'pencil-line');
+	setIcon(quickEditIcon, plugin.settings.quickEditIcon || 'pencil-line');
 	
 	// Prevent title from being clickable when clicking icon
 	titleEl.addEventListener('click', (e) => {

@@ -1,6 +1,7 @@
 import { PluginSettingTab, Setting, App, Plugin } from 'obsidian';
 import { BasesCMSSettings } from './types';
 import { CommandPickerModal } from './components/command-picker-modal';
+import { IconPickerModal } from './components/icon-picker-modal';
 
 export class BasesCMSSettingTab extends PluginSettingTab {
 	plugin: Plugin & { settings: BasesCMSSettings };
@@ -219,7 +220,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Enable quick edit')
-			.setDesc('Show a pencil icon on card titles that launches a command when clicked.')
+			.setDesc('Show an icon on card titles that launches a command when clicked.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableQuickEdit)
 				.onChange((value) => {
@@ -298,6 +299,37 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		// Hide command selector if quick edit is disabled
 		quickEditCommandSetting.settingEl.toggleClass('bases-cms-setting-hidden', !this.plugin.settings.enableQuickEdit);
 
+		// Icon picker setting
+		const quickEditIconSetting = new Setting(containerEl)
+			.setName('Quick edit icon')
+			.setDesc('Select the icon to display for the quick edit button on card titles.')
+			.addButton(button => {
+				const iconName = this.getIconName(this.plugin.settings.quickEditIcon || 'pencil-line');
+				button.setButtonText(iconName || 'Select icon...')
+					.onClick(() => {
+						const modal = new IconPickerModal(this.app, async (iconId) => {
+							this.plugin.settings.quickEditIcon = iconId;
+							await this.plugin.saveData(this.plugin.settings);
+							// Re-render to show updated icon name
+							this.display();
+						});
+						modal.open();
+					});
+			});
+		
+		// Hide icon selector if quick edit is disabled
+		quickEditIconSetting.settingEl.toggleClass('bases-cms-setting-hidden', !this.plugin.settings.enableQuickEdit);
+
+	}
+
+	private getIconName(iconId: string): string {
+		if (!iconId) return '';
+		// Convert icon ID to a readable name, removing lucide- prefix if present
+		return iconId
+			.replace(/^lucide-/, '') // Remove lucide- prefix
+			.split('-')
+			.map(word => word.charAt(0).toUpperCase() + word.slice(1))
+			.join(' ');
 	}
 }
 
