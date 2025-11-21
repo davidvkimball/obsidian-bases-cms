@@ -2,6 +2,9 @@
 
 A fork of [Dynamic Views](https://github.com/greetclammy/dynamic-views) that provides CMS-like functionality to Obsidian bases. Inspired by the [Multi-Properties](https://github.com/technohiker/obsidian-multi-properties) plugin.
 
+![bases-cms-preview](https://github.com/user-attachments/assets/e20f2535-8991-4ccf-bb59-f97694e52c34)
+
+
 ## Installation
 
 Bases CMS is not yet available in the Community plugins section. Install using [BRAT](https://github.com/TfTHacker/obsidian42-brat) or manually:
