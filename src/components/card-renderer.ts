@@ -206,28 +206,25 @@ export class CardRenderer {
 			const isCheckbox = propInfo?.widget === 'checkbox' || typeof propertyValue === 'boolean';
 
 			if (isCheckbox) {
-				// Render as checkbox
+				// Render as native Obsidian checkbox - simple input checkbox
 				const checkbox = propEl.createEl('input', { type: 'checkbox' });
 				checkbox.checked = Boolean(propertyValue);
 				propEl.createSpan({ text: propertyName });
 				
 				if (onPropertyToggle) {
+					checkbox.addEventListener('change', async (e) => {
+						e.stopPropagation();
+						const checked = checkbox.checked;
+						try {
+							await onPropertyToggle(card.path, propertyName, checked);
+						} catch (error) {
+							console.error('Error toggling property:', error);
+							// Revert checkbox state on error
+							checkbox.checked = !checked;
+						}
+					});
 					checkbox.addEventListener('click', (e) => {
 						e.stopPropagation();
-						// Don't prevent default - let the checkbox toggle naturally
-					});
-					
-					checkbox.addEventListener('change', (e) => {
-						e.stopPropagation();
-						void (async () => {
-							try {
-								await onPropertyToggle(card.path, propertyName, checkbox.checked);
-							} catch (error) {
-								console.error('Error toggling property:', error);
-								// Revert checkbox state on error
-								checkbox.checked = !checkbox.checked;
-							}
-						})();
 					});
 				}
 			} else {

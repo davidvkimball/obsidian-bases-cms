@@ -487,30 +487,28 @@ export class SharedCardRenderer {
 				(entryValue && 'data' in entryValue && typeof entryValue.data === 'boolean');
 
 			if (isCheckbox && onPropertyToggle) {
-				// Render as checkbox
-				const checkbox = metaContent.createEl('input', { type: 'checkbox', cls: 'checkbox-input' });
+				// Render as native Obsidian checkbox - simple input checkbox
+				const checkbox = metaContent.createEl('input', { type: 'checkbox' });
 				checkbox.checked = entryValue && 'data' in entryValue ? Boolean(entryValue.data) : false;
 				
 				// Strip "note." prefix for display
 				const displayName = propertyName.startsWith('note.') ? propertyName.substring(5) : propertyName;
-				metaContent.createSpan({ cls: 'checkbox-label', text: displayName });
+				metaContent.createSpan({ text: displayName });
 				
+				checkbox.addEventListener('change', async (e) => {
+					e.stopPropagation();
+					const checked = checkbox.checked;
+					try {
+						// Strip "note." prefix before toggling
+						const cleanProperty = propertyName.startsWith('note.') ? propertyName.substring(5) : propertyName;
+						await onPropertyToggle(card.path, cleanProperty, checked);
+					} catch (error) {
+						console.error('Error toggling property:', error);
+						checkbox.checked = !checked;
+					}
+				});
 				checkbox.addEventListener('click', (e) => {
 					e.stopPropagation();
-				});
-				
-				checkbox.addEventListener('change', (e) => {
-					e.stopPropagation();
-					void (async () => {
-						try {
-							// Strip "note." prefix before toggling
-							const cleanProperty = propertyName.startsWith('note.') ? propertyName.substring(5) : propertyName;
-							await onPropertyToggle(card.path, cleanProperty, checkbox.checked);
-						} catch (error) {
-							console.error('Error toggling property:', error);
-							checkbox.checked = !checkbox.checked;
-						}
-					})();
 				});
 			} else {
 				// Generic property - wrap in div for proper scrolling
