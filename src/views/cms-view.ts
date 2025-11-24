@@ -10,9 +10,12 @@ import { readCMSSettings } from '../shared/settings-schema';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
 import { loadSnippetsForEntries, loadImagesForEntries, loadEmbedImagesForEntries } from '../shared/content-loader';
 import { SharedCardRenderer } from './shared-renderer';
-import { BATCH_SIZE, GAP_SIZE } from '../shared/constants';
+import { BATCH_SIZE } from '../shared/constants';
 import { BulkToolbar } from '../components/bulk-toolbar';
 import { setupNewNoteInterceptor } from '../utils/new-note-interceptor';
+import { PropertyToggleHandler } from '../utils/property-toggle-handler';
+import { ScrollLayoutManager } from '../utils/scroll-layout-manager';
+import { ViewSwitchListener } from '../utils/view-switch-listener';
 
 export const CMS_VIEW_TYPE = 'bases-cms';
 
@@ -25,17 +28,13 @@ export class BasesCMSView extends BasesView {
 	private images: Record<string, string | string[]> = {};
 	private hasImageAvailable: Record<string, boolean> = {};
 	private updateLayoutRef: { current: (() => void) | null } = { current: null };
-	private displayedCount: number = 50;
-	private isLoading: boolean = false;
-	private scrollListener: (() => void) | null = null;
-	private scrollThrottleTimeout: number | null = null;
-	private resizeObserver: ResizeObserver | null = null;
 	private propertyObservers: ResizeObserver[] = [];
 	private cardRenderer: SharedCardRenderer;
 	private bulkToolbar: BulkToolbar | null = null;
 	private isRefreshingWithSelection: boolean = false;
-	private currentBaseIdentifier: string | null = null;
-	private backupInterval: number | null = null;
+	private propertyToggleHandler: PropertyToggleHandler;
+	private scrollLayoutManager: ScrollLayoutManager;
+	private viewSwitchListener: ViewSwitchListener;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: BasesCMSPlugin) {
 		super(controller);
@@ -56,9 +55,33 @@ export class BasesCMSView extends BasesView {
 		this.containerEl.addClass('bases-cms');
 		this.containerEl.addClass('bases-cms-container');
 		
-		// Set initial batch size based on device (matches Dynamic Views)
-		const isMobile = (this.app as { isMobile?: boolean }).isMobile ?? false;
-		this.displayedCount = isMobile ? 25 : BATCH_SIZE;
+		// Initialize managers
+		this.propertyToggleHandler = new PropertyToggleHandler(
+			this.app,
+			this.config as { get: (key: string) => unknown },
+			this.plugin.settings,
+			() => this.onDataUpdated()
+		);
+
+		this.scrollLayoutManager = new ScrollLayoutManager(
+			this.containerEl,
+			this.app,
+			this.config as { get: (key: string) => unknown },
+			this.plugin.settings,
+			() => this.onDataUpdated(),
+			(cleanup) => this.register(cleanup)
+		);
+
+		this.viewSwitchListener = new ViewSwitchListener(
+			this.containerEl,
+			this.plugin,
+			this.config as { getName?: () => string; name?: string },
+			(this as unknown as { controller?: { getBaseName?: () => string; baseName?: string } }).controller,
+			this.data as { baseName?: string } | undefined,
+			this.selectedFiles,
+			() => this.updateSelectionUI(),
+			(cleanup) => this.register(cleanup)
+		);
 
 		// Intercept new note button clicks
 		setupNewNoteInterceptor(
@@ -69,197 +92,11 @@ export class BasesCMSView extends BasesView {
 			(cleanup) => this.register(cleanup)
 		);
 		
-		// Listen for view switches to clear selection when switching away
-		this.setupViewSwitchListener();
+		// Setup view switch listener - wraps handleSelectionChange
+		const originalHandleSelectionChange = this.handleSelectionChange.bind(this);
+		this.handleSelectionChange = this.viewSwitchListener.setup(originalHandleSelectionChange);
 	}
 	
-	/**
-	 * Setup listener to ensure toolbar hides when selection becomes empty
-	 * Uses MutationObserver to watch for card removal (view switches)
-	 */
-	private setupViewSwitchListener(): void {
-		let mutationObserver: MutationObserver | null = null;
-		
-		const startObserving = () => {
-			if (mutationObserver) return; // Already observing
-			
-			mutationObserver = new MutationObserver((mutations) => {
-				// Only check if we have selection
-				if (this.selectedFiles.size === 0) {
-					return;
-				}
-				
-				// Check if any cards were removed
-				for (const mutation of mutations) {
-					if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
-						// Cards were removed - check if our selected cards are gone
-						let foundSelectedCard = false;
-						for (const path of this.selectedFiles) {
-							const card = this.containerEl.querySelector(`[data-path="${path}"]`);
-							if (card) {
-								foundSelectedCard = true;
-								break;
-							}
-						}
-						
-						// Also check if container has any cards at all
-						const allCards = this.containerEl.querySelectorAll('.card[data-path]');
-						
-						if (!foundSelectedCard || allCards.length === 0) {
-							this.selectedFiles.clear();
-							this.updateSelectionUI();
-							break;
-						}
-					}
-				}
-			});
-			
-			// Observe the container for child removals
-			if (this.containerEl) {
-				mutationObserver.observe(this.containerEl, {
-					childList: true,
-					subtree: true
-				});
-			}
-		};
-		
-		const stopObserving = () => {
-			if (mutationObserver) {
-				mutationObserver.disconnect();
-				mutationObserver = null;
-				
-				// When observer stops, it means selection is empty or view switched
-				// Force clear selection and hide toolbar
-				if (this.selectedFiles.size > 0) {
-					this.selectedFiles.clear();
-				}
-				this.updateSelectionUI();
-				
-				// Force hide toolbar immediately
-				if (this.bulkToolbar) {
-					this.bulkToolbar.hide();
-				}
-				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar');
-				if (toolbarEl instanceof HTMLElement) {
-					toolbarEl.removeClass('bases-cms-bulk-toolbar-visible');
-					toolbarEl.addClass('bases-cms-bulk-toolbar-hidden');
-				}
-			}
-		};
-		
-		// Get base identifier - try multiple methods
-		const getBaseIdentifier = (): string | null => {
-			try {
-			// Try to get base name from config
-			const config = this.config as { getName?: () => string; name?: string };
-				if (config?.getName) {
-					return config.getName();
-				}
-				if (config?.name) {
-					return String(config.name);
-				}
-				// Try to access controller through parent class
-				const view = this as { controller?: { getBaseName?: () => string; baseName?: string } };
-				if (view.controller) {
-					const controller = view.controller;
-					if (controller?.getBaseName) {
-						return controller.getBaseName();
-					}
-					if (controller?.baseName) {
-						return String(controller.baseName);
-					}
-				}
-				// Try to get from data
-				if (this.data) {
-					const data = this.data as { baseName?: string };
-					if (data.baseName) {
-						return String(data.baseName);
-					}
-				}
-			} catch {
-				// Ignore errors
-			}
-			return null;
-		};
-		
-		// Also check periodically as backup (slower, 500ms)
-		const backupCheck = () => {
-			if (this.selectedFiles.size === 0) {
-				if (this.backupInterval !== null) {
-					window.clearInterval(this.backupInterval);
-					this.backupInterval = null;
-				}
-				return;
-			}
-			
-			// Check if base identifier changed
-			const currentBaseId = getBaseIdentifier();
-			if (this.currentBaseIdentifier !== null && currentBaseId !== null && 
-				this.currentBaseIdentifier !== currentBaseId) {
-				this.selectedFiles.clear();
-				this.updateSelectionUI();
-				stopObserving();
-				if (this.backupInterval !== null) {
-					window.clearInterval(this.backupInterval);
-					this.backupInterval = null;
-				}
-				return;
-			}
-			
-			// Check if container has cards
-			const allCards = this.containerEl.querySelectorAll('.card[data-path]');
-			if (allCards.length === 0) {
-				this.selectedFiles.clear();
-				this.updateSelectionUI();
-			}
-		};
-		
-		// Start observing when selection is made
-		const originalHandleSelectionChange = this.handleSelectionChange.bind(this);
-		this.handleSelectionChange = (path: string, selected: boolean) => {
-			originalHandleSelectionChange(path, selected);
-			
-			// Start observing if we have selection, stop if we don't
-			if (this.selectedFiles.size > 0) {
-				// Store current base identifier when selection starts
-				if (this.currentBaseIdentifier === null) {
-					this.currentBaseIdentifier = getBaseIdentifier();
-				}
-				startObserving();
-				// Also start backup interval - use plugin's registerInterval for proper cleanup
-				if (this.backupInterval === null) {
-					this.backupInterval = this.plugin.registerInterval(window.setInterval(backupCheck, 500));
-				}
-			} else {
-				// Clear base identifier when selection is empty
-				this.currentBaseIdentifier = null;
-				// Selection became empty - stop observing and force hide toolbar
-				stopObserving();
-				if (this.backupInterval !== null) {
-					window.clearInterval(this.backupInterval);
-					this.backupInterval = null;
-				}
-				// Force hide toolbar
-				if (this.bulkToolbar) {
-					this.bulkToolbar.hide();
-				}
-				const toolbarEl = this.containerEl.querySelector('.bases-cms-bulk-toolbar');
-				if (toolbarEl instanceof HTMLElement) {
-					toolbarEl.removeClass('bases-cms-bulk-toolbar-visible');
-					toolbarEl.addClass('bases-cms-bulk-toolbar-hidden');
-				}
-			}
-		};
-		
-		// Register cleanup
-		this.register(() => {
-			stopObserving();
-			if (this.backupInterval !== null) {
-				window.clearInterval(this.backupInterval);
-				this.backupInterval = null;
-			}
-		});
-	}
 
 	onDataUpdated(): void {
 		// Check if we're still the active view
@@ -317,18 +154,8 @@ export class BasesCMSView extends BasesView {
 				this.plugin.settings
 			);
 
-			// Calculate grid columns
-			const containerWidth = this.containerEl.clientWidth;
-			const cardMinWidth = settings.cardSize; // Card size from settings
-			const minColumns = 1;
-			const gap = GAP_SIZE;
-			const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
-			const cardWidth = (containerWidth - (gap * (cols - 1))) / cols;
-
-			// Set CSS variables for grid layout
-			this.containerEl.style.setProperty('--card-min-width', `${cardWidth}px`);
-			this.containerEl.style.setProperty('--grid-columns', String(cols));
-			this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(settings.imageAspectRatio));
+			// Update grid layout using scroll layout manager
+			this.scrollLayoutManager.updateGridLayout(settings);
 
 			// Save scroll position before re-rendering
 			const savedScrollTop = this.containerEl.scrollTop;
@@ -344,7 +171,7 @@ export class BasesCMSView extends BasesView {
 
 			// Collect visible entries across all groups (up to displayedCount)
 			const visibleEntries: BasesEntry[] = [];
-			let remainingCount = this.displayedCount;
+			let remainingCount = this.scrollLayoutManager.getDisplayedCount();
 
 			for (const processedGroup of processedGroups) {
 				if (remainingCount <= 0) break;
@@ -531,9 +358,9 @@ export class BasesCMSView extends BasesView {
 			const imageElements: Array<{ img: HTMLImageElement; src: string }> = [];
 			
 			for (const processedGroup of processedGroups) {
-				if (displayedSoFar >= this.displayedCount) break;
+				if (displayedSoFar >= this.scrollLayoutManager.getDisplayedCount()) break;
 
-				const entriesToDisplay = Math.min(processedGroup.entries.length, this.displayedCount - displayedSoFar);
+				const entriesToDisplay = Math.min(processedGroup.entries.length, this.scrollLayoutManager.getDisplayedCount() - displayedSoFar);
 				if (entriesToDisplay === 0) continue;
 
 				const groupEntries = processedGroup.entries.slice(0, entriesToDisplay);
@@ -586,29 +413,9 @@ export class BasesCMSView extends BasesView {
 				this.containerEl.scrollTop = savedScrollTop;
 			}
 
-			// Setup infinite scroll
-			this.setupInfiniteScroll(allEntries.length);
-
-			// Setup ResizeObserver for dynamic grid updates
-			if (!this.resizeObserver) {
-				this.resizeObserver = new ResizeObserver(() => {
-					const containerWidth = this.containerEl.clientWidth;
-					const currentSettings = readCMSSettings(
-						this.config,
-						this.plugin.settings
-					);
-					const cardMinWidth = currentSettings.cardSize;
-					const minColumns = 1;
-					const gap = GAP_SIZE;
-					const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
-					const cardWidth = (containerWidth - (gap * (cols - 1))) / cols;
-
-					this.containerEl.style.setProperty('--card-min-width', `${cardWidth}px`);
-					this.containerEl.style.setProperty('--grid-columns', String(cols));
-					this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(currentSettings.imageAspectRatio));
-				});
-				this.resizeObserver.observe(this.containerEl);
-			}
+			// Setup infinite scroll and resize observer
+			this.scrollLayoutManager.setupInfiniteScroll(allEntries.length);
+			this.scrollLayoutManager.setupResizeObserver();
 
 			// Restore toolbar at the bottom if it was preserved
 			if (preservedToolbarEl && this.bulkToolbar) {
@@ -647,7 +454,7 @@ export class BasesCMSView extends BasesView {
 			}
 
 			// Clear loading flag after async work completes
-			this.isLoading = false;
+			this.scrollLayoutManager.setIsLoading(false);
 		})();
 	}
 
@@ -692,68 +499,6 @@ export class BasesCMSView extends BasesView {
 	}
 
 
-	private setupInfiniteScroll(totalEntries: number): void {
-		// Clean up existing listener
-		if (this.scrollListener) {
-			this.containerEl.removeEventListener('scroll', this.scrollListener);
-			this.scrollListener = null;
-		}
-
-		// Skip if all items already displayed
-		if (this.displayedCount >= totalEntries) {
-			return;
-		}
-
-		// Create scroll handler with throttling
-		this.scrollListener = () => {
-			// Throttle: skip if cooldown active
-			if (this.scrollThrottleTimeout !== null) {
-				return;
-			}
-
-			// Skip if already loading
-			if (this.isLoading) {
-				return;
-			}
-
-			// Calculate distance from bottom
-			const scrollTop = this.containerEl.scrollTop;
-			const scrollHeight = this.containerEl.scrollHeight;
-			const clientHeight = this.containerEl.clientHeight;
-			const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-
-			// Dynamic threshold based on viewport and device
-			const isMobile = (this.app as { isMobile?: boolean }).isMobile ?? false;
-			const viewportMultiplier = isMobile ? 1 : 2;
-			const threshold = clientHeight * viewportMultiplier;
-
-			// Check if should load more
-			if (distanceFromBottom < threshold && this.displayedCount < totalEntries) {
-				this.isLoading = true;
-				const batchSize = 50;
-				this.displayedCount = Math.min(this.displayedCount + batchSize, totalEntries);
-				this.onDataUpdated();
-			}
-
-			// Start throttle cooldown
-			this.scrollThrottleTimeout = window.setTimeout(() => {
-				this.scrollThrottleTimeout = null;
-			}, 100);
-		};
-
-		// Attach listener
-		this.containerEl.addEventListener('scroll', this.scrollListener);
-
-		// Register cleanup
-		this.register(() => {
-			if (this.scrollListener) {
-				this.containerEl.removeEventListener('scroll', this.scrollListener);
-			}
-			if (this.scrollThrottleTimeout !== null) {
-				window.clearTimeout(this.scrollThrottleTimeout);
-			}
-		});
-	}
 
 	private handleSelectionChange(path: string, selected: boolean): void {
 		if (selected) {
@@ -782,89 +527,7 @@ export class BasesCMSView extends BasesView {
 	}
 
 	private async handlePropertyToggle(path: string, property: string, value: unknown): Promise<void> {
-		try {
-			const file = this.app.vault.getAbstractFileByPath(path);
-			if (!(file instanceof TFile)) return;
-
-			// Strip "note." prefix if present (Bases uses "note.property" but frontmatter uses just "property")
-			const cleanProperty = property.startsWith('note.') ? property.substring(5) : property;
-
-			// Read settings to check if this is the draft property
-			const settings = readCMSSettings(
-				this.config,
-				this.plugin.settings
-			);
-
-			// Check if this is the draft status property
-			const isDraftProperty = settings.showDraftStatus && cleanProperty === 'draft';
-			let shouldRefresh = false;
-
-			if (isDraftProperty) {
-				// Check if using filename prefix mode
-				if (settings.draftStatusUseFilenamePrefix) {
-					// Always use filename-based detection when this setting is enabled
-					const fileName = file.basename; // basename excludes extension
-					const startsWithUnderscore = fileName.startsWith('_');
-					const currentPath = file.path;
-					const pathParts = currentPath.split('/');
-					
-					// Toggle based on desired state: if value is true (draft), ensure underscore; if false (published), remove it
-					if (value === true) {
-						// Toggling to draft - add underscore if not present
-						if (!startsWithUnderscore) {
-							const newName = `_${fileName}${file.extension ? `.${file.extension}` : ''}`;
-							pathParts[pathParts.length - 1] = newName;
-							const newPath = pathParts.join('/');
-							await this.app.fileManager.renameFile(file, newPath);
-							shouldRefresh = true;
-						}
-					} else {
-						// Toggling to published - remove underscore if present
-						if (startsWithUnderscore) {
-							const newName = fileName.substring(1) + (file.extension ? `.${file.extension}` : '');
-							pathParts[pathParts.length - 1] = newName;
-							const newPath = pathParts.join('/');
-							await this.app.fileManager.renameFile(file, newPath);
-							shouldRefresh = true;
-						}
-					}
-				} else {
-					// Use property-based detection (frontmatter)
-					const cleanConfigProperty = settings.draftStatusProperty && settings.draftStatusProperty.trim()
-						? (settings.draftStatusProperty.startsWith('note.') 
-							? settings.draftStatusProperty.substring(5) 
-							: settings.draftStatusProperty)
-						: 'draft';
-					
-					await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-						frontmatter[cleanConfigProperty] = value;
-					});
-					shouldRefresh = true;
-				}
-			} else {
-				// Normal property toggle - update frontmatter
-				await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-					frontmatter[cleanProperty] = value;
-				});
-				shouldRefresh = true;
-			}
-
-			// Only refresh if we actually made a change
-			if (shouldRefresh) {
-				// Wait for metadata cache to update, then refresh view
-				requestAnimationFrame(() => {
-					setTimeout(() => {
-						try {
-							this.onDataUpdated();
-						} catch (error) {
-							console.error('Error refreshing view after property toggle:', error);
-						}
-					}, 100);
-				});
-			}
-		} catch (error) {
-			console.error('Error toggling property:', error);
-		}
+		await this.propertyToggleHandler.handlePropertyToggle(path, property, value);
 	}
 
 	private selectAll(): void {
@@ -963,7 +626,7 @@ export class BasesCMSView extends BasesView {
 						
 						// Restore selection after refresh completes
 						// Use multiple timeouts to ensure it works even if the first one is too early
-						setTimeout(() => {
+						window.setTimeout(() => {
 							// Restore selection
 							selectedPaths.forEach(path => {
 								if (this.app.vault.getAbstractFileByPath(path)) {
@@ -982,7 +645,7 @@ export class BasesCMSView extends BasesView {
 							}
 							
 							// Double-check after a bit more time
-							setTimeout(() => {
+							window.setTimeout(() => {
 								if (this.selectedFiles.size > 0 && this.bulkToolbar) {
 									this.bulkToolbar.show();
 									this.bulkToolbar.updateCount(this.selectedFiles.size);
@@ -1021,9 +684,8 @@ export class BasesCMSView extends BasesView {
 	}
 
 	onClose(): void {
-		if (this.resizeObserver) {
-			this.resizeObserver.disconnect();
-		}
+		this.scrollLayoutManager.cleanup();
+		this.viewSwitchListener.cleanup();
 		this.propertyObservers.forEach(obs => obs.disconnect());
 		this.propertyObservers = [];
 		if (this.bulkToolbar) {

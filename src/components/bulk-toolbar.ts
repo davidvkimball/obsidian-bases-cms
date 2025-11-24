@@ -5,22 +5,17 @@
 
 import { App, setIcon } from 'obsidian';
 import type BasesCMSPlugin from '../main';
-import { BulkOperations } from '../utils/bulk-operations';
-import { ManageTagsModal } from './manage-tags-modal';
-import { SetPropertyModal } from './set-property-modal';
-import { RemovePropertyModal } from './remove-property-modal';
-import { DeletionPreviewModal } from './deletion-preview';
-import { BulkOperationConfirmModal } from './bulk-operation-confirm';
-import { prepareDeletionPreview, executeSmartDeletion } from '../utils/smart-deletion';
 import type { CMSSettings } from '../shared/data-transform';
+import { ToolbarActions } from '../utils/toolbar-actions';
 
 export class BulkToolbar {
 	private toolbarEl: HTMLElement | null = null;
 	private countEl: HTMLElement | null = null;
-	private bulkOps: BulkOperations;
 	private selectAllCallback?: () => void;
 	private resizeObserver: ResizeObserver | null = null;
 	private settings?: CMSSettings;
+	private actions: ToolbarActions;
+	private timeoutIds: number[] = [];
 
 	constructor(
 		private app: App,
@@ -32,9 +27,16 @@ export class BulkToolbar {
 		selectAllCallback?: () => void,
 		settings?: CMSSettings
 	) {
-		this.bulkOps = new BulkOperations(app);
 		this.selectAllCallback = selectAllCallback;
 		this.settings = settings;
+		this.actions = new ToolbarActions(
+			this.app,
+			this.plugin,
+			this.getSelectedFiles,
+			this.clearSelection,
+			this.refreshView,
+			() => this.show()
+		);
 		this.createToolbar();
 	}
 
@@ -59,7 +61,8 @@ export class BulkToolbar {
 		this.positionToolbar();
 		
 		// Also try positioning after a short delay in case DOM isn't ready yet
-		setTimeout(() => this.positionToolbar(), 100);
+		const timeoutId = window.setTimeout(() => this.positionToolbar(), 100);
+		this.timeoutIds.push(timeoutId);
 	}
 
 	private positionToolbar(): void {
@@ -178,36 +181,36 @@ export class BulkToolbar {
 		// Right side: Publish
 		if (this.plugin.settings.showToolbarPublish) {
 			createBasesButton('book-check', 'Publish', () => {
-				void this.handlePublish();
+				void this.actions.handlePublish(this.settings);
 			}, rightContainer);
 		}
 
 		// Right side: Draft
 		if (this.plugin.settings.showToolbarDraft) {
 			createBasesButton('book-dashed', 'Draft', () => {
-				void this.handleSetDraft();
+				void this.actions.handleSetDraft(this.settings);
 			}, rightContainer);
 		}
 
 		// Right side: Tags
 		if (this.plugin.settings.showToolbarTags) {
-			createBasesButton('tags', 'Tags', () => this.handleManageTags(), rightContainer);
+			createBasesButton('tags', 'Tags', () => this.actions.handleManageTags(), rightContainer);
 		}
 
 		// Right side: Set
 		if (this.plugin.settings.showToolbarSet) {
-			createBasesButton('list-check', 'Set', () => this.handleSetProperty(), rightContainer);
+			createBasesButton('list-check', 'Set', () => this.actions.handleSetProperty(), rightContainer);
 		}
 
 		// Right side: Remove
 		if (this.plugin.settings.showToolbarRemove) {
-			createBasesButton('list-x', 'Remove', () => this.handleRemoveProperty(), rightContainer);
+			createBasesButton('list-x', 'Remove', () => this.actions.handleRemoveProperty(), rightContainer);
 		}
 
 		// Right side: Delete
 		if (this.plugin.settings.showToolbarDelete) {
 			createBasesButton('trash-2', 'Delete', () => {
-				void this.handleDelete();
+				void this.actions.handleDelete();
 			}, rightContainer, true);
 		}
 
@@ -219,9 +222,10 @@ export class BulkToolbar {
 		if (!this.toolbarEl) return;
 
 		// Check initial state after a short delay to ensure toolbar is rendered
-		setTimeout(() => {
+		const timeoutId1 = window.setTimeout(() => {
 			this.updateCollapsedState();
 		}, 100);
+		this.timeoutIds.push(timeoutId1);
 
 		// Observe toolbar width changes (more accurate than container)
 		if (this.toolbarEl) {
@@ -237,9 +241,10 @@ export class BulkToolbar {
 			// Use a separate observer for container to catch window resize
 			const containerObserver = new ResizeObserver(() => {
 				// Small delay to let toolbar resize first
-				setTimeout(() => {
+				const timeoutId = window.setTimeout(() => {
 					this.updateCollapsedState();
 				}, 10);
+				this.timeoutIds.push(timeoutId);
 			});
 			containerObserver.observe(container);
 			
@@ -299,12 +304,13 @@ export class BulkToolbar {
 			void this.toolbarEl.offsetHeight;
 			
 			// Animate in - use setTimeout instead of requestAnimationFrame for more reliability
-			setTimeout(() => {
+			const timeoutId = window.setTimeout(() => {
 				if (this.toolbarEl) {
 					this.toolbarEl.removeClass('bases-cms-bulk-toolbar-animating-out');
 					this.toolbarEl.addClass('bases-cms-bulk-toolbar-animating-in');
 				}
 			}, 10);
+			this.timeoutIds.push(timeoutId);
 		} else {
 			console.error('[Bases CMS] Failed to show toolbar - element is null');
 		}
@@ -316,135 +322,16 @@ export class BulkToolbar {
 			this.toolbarEl.removeClass('bases-cms-bulk-toolbar-animating-in');
 			this.toolbarEl.addClass('bases-cms-bulk-toolbar-animating-out');
 			// Wait for transition to complete before hiding
-			setTimeout(() => {
+			const timeoutId = window.setTimeout(() => {
 				if (this.toolbarEl) {
 					this.toolbarEl.removeClass('bases-cms-bulk-toolbar-visible');
 					this.toolbarEl.addClass('bases-cms-bulk-toolbar-hidden');
 				}
 			}, 200);
+			this.timeoutIds.push(timeoutId);
 		}
 	}
 
-	private async handleSetDraft(): Promise<void> {
-		const files = this.getSelectedFiles();
-		if (files.length === 0) return;
-
-		if (this.plugin.settings.confirmBulkOperations) {
-			const modal = new BulkOperationConfirmModal(
-				this.app,
-				files,
-				'draft',
-				() => {
-					void (async () => {
-						await this.bulkOps.setDraft(files, true, this.settings);
-						this.refreshView();
-					})();
-				}
-			);
-			modal.open();
-		} else {
-			await this.bulkOps.setDraft(files, true, this.settings);
-			this.refreshView();
-		}
-	}
-
-	private async handlePublish(): Promise<void> {
-		const files = this.getSelectedFiles();
-		if (files.length === 0) return;
-
-		if (this.plugin.settings.confirmBulkOperations) {
-			const modal = new BulkOperationConfirmModal(
-				this.app,
-				files,
-				'publish',
-				() => {
-					void (async () => {
-						await this.bulkOps.setDraft(files, false, this.settings);
-						this.refreshView();
-					})();
-				}
-			);
-			modal.open();
-		} else {
-			await this.bulkOps.setDraft(files, false, this.settings);
-			this.refreshView();
-		}
-	}
-
-	private handleManageTags(): void {
-		const files = this.getSelectedFiles();
-		if (files.length === 0) return;
-
-		const modal = new ManageTagsModal(this.app, files);
-		modal.onClose = () => {
-			// Keep toolbar visible - don't let it close
-			this.show();
-			// Refresh view - the refreshView callback will preserve selection
-			this.refreshView();
-		};
-		modal.open();
-	}
-
-	private handleSetProperty(): void {
-		const files = this.getSelectedFiles();
-		if (files.length === 0) return;
-
-		const modal = new SetPropertyModal(this.app, files);
-		modal.onClose = () => {
-			// Keep toolbar visible - don't let it close
-			this.show();
-			// Refresh view - the refreshView callback will preserve selection
-			this.refreshView();
-		};
-		modal.open();
-	}
-
-	private handleRemoveProperty(): void {
-		const files = this.getSelectedFiles();
-		if (files.length === 0) return;
-
-		const modal = new RemovePropertyModal(this.app, files);
-		modal.onClose = () => {
-			// Keep toolbar visible - don't let it close
-			this.show();
-			// Refresh view - the refreshView callback will preserve selection
-			this.refreshView();
-		};
-		modal.open();
-	}
-
-	private async handleDelete(): Promise<void> {
-		const files = this.getSelectedFiles();
-		if (files.length === 0) return;
-
-		if (this.plugin.settings.confirmDeletions) {
-			const preview = await prepareDeletionPreview(
-				this.app,
-				files,
-				this.plugin.settings
-			);
-
-			const modal = new DeletionPreviewModal(
-				this.app,
-				preview,
-				() => {
-					this.clearSelection();
-					this.refreshView();
-				}
-			);
-			modal.open();
-		} else {
-			// Direct deletion without confirmation
-			const preview = await prepareDeletionPreview(
-				this.app,
-				files,
-				this.plugin.settings
-			);
-			await executeSmartDeletion(this.app, preview);
-			this.clearSelection();
-			this.refreshView();
-		}
-	}
 
 	/**
 	 * Recreate the toolbar with updated settings
@@ -476,6 +363,10 @@ export class BulkToolbar {
 	}
 
 	destroy(): void {
+		// Clear all timeouts
+		this.timeoutIds.forEach(id => window.clearTimeout(id));
+		this.timeoutIds = [];
+		
 		if (this.resizeObserver) {
 			this.resizeObserver.disconnect();
 			this.resizeObserver = null;

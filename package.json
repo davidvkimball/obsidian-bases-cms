@@ -1,6 +1,6 @@
 {
 	"name": "bases-cms",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"description": "Manage your notes in bases like a content management system.",
 	"main": "main.js",
 	"scripts": {
