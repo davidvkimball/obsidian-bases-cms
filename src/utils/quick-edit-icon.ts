@@ -1,4 +1,4 @@
-import { App, TFile, setIcon, Modal, TextComponent } from 'obsidian';
+import { App, TFile, setIcon, Modal, TextComponent, Notice } from 'obsidian';
 import type BasesCMSPlugin from '../main';
 import type { CMSSettings } from '../shared/data-transform';
 
@@ -82,6 +82,29 @@ function isObsidianRenameCommand(commandId: string): boolean {
 }
 
 /**
+ * Check if a command is known to not work well without the file being properly opened
+ * These commands typically need editor context or specific UI state that can't be faked
+ */
+function isProblematicCommand(commandId: string, commandName: string): boolean {
+	const lowerId = commandId.toLowerCase();
+	const lowerName = commandName.toLowerCase();
+	
+	// Commands that need editor context and typically don't work well programmatically
+	const problematicPatterns = [
+		'add tag',
+		'add-tag',
+		'insert-template',
+		'insert-template',
+		'editor:',
+		'markdown:',
+	];
+	
+	return problematicPatterns.some(pattern => 
+		lowerId.includes(pattern) || lowerName.includes(pattern)
+	);
+}
+
+/**
  * Setup quick edit icon on title element
  */
 export function setupQuickEditIcon(
@@ -135,13 +158,25 @@ export function setupQuickEditIcon(
 				// Show rename dialog without opening the file, similar to Astro Composer
 				const commandRegistry = (app as { commands?: { commands?: Record<string, { name?: string }> } }).commands;
 				const command = commandRegistry?.commands?.[commandId];
-				const commandName = command?.name?.toLowerCase() || '';
+				const commandName = command?.name || '';
+				const lowerCommandName = commandName.toLowerCase();
 				
 				// Check if this is a rename file command by ID or name
 				if (isObsidianRenameCommand(commandId) || 
-					(commandName.includes('rename') && commandName.includes('file'))) {
+					(lowerCommandName.includes('rename') && lowerCommandName.includes('file'))) {
 					showRenameDialog(app, file);
 					return; // Success, exit early - do NOT open the file
+				}
+				
+				// Check if this is a known problematic command that won't work well
+				if (isProblematicCommand(commandId, commandName)) {
+					if (plugin.settings.quickEditOpenFile) {
+						// User has enabled the setting, so try to open and execute anyway
+						// Fall through to the file opening logic below
+					} else {
+						new Notice(`The "${commandName}" command requires the file to be open in an editor. Enable "Attempt to open file and execute quick edit command" in settings to try anyway.`, 5000);
+						return; // Don't try to execute - it won't work properly
+					}
 				}
 				
 				// Try to find and call a helper function from the plugin that registered this command
@@ -200,9 +235,16 @@ export function setupQuickEditIcon(
 					// Fall through to try regular command execution
 				}
 				
-				// For other commands or if helper not available, we need to open the file first
-				// and make it active so commands like "Rename file" target the correct file
+				// For other commands or if helper not available, check if user wants to try opening the file
 				if (!helperCalled) {
+					// Only attempt to open file and execute if the setting is enabled
+					if (!plugin.settings.quickEditOpenFile) {
+						new Notice(`This command doesn't have special handling. Enable "Attempt to open file and execute quick edit command" in settings to try executing it.`, 5000);
+						return; // Don't try to execute
+					}
+					
+					// User has enabled the setting, so try to open the file first
+					// and make it active so commands like "Rename file" target the correct file
 					// Always open the file first and make it active before executing the command
 					// This ensures commands that use getActiveFile() target the correct file
 					const leaf = app.workspace.getLeaf(false);

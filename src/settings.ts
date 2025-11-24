@@ -218,6 +218,11 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		// Quick edit settings
 		new Setting(containerEl).setName('Quick edit').setHeading();
 
+		// Define quick edit settings first (needed for visibility toggling)
+		let quickEditCommandSetting: Setting;
+		let quickEditIconSetting: Setting;
+		let quickEditOpenFileSetting: Setting;
+
 		new Setting(containerEl)
 			.setName('Enable quick edit')
 			.setDesc('Show an icon on card titles that launches a command when clicked.')
@@ -227,13 +232,15 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 					void (async () => {
 						this.plugin.settings.enableQuickEdit = value;
 						await this.plugin.saveData(this.plugin.settings);
-						// Show/hide command selector based on toggle
-						quickEditCommandSetting.settingEl.toggleClass('bases-cms-setting-hidden', !value);
+						// Show/hide command selector and related settings based on toggle
+						if (quickEditCommandSetting) quickEditCommandSetting.settingEl.toggleClass('bases-cms-setting-hidden', !value);
+						if (quickEditIconSetting) quickEditIconSetting.settingEl.toggleClass('bases-cms-setting-hidden', !value);
+						if (quickEditOpenFileSetting) quickEditOpenFileSetting.settingEl.toggleClass('bases-cms-setting-hidden', !value);
 					})();
 				}));
 
 		// Command picker setting
-		const quickEditCommandSetting = new Setting(containerEl)
+		quickEditCommandSetting = new Setting(containerEl)
 			.setName('Quick edit command')
 			.setDesc('The command to execute when clicking the quick edit icon on a card title.')
 			.addButton(button => {
@@ -300,7 +307,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		quickEditCommandSetting.settingEl.toggleClass('bases-cms-setting-hidden', !this.plugin.settings.enableQuickEdit);
 
 		// Icon picker setting
-		const quickEditIconSetting = new Setting(containerEl)
+		quickEditIconSetting = new Setting(containerEl)
 			.setName('Quick edit icon')
 			.setDesc('Select the icon to display for the quick edit button on card titles.')
 			.addButton(button => {
@@ -319,6 +326,22 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		
 		// Hide icon selector if quick edit is disabled
 		quickEditIconSetting.settingEl.toggleClass('bases-cms-setting-hidden', !this.plugin.settings.enableQuickEdit);
+
+		// Quick edit open file setting
+		quickEditOpenFileSetting = new Setting(containerEl)
+			.setName('Attempt to open file and execute quick edit command')
+			.setDesc('For commands that don\'t have special handling, attempt to open the file and execute the command. Some commands may not work properly this way.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.quickEditOpenFile)
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.quickEditOpenFile = value;
+						await this.plugin.saveData(this.plugin.settings);
+					})();
+				}));
+		
+		// Hide this setting if quick edit is disabled
+		quickEditOpenFileSetting.settingEl.toggleClass('bases-cms-setting-hidden', !this.plugin.settings.enableQuickEdit);
 
 	}
 

@@ -22,6 +22,7 @@ export interface BasesCMSSettings {
 	quickEditCommand: string;
 	quickEditCommandName: string; // Store command name for display
 	quickEditIcon: string; // Icon ID for the quick edit icon
+	quickEditOpenFile: boolean; // Attempt to open file and execute command for unsupported commands
 	
 	// Toolbar button visibility settings
 	showToolbarSelectAll: boolean;
@@ -45,6 +46,7 @@ export const DEFAULT_SETTINGS: BasesCMSSettings = {
 	quickEditCommand: '',
 	quickEditCommandName: '',
 	quickEditIcon: 'pencil-line',
+	quickEditOpenFile: false,
 	showToolbarSelectAll: true,
 	showToolbarClear: true,
 	showToolbarDraft: true,

@@ -17,6 +17,7 @@ export class ScrollLayoutManager {
 	private scrollListener: (() => void) | null = null;
 	private scrollThrottleTimeout: number | null = null;
 	private resizeObserver: ResizeObserver | null = null;
+	private windowResizeHandler: (() => void) | null = null;
 	private isLoading: boolean = false;
 	private displayedCount: number = 50;
 	private totalEntries: number = 0;
@@ -113,39 +114,36 @@ export class ScrollLayoutManager {
 	}
 
 	setupResizeObserver(): void {
+		// Only set up once - but now we just need to set the card min width
+		// CSS Grid's auto-fill will handle column snapping automatically
 		if (this.resizeObserver) {
 			return; // Already set up
 		}
 
-		this.resizeObserver = new ResizeObserver(() => {
-			const containerWidth = this.containerEl.clientWidth;
+		// Create the update function - just set card min width, CSS Grid handles the rest
+		const updateGrid = () => {
 			const currentSettings = readCMSSettings(
 				this.config,
 				this.pluginSettings
 			);
 			const cardMinWidth = currentSettings.cardSize;
-			const minColumns = 1;
-			const gap = GAP_SIZE;
-			const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
-			const cardWidth = (containerWidth - (gap * (cols - 1))) / cols;
 
-			this.containerEl.style.setProperty('--card-min-width', `${cardWidth}px`);
-			this.containerEl.style.setProperty('--grid-columns', String(cols));
+			// Set CSS variables on container - CSS Grid auto-fill handles column snapping
+			this.containerEl.style.setProperty('--card-min-width', `${cardMinWidth}px`);
 			this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(currentSettings.imageAspectRatio));
-		});
+		};
+
+		// Set up ResizeObserver to call updateGrid when container resizes
+		this.resizeObserver = new ResizeObserver(updateGrid);
 		this.resizeObserver.observe(this.containerEl);
+		
+		// Call updateGrid immediately to set initial values
+		updateGrid();
 	}
 
 	updateGridLayout(settings: CMSSettings): void {
-		const containerWidth = this.containerEl.clientWidth;
-		const cardMinWidth = settings.cardSize;
-		const minColumns = 1;
-		const gap = GAP_SIZE;
-		const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
-		const cardWidth = (containerWidth - (gap * (cols - 1))) / cols;
-
-		this.containerEl.style.setProperty('--card-min-width', `${cardWidth}px`);
-		this.containerEl.style.setProperty('--grid-columns', String(cols));
+		// Just set the card min width - CSS Grid auto-fill handles column snapping automatically
+		this.containerEl.style.setProperty('--card-min-width', `${settings.cardSize}px`);
 		this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(settings.imageAspectRatio));
 	}
 
@@ -153,6 +151,10 @@ export class ScrollLayoutManager {
 		if (this.resizeObserver) {
 			this.resizeObserver.disconnect();
 			this.resizeObserver = null;
+		}
+		if (this.windowResizeHandler) {
+			window.removeEventListener('resize', this.windowResizeHandler);
+			this.windowResizeHandler = null;
 		}
 		if (this.scrollListener) {
 			this.containerEl.removeEventListener('scroll', this.scrollListener);
