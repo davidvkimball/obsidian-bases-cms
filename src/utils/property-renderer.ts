@@ -11,8 +11,8 @@ import { getPropertyLabel, getFirstBasesPropertyValue } from './property';
 export class PropertyRenderer {
 	constructor(
 		private app: App,
-		private basesConfig?: { get?: (key: string) => unknown },
-		private basesController?: { getPropertyDisplayName?: (name: string) => string }
+		private getBasesConfig?: () => { get?: (key: string) => unknown } | undefined,
+		private getBasesController?: () => { getPropertyDisplayName?: (name: string) => string } | undefined
 	) {}
 
 	/**
@@ -112,7 +112,9 @@ export class PropertyRenderer {
 		}
 
 		// Get property label from Bases if available
-		const propertyLabel = getPropertyLabel(propertyName, this.app, this.basesConfig, this.basesController);
+		const basesConfig = this.getBasesConfig ? this.getBasesConfig() : undefined;
+		const basesController = this.getBasesController ? this.getBasesController() : undefined;
+		const propertyLabel = getPropertyLabel(propertyName, this.app, basesConfig, basesController);
 		// Check if we got a custom display name (different from property name)
 		const isCustomLabel = propertyLabel.toLowerCase() !== propertyName.toLowerCase();
 
@@ -220,9 +222,8 @@ export class PropertyRenderer {
 				const checkbox = metaContent.createEl('input', { type: 'checkbox' });
 				checkbox.checked = entryValue && 'data' in entryValue ? Boolean(entryValue.data) : false;
 				
-				// Strip "note." prefix for display
-				const displayName = propertyName.startsWith('note.') ? propertyName.substring(5) : propertyName;
-				metaContent.createSpan({ text: displayName });
+				// Use the property label (which uses getDisplayName) instead of raw property name
+				metaContent.createSpan({ text: propertyLabel });
 				
 				checkbox.addEventListener('change', async (e) => {
 					e.stopPropagation();

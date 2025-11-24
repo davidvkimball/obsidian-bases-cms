@@ -29,8 +29,8 @@ export class SharedCardRenderer {
 		this.basesController = basesController as { getPropertyDisplayName?: (name: string) => string };
 		this.propertyRenderer = new PropertyRenderer(
 			this.app,
-			this.basesConfig,
-			this.basesController
+			() => this.basesConfig, // Pass a getter function so it always gets the latest config
+			() => this.basesController // Pass a getter function so it always gets the latest controller
 		);
 	}
 

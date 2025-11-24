@@ -1,6 +1,85 @@
-import { App, TFile, setIcon } from 'obsidian';
+import { App, TFile, setIcon, Modal, TextComponent } from 'obsidian';
 import type BasesCMSPlugin from '../main';
 import type { CMSSettings } from '../shared/data-transform';
+
+/**
+ * Show rename dialog for a file without opening it
+ * Similar to how Astro Composer's renameContentByPath works
+ */
+function showRenameDialog(app: App, file: TFile): void {
+	const modal = new Modal(app);
+	modal.titleEl.setText('Rename file');
+	
+	const inputContainer = modal.contentEl.createDiv();
+	// Make input container full width
+	inputContainer.style.width = '100%';
+	const input = new TextComponent(inputContainer);
+	input.setValue(file.basename);
+	// Make input field full width to match Obsidian's native dialog
+	input.inputEl.style.width = '100%';
+	input.inputEl.style.boxSizing = 'border-box';
+	input.inputEl.focus();
+	input.inputEl.select();
+	
+	const buttonContainer = modal.contentEl.createDiv({ cls: 'modal-button-container' });
+	const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
+	cancelButton.addEventListener('click', () => modal.close());
+	
+	const renameButton = buttonContainer.createEl('button', { 
+		text: 'Rename',
+		cls: 'mod-cta'
+	});
+	
+	const handleRename = async () => {
+		const newName = input.getValue().trim();
+		if (!newName || newName === file.basename) {
+			modal.close();
+			return;
+		}
+		
+		// Construct new path with extension
+		const pathParts = file.path.split('/');
+		pathParts[pathParts.length - 1] = newName + (file.extension ? `.${file.extension}` : '');
+		const newPath = pathParts.join('/');
+		
+		try {
+			await app.fileManager.renameFile(file, newPath);
+			modal.close();
+		} catch (error) {
+			// Error handling - the rename might fail if file already exists, etc.
+			console.error('[Bases CMS] Error renaming file:', error);
+			modal.close();
+		}
+	};
+	
+	renameButton.addEventListener('click', () => {
+		void handleRename();
+	});
+	
+	input.inputEl.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			void handleRename();
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			modal.close();
+		}
+	});
+	
+	modal.open();
+}
+
+/**
+ * Check if a command is Obsidian's default "Rename file" command
+ */
+function isObsidianRenameCommand(commandId: string): boolean {
+	// Obsidian's rename file command IDs (may vary by version)
+	const lowerId = commandId.toLowerCase();
+	return commandId === 'file-explorer:rename-file' || 
+		   commandId === 'rename-file' ||
+		   commandId === 'file:rename-file' ||
+		   (lowerId.includes('rename') && lowerId.includes('file') && !lowerId.includes(':'));
+}
 
 /**
  * Setup quick edit icon on title element
@@ -51,6 +130,19 @@ export function setupQuickEditIcon(
 			const file = app.vault.getAbstractFileByPath(cardPath);
 			if (file instanceof TFile) {
 				const commandId = plugin.settings.quickEditCommand;
+				
+				// FIRST: Check if this is Obsidian's "Rename file" command
+				// Show rename dialog without opening the file, similar to Astro Composer
+				const commandRegistry = (app as { commands?: { commands?: Record<string, { name?: string }> } }).commands;
+				const command = commandRegistry?.commands?.[commandId];
+				const commandName = command?.name?.toLowerCase() || '';
+				
+				// Check if this is a rename file command by ID or name
+				if (isObsidianRenameCommand(commandId) || 
+					(commandName.includes('rename') && commandName.includes('file'))) {
+					showRenameDialog(app, file);
+					return; // Success, exit early - do NOT open the file
+				}
 				
 				// Try to find and call a helper function from the plugin that registered this command
 				// Pattern: Look for [commandId]ByPath method on the source plugin
@@ -108,46 +200,63 @@ export function setupQuickEditIcon(
 					// Fall through to try regular command execution
 				}
 				
-				// For other commands or if helper not available, try executing without opening file first
-				// Many commands work without the file being open
+				// For other commands or if helper not available, we need to open the file first
+				// and make it active so commands like "Rename file" target the correct file
 				if (!helperCalled) {
-					try {
-						await (app as { commands?: { executeCommandById?: (id: string) => Promise<void> } }).commands?.executeCommandById?.(plugin.settings.quickEditCommand);
-						return; // Success, no need to open file
-					} catch {
-						// Command failed - it might need the file open
-						// Open file as a last resort
+					// Always open the file first and make it active before executing the command
+					// This ensures commands that use getActiveFile() target the correct file
+					const leaf = app.workspace.getLeaf(false);
+					await leaf.openFile(file);
+					
+					// CRITICAL: Set this leaf as active so commands target the correct file
+					// Commands like "Rename file" use getActiveFile() to determine which file to operate on
+					app.workspace.setActiveLeaf(leaf, { focus: true });
+					
+					// Wait for the editor to be ready and the file to be active
+					// Use multiple checks to ensure the workspace state has fully updated
+					let attempts = 0;
+					const maxAttempts = 30; // Maximum 1.5 seconds of waiting (30 * 50ms)
+					const executeCommand = () => {
+						// Final check right before executing
+						const finalActiveFile = app.workspace.getActiveFile();
+						if (finalActiveFile === file) {
+							// File is confirmed active, execute the command
+							void (async () => {
+								try {
+									await (app as { commands?: { executeCommandById?: (id: string) => Promise<void> } }).commands?.executeCommandById?.(plugin.settings.quickEditCommand);
+								} catch {
+									// Command execution failed
+								}
+							})();
+						}
+					};
+					
+					const checkEditorReady = () => {
+						const view = leaf.view;
+						const viewWithEditor = view as { editor?: unknown };
+						const activeFile = app.workspace.getActiveFile();
 						
-						// Open the file in an editor view (not just preview)
-						// This ensures editorCallback commands have the proper context
-						const leaf = app.workspace.getLeaf(false);
-						await leaf.openFile(file);
-						
-						// Wait for the editor to be ready before executing command
-						// Some commands need the editor context
-						const checkEditorReady = () => {
-							const view = leaf.view;
-							const viewWithEditor = view as { editor?: unknown };
-							if (view && 'editor' in view && viewWithEditor.editor) {
-								// Editor is ready, execute command
-								setTimeout(() => {
-									void (async () => {
-										try {
-											await (app as { commands?: { executeCommandById?: (id: string) => Promise<void> } }).commands?.executeCommandById?.(plugin.settings.quickEditCommand);
-										} catch {
-											// Command execution failed
-										}
-									})();
-								}, 100);
-							} else {
-								// Editor not ready yet, check again
-								setTimeout(checkEditorReady, 50);
-							}
-						};
-						
-						// Start checking for editor readiness
-						checkEditorReady();
-					}
+						// Check that both the editor is ready AND the file is active
+						if (view && 'editor' in view && viewWithEditor.editor && activeFile === file) {
+							// Editor is ready and file is active
+							// Wait a bit more to ensure workspace state is fully propagated
+							// Use multiple animation frames and timeouts to ensure everything is settled
+							requestAnimationFrame(() => {
+								requestAnimationFrame(() => {
+									setTimeout(() => {
+										executeCommand();
+									}, 200);
+								});
+							});
+						} else if (attempts < maxAttempts) {
+							// Editor not ready yet or file not active, check again
+							attempts++;
+							setTimeout(checkEditorReady, 50);
+						}
+					};
+					
+					// Start checking for editor readiness
+					checkEditorReady();
 				}
 			}
 		})();
