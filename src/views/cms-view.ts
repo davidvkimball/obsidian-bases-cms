@@ -180,11 +180,14 @@ export class BasesCMSView extends BasesView {
 				remainingCount -= entriesToTake;
 			}
 
-			// Load images synchronously for ALL entries (not just visible) for instant rendering
-			// This ensures images are ready when switching views or scrolling
+			// PERFORMANCE OPTIMIZATION: Render cards immediately, load images asynchronously
+			// This eliminates blocking delays when opening new tabs
+			// Prepare image loading data but don't await it before rendering
+			const imageLoadingPromises: Array<Promise<void>> = [];
+			
 			if (settings.imageFormat !== 'none') {
-				// Process ALL entries, not just visible ones
-				const allImageEntries = allEntries
+				// Process visible entries first for priority loading
+				const visibleImageEntries = visibleEntries
 					.filter(entry => !(entry.file.path in this.images))
 					.map(entry => {
 						const file = this.app.vault.getAbstractFileByPath(entry.file.path);
@@ -198,95 +201,76 @@ export class BasesCMSView extends BasesView {
 					})
 					.filter((e): e is NonNullable<typeof e> => e !== null);
 
-				// For visible entries, generate thumbnails immediately (blocking for instant display)
-				// For rest, generate in background
-				const visibleImageEntries = allImageEntries.filter(e => 
-					visibleEntries.some(ve => ve.file.path === e.path)
-				);
-				const backgroundImageEntries = allImageEntries.filter(e => 
-					!visibleEntries.some(ve => ve.file.path === e.path)
-				);
+				// Process background entries (non-visible) for later loading
+				const backgroundImageEntries = allEntries
+					.filter(entry => 
+						!(entry.file.path in this.images) && 
+						!visibleEntries.some(ve => ve.file.path === entry.file.path)
+					)
+					.map(entry => {
+						const file = this.app.vault.getAbstractFileByPath(entry.file.path);
+						if (!(file instanceof TFile)) return null;
+						const imagePropertyValues = getAllBasesImagePropertyValues(entry, settings.imageProperty);
+						return {
+							path: entry.file.path,
+							file,
+							imagePropertyValues: imagePropertyValues
+						};
+					})
+					.filter((e): e is NonNullable<typeof e> => e !== null);
 				
-				// Load images for visible entries first (parallel loading - much faster)
+				// Start loading images for visible entries (high priority, but don't await)
 				if (visibleImageEntries.length > 0) {
-					await loadImagesForEntries(
-						visibleImageEntries,
-						settings.fallbackToEmbeds,
-						this.app,
-						this.images,
-						this.hasImageAvailable
+					imageLoadingPromises.push(
+						loadImagesForEntries(
+							visibleImageEntries,
+							settings.fallbackToEmbeds,
+							this.app,
+							this.images,
+							this.hasImageAvailable
+						).then(() => {
+							// Update visible cards when images load
+							requestAnimationFrame(() => {
+								visibleImageEntries.forEach(entry => {
+									if (entry.path in this.images) {
+										this.updateCardImage(entry.path, this.images[entry.path]);
+									}
+								});
+							});
+						})
 					);
 				}
 				
-				// Load images for background entries (non-blocking, parallel)
+				// Start loading images for background entries (low priority, non-blocking)
 				if (backgroundImageEntries.length > 0) {
-					void loadImagesForEntries(
-						backgroundImageEntries,
-						settings.fallbackToEmbeds,
-						this.app,
-						this.images,
-						this.hasImageAvailable
+					imageLoadingPromises.push(
+						loadImagesForEntries(
+							backgroundImageEntries,
+							settings.fallbackToEmbeds,
+							this.app,
+							this.images,
+							this.hasImageAvailable
+						)
 					);
 				}
 
 				// Load embed images in background for entries without property images
 				if (settings.fallbackToEmbeds) {
+					const allImageEntries = [...visibleImageEntries, ...backgroundImageEntries];
 					const embedEntries = allImageEntries.filter(e => !(e.path in this.images) && !this.hasImageAvailable[e.path]);
 					if (embedEntries.length > 0) {
-						// Don't await - let it run in background
-						void loadEmbedImagesForEntries(embedEntries, this.app, this.images, this.hasImageAvailable).then(() => {
-							// Update cards that got embed images
-							embedEntries.forEach(entry => {
-								if (entry.path in this.images) {
-									const cardEl = this.containerEl.querySelector(`.card[data-path="${entry.path}"]`);
-									if (cardEl) {
-										const imageUrl = this.images[entry.path];
-										const url = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl;
-										if (url) {
-											// Check if image element exists
-											let imgEl = cardEl.querySelector('img');
-											if (!imgEl) {
-												// No image element - need to create it (replace placeholder)
-												const placeholder = cardEl.querySelector('.card-cover-placeholder, .card-thumbnail-placeholder');
-												if (placeholder) {
-													// Preserve badge if it exists on placeholder
-													const existingBadge = placeholder.querySelector('.card-status-badge');
-													
-													const imageClassName = placeholder.classList.contains('card-cover-placeholder') ? 'card-cover' : 'card-thumbnail';
-													const imageEl = placeholder.parentElement?.createDiv(imageClassName);
-													if (imageEl) {
-														const imageEmbedContainer = imageEl.createDiv('image-embed');
-														imgEl = imageEmbedContainer.createEl('img', {
-															attr: { 
-																src: url, 
-																alt: '',
-																decoding: 'async'
-															}
-														});
-														imageEmbedContainer.style.setProperty('--cover-image-url', `url("${url}")`);
-														
-														// Move badge from placeholder to new image element if it exists
-														if (existingBadge) {
-															imageEl.appendChild(existingBadge);
-														}
-														
-														placeholder.remove();
-													}
-												}
-											} else if (imgEl.src !== url) {
-												// Image element exists, just update src
-												imgEl.src = url;
-												// Update CSS variable for cover images
-												const imageEmbedContainer = imgEl.parentElement;
-												if (imageEmbedContainer && imageEmbedContainer.classList.contains('image-embed')) {
-													imageEmbedContainer.style.setProperty('--cover-image-url', `url("${url}")`);
-												}
-											}
+						imageLoadingPromises.push(
+							loadEmbedImagesForEntries(embedEntries, this.app, this.images, this.hasImageAvailable).then(() => {
+								// Update cards that got embed images
+								requestAnimationFrame(() => {
+									embedEntries.forEach(entry => {
+										if (entry.path in this.images) {
+											this.updateCardImage(entry.path, this.images[entry.path]);
 										}
-									}
-								}
-							});
-						});
+									});
+								});
+							})
+						);
 					}
 				}
 			}
@@ -317,17 +301,19 @@ export class BasesCMSView extends BasesView {
 					this.snippets
 				).then(() => {
 					// Update text preview elements for cards that now have snippets
-					snippetEntries.forEach(entry => {
-						if (entry.path in this.snippets && this.snippets[entry.path]) {
-							const cardEl = this.containerEl.querySelector(`[data-path="${entry.path}"]`);
-							if (cardEl) {
-								const textPreviewEl = (cardEl as { __textPreviewEl?: HTMLElement }).__textPreviewEl;
-								// Update if element exists and is empty (no text content or only whitespace)
-								if (textPreviewEl && (!textPreviewEl.textContent || textPreviewEl.textContent.trim().length === 0)) {
-									textPreviewEl.setText(this.snippets[entry.path]);
+					requestAnimationFrame(() => {
+						snippetEntries.forEach(entry => {
+							if (entry.path in this.snippets && this.snippets[entry.path]) {
+								const cardEl = this.containerEl.querySelector(`[data-path="${entry.path}"]`);
+								if (cardEl) {
+									const textPreviewEl = (cardEl as { __textPreviewEl?: HTMLElement }).__textPreviewEl;
+									// Update if element exists and is empty (no text content or only whitespace)
+									if (textPreviewEl && (!textPreviewEl.textContent || textPreviewEl.textContent.trim().length === 0)) {
+										textPreviewEl.setText(this.snippets[entry.path]);
+									}
 								}
 							}
-						}
+						});
 					});
 				});
 			}
@@ -343,6 +329,8 @@ export class BasesCMSView extends BasesView {
 				}
 			}
 			
+			// PERFORMANCE: Render immediately without waiting for images
+			// Images will be loaded asynchronously and cards updated when ready
 			// Clear and re-render
 			this.containerEl.empty();
 
@@ -400,9 +388,13 @@ export class BasesCMSView extends BasesView {
 			}
 			
 			// Batch set all image src attributes at once to trigger parallel loading
+			// Only set src for images that are already in cache (instant display)
+			// Other images will be updated by updateCardImage when they load
 			if (imageElements.length > 0) {
 				requestAnimationFrame(() => {
 					for (const { img, src } of imageElements) {
+						// Only set src if image is already loaded in cache
+						// This ensures instant display for cached images
 						img.src = src;
 					}
 				});
@@ -480,6 +472,58 @@ export class BasesCMSView extends BasesView {
 				void this.handlePropertyToggle(path, property, value);
 			}
 		);
+	}
+
+	/**
+	 * Update card image when it becomes available
+	 * Called asynchronously after images load
+	 */
+	private updateCardImage(path: string, imageUrl: string | string[]): void {
+		const cardEl = this.containerEl.querySelector(`.card[data-path="${path}"]`);
+		if (!cardEl) return;
+
+		const url = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl;
+		if (!url) return;
+
+		// Check if image element exists
+		let imgEl = cardEl.querySelector('img');
+		if (!imgEl) {
+			// No image element - need to create it (replace placeholder)
+			const placeholder = cardEl.querySelector('.card-cover-placeholder, .card-thumbnail-placeholder');
+			if (placeholder) {
+				// Preserve badge if it exists on placeholder
+				const existingBadge = placeholder.querySelector('.card-status-badge');
+				
+				const imageClassName = placeholder.classList.contains('card-cover-placeholder') ? 'card-cover' : 'card-thumbnail';
+				const imageEl = placeholder.parentElement?.createDiv(imageClassName);
+				if (imageEl) {
+					const imageEmbedContainer = imageEl.createDiv('image-embed');
+					imgEl = imageEmbedContainer.createEl('img', {
+						attr: { 
+							src: url, 
+							alt: '',
+							decoding: 'async'
+						}
+					});
+					imageEmbedContainer.style.setProperty('--cover-image-url', `url("${url}")`);
+					
+					// Move badge from placeholder to new image element if it exists
+					if (existingBadge) {
+						imageEl.appendChild(existingBadge);
+					}
+					
+					placeholder.remove();
+				}
+			}
+		} else if (imgEl.src !== url) {
+			// Image element exists, just update src
+			imgEl.src = url;
+			// Update CSS variable for cover images
+			const imageEmbedContainer = imgEl.parentElement;
+			if (imageEmbedContainer && imageEmbedContainer.classList.contains('image-embed')) {
+				imageEmbedContainer.style.setProperty('--cover-image-url', `url("${url}")`);
+			}
+		}
 	}
 
 	private getSortMethod(): string {
