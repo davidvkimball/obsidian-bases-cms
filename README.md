@@ -165,10 +165,10 @@ If a command doesn't have a helper method:
 
 ## Notes
 
-- Requires the [Bases](https://obsidian.md/plugins?id=bases) plugin to be installed and enabled.
+- Requires the [Bases](https://help.obsidian.md/bases) core plugin to be enabled.
 - The CMS view integrates seamlessly with Bases views and respects base queries and filters.
 - Bulk operations preserve file metadata and handle edge cases like missing properties gracefully.
-- Smart deletion features help maintain a clean vault structure when working with folder-based content (e.g., Astro posts).
+- Smart deletion features help maintain a clean vault structure when working with folder-based content.
 
 ## Contributing
 
