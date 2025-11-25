@@ -46,7 +46,7 @@ export class SharedCardRenderer {
 		isSelected: boolean,
 		onSelect: (path: string, selected: boolean) => void,
 		onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>
-	): { img: HTMLImageElement; src: string } | null {
+	): void {
 		// Create card element
 		const cardEl = container.createDiv('card bases-cms-card');
 		if (settings.imageFormat === 'cover') {
@@ -251,16 +251,12 @@ export class SharedCardRenderer {
 
 				if (imageUrls.length > 0) {
 					const imageEmbedContainer = imageEl.createDiv('image-embed');
-					// Create img element WITHOUT src first (will be set in batch)
-					const imgEl = imageEmbedContainer.createEl('img', {
-						attr: { 
-							alt: '',
-							decoding: 'async',
-							sizes: settings.imageFormat === 'cover' ? '100vw' : '80px'
-						}
-					});
-					// Set CSS variable for letterbox blur background
-					imageEmbedContainer.style.setProperty('--cover-image-url', `url("${imageUrls[0]}")`);
+					// Use background-image instead of img tag for smoother scaling
+					// Set background image directly on the container
+					imageEmbedContainer.style.backgroundImage = `url("${imageUrls[0]}")`;
+					imageEmbedContainer.style.backgroundSize = 'cover';
+					imageEmbedContainer.style.backgroundPosition = 'center center';
+					imageEmbedContainer.style.backgroundRepeat = 'no-repeat';
 					
 					// Draft status badge (top-left, clickable to toggle)
 					// For cover images, place badge on the cover AFTER image-embed is created
@@ -271,9 +267,8 @@ export class SharedCardRenderer {
 					// Properties - MUST be called before returning
 					this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle);
 					
-					
-					// Return image element and src for batch loading
-					return { img: imgEl, src: imageUrls[0] };
+					// Images are set via background-image, no return value needed
+					return;
 				}
 			} else if (settings.imageFormat === 'cover') {
 				// For cover format, render placeholder and add badge if needed
@@ -289,7 +284,7 @@ export class SharedCardRenderer {
 		// Properties
 		this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle);
 		
-		return null; // No image for this card
+		return; // No image for this card
 	}
 }
 

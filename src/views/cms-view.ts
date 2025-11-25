@@ -343,7 +343,7 @@ export class BasesCMSView extends BasesView {
 
 			// Render groups with headers
 			let displayedSoFar = 0;
-			const imageElements: Array<{ img: HTMLImageElement; src: string }> = [];
+			// Images are now handled via background-image, no need to collect img elements
 			
 			for (const processedGroup of processedGroups) {
 				if (displayedSoFar >= this.scrollLayoutManager.getDisplayedCount()) break;
@@ -378,27 +378,14 @@ export class BasesCMSView extends BasesView {
 				for (let i = 0; i < cards.length; i++) {
 					const card = cards[i];
 					const entry = groupEntries[i];
-					const imgData = this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
-					if (imgData) {
-						imageElements.push(imgData);
-					}
+					this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
 				}
 
 				displayedSoFar += entriesToDisplay;
 			}
 			
-			// Batch set all image src attributes at once to trigger parallel loading
-			// Only set src for images that are already in cache (instant display)
-			// Other images will be updated by updateCardImage when they load
-			if (imageElements.length > 0) {
-				requestAnimationFrame(() => {
-					for (const { img, src } of imageElements) {
-						// Only set src if image is already loaded in cache
-						// This ensures instant display for cached images
-						img.src = src;
-					}
-				});
-			}
+			// Images are now set via background-image in renderCard, so no batch loading needed
+			// Images will be updated by updateCardImage when they load
 
 			// Restore scroll position after rendering
 			if (savedScrollTop > 0) {
@@ -456,7 +443,7 @@ export class BasesCMSView extends BasesView {
 		entry: BasesEntry,
 		index: number,
 		settings: CMSSettings
-	): { img: HTMLImageElement; src: string } | null {
+	): void {
 		const isSelected = this.selectedFiles.has(card.path);
 		return this.cardRenderer.renderCard(
 			container,
@@ -485,10 +472,10 @@ export class BasesCMSView extends BasesView {
 		const url = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl;
 		if (!url) return;
 
-		// Check if image element exists
-		let imgEl = cardEl.querySelector('img');
-		if (!imgEl) {
-			// No image element - need to create it (replace placeholder)
+		// Check if image-embed container exists
+		let imageEmbedContainer = cardEl.querySelector('.image-embed') as HTMLElement;
+		if (!imageEmbedContainer) {
+			// No image container - need to create it (replace placeholder)
 			const placeholder = cardEl.querySelector('.card-cover-placeholder, .card-thumbnail-placeholder');
 			if (placeholder) {
 				// Preserve badge if it exists on placeholder
@@ -497,15 +484,7 @@ export class BasesCMSView extends BasesView {
 				const imageClassName = placeholder.classList.contains('card-cover-placeholder') ? 'card-cover' : 'card-thumbnail';
 				const imageEl = placeholder.parentElement?.createDiv(imageClassName);
 				if (imageEl) {
-					const imageEmbedContainer = imageEl.createDiv('image-embed');
-					imgEl = imageEmbedContainer.createEl('img', {
-						attr: { 
-							src: url, 
-							alt: '',
-							decoding: 'async'
-						}
-					});
-					imageEmbedContainer.style.setProperty('--cover-image-url', `url("${url}")`);
+					imageEmbedContainer = imageEl.createDiv('image-embed');
 					
 					// Move badge from placeholder to new image element if it exists
 					if (existingBadge) {
@@ -515,14 +494,14 @@ export class BasesCMSView extends BasesView {
 					placeholder.remove();
 				}
 			}
-		} else if (imgEl.src !== url) {
-			// Image element exists, just update src
-			imgEl.src = url;
-			// Update CSS variable for cover images
-			const imageEmbedContainer = imgEl.parentElement;
-			if (imageEmbedContainer && imageEmbedContainer.classList.contains('image-embed')) {
-				imageEmbedContainer.style.setProperty('--cover-image-url', `url("${url}")`);
-			}
+		}
+		
+		// Update background-image on the container
+		if (imageEmbedContainer) {
+			imageEmbedContainer.style.backgroundImage = `url("${url}")`;
+			imageEmbedContainer.style.backgroundSize = 'cover';
+			imageEmbedContainer.style.backgroundPosition = 'center center';
+			imageEmbedContainer.style.backgroundRepeat = 'no-repeat';
 		}
 	}
 

@@ -123,6 +123,10 @@ export async function generateThumbnail(
 						return;
 					}
 
+					// Enable high-quality image smoothing for smooth scaling
+					ctx.imageSmoothingEnabled = true;
+					ctx.imageSmoothingQuality = 'high';
+
 					// Draw resized image
 					ctx.drawImage(img, 0, 0, width, height);
 
@@ -199,6 +203,10 @@ export async function generateThumbnailFromUrl(
 						resolve(null);
 						return;
 					}
+
+					// Enable high-quality image smoothing for smooth scaling
+					ctx.imageSmoothingEnabled = true;
+					ctx.imageSmoothingQuality = 'high';
 
 					// Draw resized image
 					ctx.drawImage(img, 0, 0, width, height);
