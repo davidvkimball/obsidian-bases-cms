@@ -4,6 +4,10 @@ A fork of [Dynamic Views](https://github.com/greetclammy/dynamic-views) that pro
 
 ![bases-cms-preview](https://github.com/user-attachments/assets/e20f2535-8991-4ccf-bb59-f97694e52c34)
 
+## Made for Vault CMS
+
+Part of the [Vault CMS](https://github.com/davidvkimball/vault-cms) project.
+
 ## Features
 
 - **Card-Based CMS View**: Display your base entries as cards with thumbnails, snippets, and property information in a grid layout optimized for content management.
