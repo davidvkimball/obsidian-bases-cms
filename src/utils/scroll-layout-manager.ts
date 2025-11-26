@@ -122,6 +122,11 @@ export class ScrollLayoutManager {
 
 		// Create the update function - just set card min width, CSS Grid handles the rest
 		const updateGrid = () => {
+			// Guard: ensure config exists and has get method before using it
+			if (!this.config || typeof this.config.get !== 'function') {
+				return; // Config not ready yet, skip update
+			}
+
 			const currentSettings = readCMSSettings(
 				this.config,
 				this.pluginSettings
