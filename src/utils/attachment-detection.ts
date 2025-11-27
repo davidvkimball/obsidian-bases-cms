@@ -7,6 +7,7 @@ import { App, TFile, TFolder } from 'obsidian';
 
 /**
  * Find all attachments in a note
+ * Includes both embedded images in markdown and images referenced in frontmatter properties
  */
 export function getAttachmentsInNote(app: App, file: TFile): TFile[] {
 	const attachments: TFile[] = [];
@@ -14,12 +15,70 @@ export function getAttachmentsInNote(app: App, file: TFile): TFile[] {
 	
 	if (content instanceof TFile) {
 		const metadata = app.metadataCache.getFileCache(content);
-		const embeds = metadata?.embeds || [];
 		
+		// Get embedded images from markdown body
+		const embeds = metadata?.embeds || [];
 		for (const embed of embeds) {
 			const embedFile = app.metadataCache.getFirstLinkpathDest(embed.link, file.path);
 			if (embedFile instanceof TFile) {
 				attachments.push(embedFile);
+			}
+		}
+		
+		// Get images from frontmatter properties
+		// Check common image property names: image, imageOG, cover, thumbnail
+		const frontmatter = metadata?.frontmatter;
+		if (frontmatter) {
+			const imagePropertyNames = ['image', 'imageOG', 'cover', 'thumbnail'];
+			const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
+			
+			for (const propName of imagePropertyNames) {
+				const propValue = frontmatter[propName];
+				if (!propValue) continue;
+				
+				// Handle array of image paths
+				const imagePaths = Array.isArray(propValue) ? propValue : [propValue];
+				
+				for (const imagePath of imagePaths) {
+					if (typeof imagePath !== 'string') continue;
+					
+					// Strip wikilink syntax if present
+					const cleanPath = imagePath.replace(/^!?\[\[([^\]]+)\]\]$/, '$1').trim();
+					if (!cleanPath) continue;
+					
+					// Skip external URLs
+					if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+						continue;
+					}
+					
+					// Try to resolve the image file
+					let imageFile: TFile | null = app.metadataCache.getFirstLinkpathDest(cleanPath, file.path);
+					
+					// If not found and path starts with ./, try resolving relative to file's directory
+					if (!imageFile && cleanPath.startsWith('./')) {
+						const relativePath = cleanPath.substring(2);
+						const fullPath = file.parent?.path 
+							? `${file.parent.path}/${relativePath}`
+							: relativePath;
+						const resolvedFile = app.vault.getAbstractFileByPath(fullPath);
+						if (resolvedFile instanceof TFile) {
+							imageFile = resolvedFile;
+						}
+					}
+					
+					// If still not found, try as absolute path
+					if (!imageFile) {
+						const absoluteFile = app.vault.getAbstractFileByPath(cleanPath);
+						if (absoluteFile instanceof TFile) {
+							imageFile = absoluteFile;
+						}
+					}
+					
+					// Only add if it's a valid image file
+					if (imageFile && validImageExtensions.includes(imageFile.extension)) {
+						attachments.push(imageFile);
+					}
+				}
 			}
 		}
 	}

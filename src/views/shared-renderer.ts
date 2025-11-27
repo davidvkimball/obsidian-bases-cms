@@ -11,6 +11,7 @@ import { getFirstBasesPropertyValue } from '../utils/property';
 import { renderDraftStatusBadge } from '../utils/draft-status-badge';
 import { setupQuickEditIcon } from '../utils/quick-edit-icon';
 import { PropertyRenderer } from '../utils/property-renderer';
+import { convertGifToStatic } from '../utils/image';
 
 export class SharedCardRenderer {
 	protected basesConfig?: { get?: (key: string) => unknown };
@@ -251,9 +252,16 @@ export class SharedCardRenderer {
 
 				if (imageUrls.length > 0) {
 					const imageEmbedContainer = imageEl.createDiv('image-embed');
-					// Use background-image instead of img tag for smoother scaling
-					// Set background image directly on the container
-					imageEmbedContainer.style.backgroundImage = `url("${imageUrls[0]}")`;
+					const originalUrl = imageUrls[0];
+					
+					// Convert GIF to static if setting is enabled
+					void (async () => {
+						const finalUrl = await convertGifToStatic(originalUrl, this.plugin.settings.forceStaticGifImages);
+						imageEmbedContainer.style.backgroundImage = `url("${finalUrl}")`;
+					})();
+					
+					// Set initial background image (will be updated if GIF conversion is needed)
+					imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
 					imageEmbedContainer.style.backgroundSize = 'cover';
 					imageEmbedContainer.style.backgroundPosition = 'center center';
 					imageEmbedContainer.style.backgroundRepeat = 'no-repeat';

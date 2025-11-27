@@ -16,6 +16,7 @@ import { setupNewNoteInterceptor } from '../utils/new-note-interceptor';
 import { PropertyToggleHandler } from '../utils/property-toggle-handler';
 import { ScrollLayoutManager } from '../utils/scroll-layout-manager';
 import { ViewSwitchListener } from '../utils/view-switch-listener';
+import { convertGifToStatic } from '../utils/image';
 
 export const CMS_VIEW_TYPE = 'bases-cms';
 
@@ -145,14 +146,23 @@ export class BasesCMSView extends BasesView {
 			const groupedData = this.data.groupedData;
 			const allEntries = this.data.data;
 
-			// Update card renderer with config (now available)
-			(this.cardRenderer as unknown as { basesConfig?: { get?: (key: string) => unknown } }).basesConfig = this.config;
-
 			// Read settings from Bases config
 			const settings = readCMSSettings(
 				this.config,
 				this.plugin.settings
 			);
+			
+			// If fallback to embeds is disabled, clear any cached embed images
+			// This ensures embed images don't persist when setting is turned off
+			if (!settings.fallbackToEmbeds) {
+				// Clear all cached images to force re-evaluation
+				// This is necessary because we can't distinguish embed vs property images in cache
+				this.images = {};
+				this.hasImageAvailable = {};
+			}
+
+			// Update card renderer with config (now available)
+			(this.cardRenderer as unknown as { basesConfig?: { get?: (key: string) => unknown } }).basesConfig = this.config;
 
 			// Update grid layout using scroll layout manager
 			this.scrollLayoutManager.updateGridLayout(settings);
@@ -254,10 +264,18 @@ export class BasesCMSView extends BasesView {
 					);
 				}
 
-				// Load embed images in background for entries without property images
+				// Load embed images in background ONLY for entries without property images
+				// CRITICAL: Only load embeds if NO property values exist at all
 				if (settings.fallbackToEmbeds) {
 					const allImageEntries = [...visibleImageEntries, ...backgroundImageEntries];
-					const embedEntries = allImageEntries.filter(e => !(e.path in this.images) && !this.hasImageAvailable[e.path]);
+					const embedEntries = allImageEntries.filter(e => {
+						// Only include entries that:
+						// 1. Don't have images in cache
+						// 2. Don't have hasImageAvailable set (meaning no property values were attempted)
+						// 3. Have NO property values (check the actual property values)
+						const hasPropertyValues = e.imagePropertyValues && Array.isArray(e.imagePropertyValues) && e.imagePropertyValues.length > 0;
+						return !(e.path in this.images) && !this.hasImageAvailable[e.path] && !hasPropertyValues;
+					});
 					if (embedEntries.length > 0) {
 						imageLoadingPromises.push(
 							loadEmbedImagesForEntries(embedEntries, this.app, this.images, this.hasImageAvailable).then(() => {
@@ -498,6 +516,13 @@ export class BasesCMSView extends BasesView {
 		
 		// Update background-image on the container
 		if (imageEmbedContainer) {
+			// Convert GIF to static if setting is enabled
+			void (async () => {
+				const finalUrl = await convertGifToStatic(url, this.plugin.settings.forceStaticGifImages);
+				imageEmbedContainer.style.backgroundImage = `url("${finalUrl}")`;
+			})();
+			
+			// Set initial background image (will be updated if GIF conversion is needed)
 			imageEmbedContainer.style.backgroundImage = `url("${url}")`;
 			imageEmbedContainer.style.backgroundSize = 'cover';
 			imageEmbedContainer.style.backgroundPosition = 'center center';

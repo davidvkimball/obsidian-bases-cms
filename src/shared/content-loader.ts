@@ -30,8 +30,18 @@ export async function loadImageForEntry(
 	imageCache: Record<string, string | string[]>,
 	hasImageCache: Record<string, boolean>
 ): Promise<void> {
-	// Skip if already in cache - CRITICAL for performance
-	if (path in imageCache) {
+	// Check if image property has any values at all (even if they fail to resolve)
+	const hasPropertyValues = imagePropertyValues && Array.isArray(imagePropertyValues) && imagePropertyValues.length > 0;
+	
+	// If fallback is disabled and we have cached images, clear them to force re-evaluation
+	// This ensures cached embed images are removed when setting is turned off
+	if (!fallbackToEmbeds && path in imageCache) {
+		delete imageCache[path];
+		delete hasImageCache[path];
+	}
+	
+	// If already in cache and no property values, skip (only if fallback is enabled)
+	if (path in imageCache && !hasPropertyValues && fallbackToEmbeds) {
 		return;
 	}
 
@@ -45,15 +55,29 @@ export async function loadImageForEntry(
 			...externalUrls  // External URLs already validated by processImagePaths
 		];
 
-		// If no property images and fallback enabled, extract embed images
-		if (validImages.length === 0 && fallbackToEmbeds) {
+		// Only fall back to embed images if:
+		// 1. No property values were set at all (not when they exist but fail to resolve)
+		// 2. No valid images were found from property
+		// 3. Fallback is enabled
+		if (validImages.length === 0 && !hasPropertyValues && fallbackToEmbeds) {
 			validImages = await extractEmbedImages(file, app);
 		}
 
 		if (validImages.length > 0) {
 			// Store as array if multiple, string if single
+			// This will overwrite any cached embed images if property images are found
 			imageCache[path] = validImages.length > 1 ? validImages : validImages[0];
 			hasImageCache[path] = true;
+		} else if (hasPropertyValues) {
+			// If property values exist but failed to resolve, mark as attempted
+			// This prevents embed images from being loaded later
+			// Also clear any cached embed images
+			delete imageCache[path];
+			hasImageCache[path] = true;
+		} else if (!fallbackToEmbeds) {
+			// If fallback is disabled and no property images, clear cache
+			delete imageCache[path];
+			delete hasImageCache[path];
 		}
 	} catch (error) {
 		console.error(`Failed to load image for ${path}:`, error);
@@ -82,16 +106,21 @@ export async function loadImagesForEntries(
 	imageCache: Record<string, string | string[]>,
 	hasImageCache: Record<string, boolean>
 ): Promise<void> {
-	// Filter out entries already in cache BEFORE processing
-	const uncachedEntries = entries.filter(entry => !(entry.path in imageCache));
+	// Filter entries: only skip if cached AND no property values exist
+	// If property values exist, we MUST re-evaluate to ensure property images take priority
+	const entriesToProcess = entries.filter(entry => {
+		const hasPropertyValues = entry.imagePropertyValues && Array.isArray(entry.imagePropertyValues) && entry.imagePropertyValues.length > 0;
+		// Process if: not cached, OR has property values (to ensure property images override cached embeds)
+		return !(entry.path in imageCache) || hasPropertyValues;
+	});
 	
 	// Batch size: process 50 images at a time to avoid overwhelming the browser
 	// This balances performance (parallel loading) with browser limits
 	const BATCH_SIZE = 50;
 	
 	// Process in batches
-	for (let i = 0; i < uncachedEntries.length; i += BATCH_SIZE) {
-		const batch = uncachedEntries.slice(i, i + BATCH_SIZE);
+	for (let i = 0; i < entriesToProcess.length; i += BATCH_SIZE) {
+		const batch = entriesToProcess.slice(i, i + BATCH_SIZE);
 		
 		// Load batch in parallel
 		await Promise.all(

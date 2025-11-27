@@ -215,6 +215,27 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 					})();
 				}));
 
+		new Setting(containerEl)
+			.setName('Force static image for animated GIFs')
+			.setDesc('When enabled, animated GIFs will display only the first frame when used as card covers or thumbnails.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.forceStaticGifImages)
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.forceStaticGifImages = value;
+						await this.plugin.saveData(this.plugin.settings);
+						// Refresh all active views to apply the change
+						const pluginWithMethod = this.plugin as { activeViews?: Set<{ onDataUpdated?: () => void }> };
+						if (pluginWithMethod.activeViews) {
+							pluginWithMethod.activeViews.forEach(view => {
+								if (view.onDataUpdated) {
+									view.onDataUpdated();
+								}
+							});
+						}
+					})();
+				}));
+
 		// Quick edit settings
 		new Setting(containerEl).setName('Quick edit').setHeading();
 

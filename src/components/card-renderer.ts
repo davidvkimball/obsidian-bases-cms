@@ -6,6 +6,8 @@
 import { App, BasesEntry, TFile } from 'obsidian';
 import { CardData } from '../types';
 import { getAllBasesImagePropertyValues } from '../utils/property';
+import { convertGifToStatic } from '../utils/image';
+import type BasesCMSPlugin from '../main';
 
 export class CardRenderer {
 	constructor(

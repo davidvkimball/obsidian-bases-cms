@@ -92,7 +92,31 @@ export function resolveInternalImagePaths(
 	const resourcePaths: string[] = [];
 
 	for (const propPath of internalPaths) {
-		const imageFile = app.metadataCache.getFirstLinkpathDest(propPath, sourcePath);
+		// Try resolving with metadata cache first (handles relative paths, wikilinks, etc.)
+		let imageFile: TFile | null = app.metadataCache.getFirstLinkpathDest(propPath, sourcePath);
+		
+		// If not found and path starts with ./, try resolving relative to source file's directory
+		if (!imageFile && propPath.startsWith('./')) {
+			const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
+			if (sourceFile && sourceFile.parent) {
+				// Remove ./ prefix and resolve relative to parent directory
+				const relativePath = propPath.substring(2); // Remove ./
+				const fullPath = sourceFile.parent.path ? `${sourceFile.parent.path}/${relativePath}` : relativePath;
+				const resolvedFile = app.vault.getAbstractFileByPath(fullPath);
+				if (resolvedFile instanceof TFile) {
+					imageFile = resolvedFile;
+				}
+			}
+		}
+		
+		// If still not found, try as absolute path
+		if (!imageFile) {
+			const absoluteFile = app.vault.getAbstractFileByPath(propPath);
+			if (absoluteFile instanceof TFile) {
+				imageFile = absoluteFile;
+			}
+		}
+		
 		if (imageFile && validImageExtensions.includes(imageFile.extension)) {
 			const resourcePath = app.vault.getResourcePath(imageFile);
 			resourcePaths.push(resourcePath);
@@ -142,5 +166,69 @@ export async function extractEmbedImages(
 	const bodyExternalUrls = validatedUrls.filter((url): url is string => url !== null);
 
 	return [...bodyResourcePaths, ...bodyExternalUrls];
+}
+
+/**
+ * Check if a URL points to a GIF image
+ */
+export function isGifUrl(url: string): boolean {
+	// Check for .gif extension (case-insensitive)
+	// Match .gif at the end of the path, optionally followed by query string or fragment
+	return /\.gif(\?|#|$)/i.test(url) || /\.gif$/i.test(url);
+}
+
+/**
+ * Convert an animated GIF to a static image (first frame)
+ * Returns a data URL of the first frame, or the original URL if conversion fails
+ */
+export async function convertGifToStatic(
+	url: string,
+	forceStatic: boolean
+): Promise<string> {
+	// If not forcing static or not a GIF, return original URL
+	if (!forceStatic || !isGifUrl(url)) {
+		return url;
+	}
+
+	return new Promise((resolve) => {
+		const img = new Image();
+		img.crossOrigin = 'anonymous'; // Handle CORS if needed
+		
+		img.onload = () => {
+			try {
+				// Create canvas and draw first frame
+				const canvas = document.createElement('canvas');
+				canvas.width = img.width;
+				canvas.height = img.height;
+				const ctx = canvas.getContext('2d');
+				
+				if (ctx) {
+					ctx.drawImage(img, 0, 0);
+					// Convert to PNG data URL
+					const dataUrl = canvas.toDataURL('image/png');
+					resolve(dataUrl);
+				} else {
+					// Canvas context not available, return original
+					resolve(url);
+				}
+			} catch (error) {
+				console.warn('Failed to convert GIF to static image:', error);
+				// On error, return original URL
+				resolve(url);
+			}
+		};
+		
+		img.onerror = () => {
+			// If image fails to load, return original URL
+			resolve(url);
+		};
+		
+		// Set timeout to prevent hanging
+		setTimeout(() => {
+			resolve(url);
+		}, 5000);
+		
+		img.src = url;
+	});
 }
 
