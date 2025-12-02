@@ -98,6 +98,79 @@ export class CardRenderer {
 			onSelect(card.path, checkbox.checked);
 		});
 
+		// Long press (tap and hold) for mobile selection
+		// Works on the ENTIRE card area (cover, thumbnail, and no-image formats)
+		// Only excludes interactive elements like checkboxes and property checkboxes
+		let longPressTimer: number | null = null;
+		let touchStartTime = 0;
+		let touchStartX = 0;
+		let touchStartY = 0;
+		let hasLongPressed = false;
+		let shouldPreventClick = false;
+
+		const handleTouchStart = (e: TouchEvent) => {
+			const target = e.target as HTMLElement;
+			// Don't handle long press on excluded interactive elements only
+			// Everything else on the card (title, content, image, tags, etc.) will trigger selection
+			if (
+				checkboxEl.contains(target) ||
+				target.tagName === 'INPUT' ||
+				target.closest('input') ||
+				target.closest('.bases-cms-property')
+			) {
+				return;
+			}
+
+			touchStartTime = Date.now();
+			touchStartX = e.touches[0].clientX;
+			touchStartY = e.touches[0].clientY;
+			hasLongPressed = false;
+			shouldPreventClick = false;
+
+			// Start long press timer (500ms)
+			longPressTimer = window.setTimeout(() => {
+				hasLongPressed = true;
+				shouldPreventClick = true;
+				// Toggle selection based on current checkbox state
+				onSelect(card.path, !checkbox.checked);
+				// Provide haptic feedback if available
+				if (navigator.vibrate) {
+					navigator.vibrate(50);
+				}
+			}, 500);
+		};
+
+		const handleTouchMove = (e: TouchEvent) => {
+			// Cancel long press if user moves finger too much
+			if (longPressTimer && e.touches[0]) {
+				const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+				const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+				// If moved more than 10px, cancel
+				if (deltaX > 10 || deltaY > 10) {
+					if (longPressTimer) {
+						clearTimeout(longPressTimer);
+						longPressTimer = null;
+					}
+				}
+			}
+		};
+
+		const handleTouchEnd = (e: TouchEvent) => {
+			if (longPressTimer) {
+				clearTimeout(longPressTimer);
+				longPressTimer = null;
+			}
+
+			// If it was a long press, prevent the click handler
+			if (hasLongPressed) {
+				shouldPreventClick = true;
+			}
+		};
+
+		cardEl.addEventListener('touchstart', handleTouchStart, { passive: true });
+		cardEl.addEventListener('touchmove', handleTouchMove, { passive: true });
+		cardEl.addEventListener('touchend', handleTouchEnd, { passive: true });
+
 		// Card cover/thumbnail (if image available)
 		if (card.imageUrl) {
 			const imageUrls = Array.isArray(card.imageUrl) ? card.imageUrl : [card.imageUrl];
@@ -152,6 +225,15 @@ export class CardRenderer {
 
 		// Click handler to open file - but NOT when clicking checkboxes or property checkboxes
 		cardEl.addEventListener('click', (e) => {
+			// Prevent click if it was triggered by a long press
+			if (shouldPreventClick) {
+				e.preventDefault();
+				e.stopPropagation();
+				e.stopImmediatePropagation();
+				shouldPreventClick = false;
+				return;
+			}
+
 			const target = e.target as HTMLElement;
 			
 			// Don't open file when clicking:
