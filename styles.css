@@ -625,7 +625,8 @@
 	transition: opacity 0.2s ease, transform 0.2s ease;
 	padding-left: var(--bases-header-padding-start, var(--size-4-2));
 	padding-right: var(--bases-header-padding-end, var(--size-4-2));
-	margin-top: var(--size-4-2);
+	margin-top: var(--size-4-1);
+	margin-bottom: var(--size-4-1);
 	box-sizing: border-box;
 	min-width: 0; /* Allow flex items to shrink */
 	overflow: hidden; /* Prevent overflow */
@@ -648,6 +649,30 @@
 	margin-left: auto;
 	min-width: 0; /* Allow shrinking */
 	flex-wrap: nowrap; /* Keep buttons in a row */
+}
+
+/* Mobile-specific toolbar improvements */
+@media (hover: none) and (pointer: coarse),
+       (max-width: 768px) {
+	.bases-cms-bulk-toolbar-left,
+	.bases-cms-bulk-toolbar-right {
+		gap: var(--size-4-1);
+	}
+	
+	.bases-cms-bulk-toolbar .text-icon-button {
+		padding: var(--size-4-2) var(--size-4-2);
+		min-height: 40px;
+	}
+	
+	.bases-cms-bulk-toolbar .text-icon-button .text-button-icon {
+		width: 20px;
+		height: 20px;
+	}
+	
+	.bases-cms-bulk-toolbar .text-icon-button .text-button-icon svg {
+		width: 20px;
+		height: 20px;
+	}
 }
 
 /* Selected count styling */

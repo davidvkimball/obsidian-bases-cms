@@ -47,6 +47,13 @@ export class BulkToolbar {
 		this.settings = settings;
 	}
 
+	/**
+	 * Get toolbar actions (for use in context menus)
+	 */
+	getActions(): ToolbarActions {
+		return this.actions;
+	}
+
 	private createToolbar(): void {
 		// Create toolbar element matching Bases structure
 		this.toolbarEl = document.createElement('div');
@@ -173,7 +180,7 @@ export class BulkToolbar {
 		// Left side: Selected count (not a button, just text)
 		const countItem = leftContainer.createDiv('bases-toolbar-item bases-cms-selected-count');
 		this.countEl = countItem.createSpan('text-button-label');
-		this.countEl.setText('0 items selected');
+		this.countEl.setText('0 selected');
 
 		// Right side container (all action buttons)
 		const rightContainer = this.toolbarEl.createDiv('bases-cms-bulk-toolbar-right');
@@ -270,7 +277,7 @@ export class BulkToolbar {
 
 	updateCount(count: number): void {
 		if (this.countEl) {
-			this.countEl.setText(`${count} item${count !== 1 ? 's' : ''} selected`);
+			this.countEl.setText(`${count} selected`);
 		}
 	}
 

@@ -455,6 +455,44 @@ export class BasesCMSView extends BasesView {
 		})();
 	}
 
+	/**
+	 * Direct delete handler for context menu - deletes a single file without selection
+	 */
+	private getDirectDeleteHandler(filePath: string): () => Promise<void> {
+		return async () => {
+			const { prepareDeletionPreview, executeSmartDeletion } = await import('../utils/smart-deletion');
+			const { DeletionPreviewModal } = await import('../components/deletion-preview');
+			
+			if (this.plugin.settings.confirmDeletions) {
+				const preview = await prepareDeletionPreview(
+					this.app,
+					[filePath],
+					this.plugin.settings
+				);
+
+				const modal = new DeletionPreviewModal(
+					this.app,
+					preview,
+					() => {
+						// Refresh view after deletion
+						this.onDataUpdated();
+					}
+				);
+				modal.open();
+			} else {
+				// Direct deletion without confirmation
+				const preview = await prepareDeletionPreview(
+					this.app,
+					[filePath],
+					this.plugin.settings
+				);
+				await executeSmartDeletion(this.app, preview);
+				// Refresh view after deletion
+				this.onDataUpdated();
+			}
+		};
+	}
+
 	private renderCard(
 		container: HTMLElement,
 		card: CardData,
@@ -475,7 +513,8 @@ export class BasesCMSView extends BasesView {
 			},
 			(path: string, property: string, value: unknown) => {
 				void this.handlePropertyToggle(path, property, value);
-			}
+			},
+			{ handleDelete: this.getDirectDeleteHandler(card.path) }
 		);
 	}
 

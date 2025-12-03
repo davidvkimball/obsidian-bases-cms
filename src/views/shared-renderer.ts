@@ -46,7 +46,8 @@ export class SharedCardRenderer {
 		hoverParent: unknown,
 		isSelected: boolean,
 		onSelect: (path: string, selected: boolean) => void,
-		onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>
+		onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>,
+		toolbarActions?: { handleDelete: () => Promise<void> }
 	): void {
 		// Create card element
 		const cardEl = container.createDiv('card bases-cms-card');
@@ -79,91 +80,8 @@ export class SharedCardRenderer {
 			renderDraftStatusBadge(cardEl, entry, card.path, settings, onPropertyToggle);
 		}
 
-		// Long press (tap and hold) for mobile selection
-		// Works on the ENTIRE card area (cover, thumbnail, and no-image formats)
-		// Only excludes interactive elements like checkboxes, status badges, and edit icons
-		let longPressTimer: number | null = null;
-		let touchStartTime = 0;
-		let touchStartX = 0;
-		let touchStartY = 0;
-		let hasLongPressed = false;
-		let shouldPreventClick = false;
-
-		const handleTouchStart = (e: TouchEvent) => {
-			const target = e.target as HTMLElement;
-			// Don't handle long press on excluded interactive elements only
-			// Everything else on the card (title, content, image, tags, etc.) will trigger selection
-			if (
-				checkboxEl.contains(target) ||
-				target.tagName === 'INPUT' ||
-				target.closest('input') ||
-				target.closest('.bases-cms-property') ||
-				target.closest('.card-status-badge') ||
-				target.closest('.bases-cms-quick-edit-icon')
-			) {
-				return;
-			}
-
-			touchStartTime = Date.now();
-			touchStartX = e.touches[0].clientX;
-			touchStartY = e.touches[0].clientY;
-			hasLongPressed = false;
-			shouldPreventClick = false;
-
-			// Start long press timer (500ms)
-			longPressTimer = window.setTimeout(() => {
-				hasLongPressed = true;
-				shouldPreventClick = true;
-				// Toggle selection based on current checkbox state
-				onSelect(card.path, !checkbox.checked);
-				// Provide haptic feedback if available
-				if (navigator.vibrate) {
-					navigator.vibrate(50);
-				}
-			}, 500);
-		};
-
-		const handleTouchMove = (e: TouchEvent) => {
-			// Cancel long press if user moves finger too much
-			if (longPressTimer && e.touches[0]) {
-				const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-				const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-				// If moved more than 10px, cancel
-				if (deltaX > 10 || deltaY > 10) {
-					if (longPressTimer) {
-						clearTimeout(longPressTimer);
-						longPressTimer = null;
-					}
-				}
-			}
-		};
-
-		const handleTouchEnd = (e: TouchEvent) => {
-			if (longPressTimer) {
-				clearTimeout(longPressTimer);
-				longPressTimer = null;
-			}
-
-			// If it was a long press, prevent the click handler
-			if (hasLongPressed) {
-				shouldPreventClick = true;
-			}
-		};
-
-		cardEl.addEventListener('touchstart', handleTouchStart, { passive: true });
-		cardEl.addEventListener('touchmove', handleTouchMove, { passive: true });
-		cardEl.addEventListener('touchend', handleTouchEnd, { passive: true });
-
 		// Handle card click to open file (but not when clicking checkbox or property checkboxes)
 		cardEl.addEventListener('click', (e) => {
-			// Prevent click if it was triggered by a long press
-			if (shouldPreventClick) {
-				e.preventDefault();
-				e.stopPropagation();
-				e.stopImmediatePropagation();
-				shouldPreventClick = false;
-				return;
-			}
 			const target = e.target as HTMLElement;
 			// Check if click is on quick edit icon or any of its children (like SVG)
 			const quickEditIcon = target.closest('.bases-cms-quick-edit-icon');
@@ -188,6 +106,7 @@ export class SharedCardRenderer {
 		});
 
 		// Handle right-click to show context menu
+		// Use Obsidian's standard file-menu event subscription pattern
 		cardEl.addEventListener('contextmenu', (e) => {
 			const target = e.target as HTMLElement;
 			// Don't show context menu for checkboxes, property checkboxes, status badges, or quick edit icon
@@ -210,10 +129,75 @@ export class SharedCardRenderer {
 				// Don't prevent default - Obsidian's menu system needs default behavior
 				
 				const menu = new Menu();
-				// Trigger file-menu with 'bases' source only (same as native Bases cards view)
-				// This includes both Bases-specific options and standard file options
+				
+				// Check current selection state dynamically by checking the checkbox
+				const currentlySelected = checkbox.checked;
+				
+				// Add Select/Unselect item
+				if (currentlySelected) {
+					menu.addItem((item) => {
+						item.setTitle('Unselect');
+						item.setIcon('square');
+						item.onClick(() => {
+							onSelect(card.path, false);
+						});
+					});
+				} else {
+					menu.addItem((item) => {
+						item.setTitle('Select');
+						item.setIcon('copy-check');
+						item.onClick(() => {
+							onSelect(card.path, true);
+						});
+					});
+				}
+				
+				menu.addSeparator();
+				
+				// Trigger file-menu event - this allows other plugins to add their items
 				this.app.workspace.trigger('file-menu', menu, file, 'bases');
+				
+				// Add Delete at the bottom (after all file-menu subscriptions have run)
+				// Always show Delete option - toolbarActions should always be provided
+				menu.addSeparator();
+				menu.addItem((item) => {
+					item.setTitle('Delete');
+					item.setIcon('trash-2');
+					item.onClick(async () => {
+						// Delete directly without selecting
+						if (toolbarActions) {
+							await toolbarActions.handleDelete();
+						}
+					});
+				});
+				
 				menu.showAtMouseEvent(e);
+				
+				// Style Delete menu item as destructive (red/warning color)
+				setTimeout(() => {
+					const menuEl = document.querySelector('.menu') as HTMLElement | null;
+					if (!menuEl) return;
+					
+					const menuItems = Array.from(menuEl.querySelectorAll('.menu-item')) as HTMLElement[];
+					const deleteItem = menuItems.find(item => {
+						const title = item.textContent?.trim();
+						return title === 'Delete';
+					});
+					
+					if (deleteItem) {
+						deleteItem.addClass('is-danger');
+						// Style the icon and text with error color
+						const icon = deleteItem.querySelector('svg');
+						if (icon) {
+							icon.style.color = 'var(--text-error)';
+							icon.style.stroke = 'var(--text-error)';
+						}
+						const title = deleteItem.querySelector('.menu-item-title');
+						if (title) {
+							(title as HTMLElement).style.color = 'var(--text-error)';
+						}
+					}
+				}, 0);
 			}
 		});
 
