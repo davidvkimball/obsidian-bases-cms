@@ -13,6 +13,7 @@ import { SharedCardRenderer } from './shared-renderer';
 import { BATCH_SIZE } from '../shared/constants';
 import { BulkToolbar } from '../components/bulk-toolbar';
 import { setupNewNoteInterceptor } from '../utils/new-note-interceptor';
+import { setupPropertiesButtonInterceptor } from '../utils/properties-button-interceptor';
 import { PropertyToggleHandler } from '../utils/property-toggle-handler';
 import { ScrollLayoutManager } from '../utils/scroll-layout-manager';
 import { ViewSwitchListener } from '../utils/view-switch-listener';
@@ -90,6 +91,16 @@ export class BasesCMSView extends BasesView {
 			this.containerEl,
 			this.config,
 			this.plugin.settings,
+			(cleanup) => this.register(cleanup)
+		);
+
+		// Intercept properties button clicks to show helpful info
+		setupPropertiesButtonInterceptor(
+			this.app,
+			this.containerEl,
+			this.config,
+			this.plugin.settings,
+			this.plugin,
 			(cleanup) => this.register(cleanup)
 		);
 		

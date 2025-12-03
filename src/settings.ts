@@ -236,6 +236,19 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 					})();
 				}));
 
+		// Properties info modal setting
+		new Setting(containerEl)
+			.setName('Show properties info modal')
+			.setDesc('Show an informational modal when clicking the properties button in CMS views. This explains how properties work differently in CMS views compared to standard Bases views.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showPropertiesInfoModal)
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.showPropertiesInfoModal = value;
+						await this.plugin.saveData(this.plugin.settings);
+					})();
+				}));
+
 		// Quick edit settings
 		new Setting(containerEl).setName('Quick edit').setHeading();
 
