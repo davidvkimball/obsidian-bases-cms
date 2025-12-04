@@ -165,7 +165,9 @@ export class BasesCMSView extends BasesView {
 			
 			// If fallback to embeds is disabled, clear any cached embed images
 			// This ensures embed images don't persist when setting is turned off
-			if (!settings.fallbackToEmbeds) {
+			const shouldFallback = settings.fallbackToEmbeds === true || settings.fallbackToEmbeds === 'always' || 
+				(settings.fallbackToEmbeds === 'if-empty' && !settings.imageProperty);
+			if (!shouldFallback) {
 				// Clear all cached images to force re-evaluation
 				// This is necessary because we can't distinguish embed vs property images in cache
 				this.images = {};
@@ -277,7 +279,9 @@ export class BasesCMSView extends BasesView {
 
 				// Load embed images in background ONLY for entries without property images
 				// CRITICAL: Only load embeds if NO property values exist at all
-				if (settings.fallbackToEmbeds) {
+				const shouldFallback = settings.fallbackToEmbeds === true || settings.fallbackToEmbeds === 'always' || 
+					(settings.fallbackToEmbeds === 'if-empty' && !settings.imageProperty);
+				if (shouldFallback) {
 					const allImageEntries = [...visibleImageEntries, ...backgroundImageEntries];
 					const embedEntries = allImageEntries.filter(e => {
 						// Only include entries that:

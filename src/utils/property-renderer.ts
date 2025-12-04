@@ -17,19 +17,31 @@ export class PropertyRenderer {
 
 	/**
 	 * Renders property fields for a card
+	 * @param position - 'top' to render only top-positioned groups, 'bottom' to render only bottom-positioned groups, undefined to render all
 	 */
 	renderProperties(
 		cardEl: HTMLElement,
 		card: CardData,
 		entry: BasesEntry,
 		settings: CMSSettings,
-		onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>
+		onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>,
+		position?: 'top' | 'bottom'
 	): void {
 		const props = [
 			settings.propertyDisplay1,
 			settings.propertyDisplay2,
 			settings.propertyDisplay3,
-			settings.propertyDisplay4
+			settings.propertyDisplay4,
+			settings.propertyDisplay5,
+			settings.propertyDisplay6,
+			settings.propertyDisplay7,
+			settings.propertyDisplay8,
+			settings.propertyDisplay9,
+			settings.propertyDisplay10,
+			settings.propertyDisplay11,
+			settings.propertyDisplay12,
+			settings.propertyDisplay13,
+			settings.propertyDisplay14
 		];
 
 		// Detect duplicates
@@ -46,36 +58,95 @@ export class PropertyRenderer {
 			prop ? resolveBasesProperty(prop, entry, card, settings) : null
 		);
 
-		// Check if any row has content
-		const row1HasContent = effectiveProps[0] !== '' || effectiveProps[1] !== '';
-		const row2HasContent = effectiveProps[2] !== '' || effectiveProps[3] !== '';
-
-		if (!row1HasContent && !row2HasContent) return;
-
-		const metaEl = cardEl.createDiv('card-properties properties-4field');
-
-		// Row 1
-		if (row1HasContent) {
-			const row1El = metaEl.createDiv('property-row property-row-1');
-			if (settings.propertyLayout12SideBySide) {
-				row1El.addClass('property-row-side-by-side');
+		// Define property groups
+		const propertyGroups = [
+			{
+				props: [effectiveProps[0], effectiveProps[1]],
+				values: [values[0], values[1]],
+				sideBySide: settings.propertyLayout12SideBySide,
+				position: settings.propertyGroup1Position
+			},
+			{
+				props: [effectiveProps[2], effectiveProps[3]],
+				values: [values[2], values[3]],
+				sideBySide: settings.propertyLayout34SideBySide,
+				position: settings.propertyGroup2Position
+			},
+			{
+				props: [effectiveProps[4], effectiveProps[5]],
+				values: [values[4], values[5]],
+				sideBySide: settings.propertyLayout56SideBySide,
+				position: settings.propertyGroup3Position
+			},
+			{
+				props: [effectiveProps[6], effectiveProps[7]],
+				values: [values[6], values[7]],
+				sideBySide: settings.propertyLayout78SideBySide,
+				position: settings.propertyGroup4Position
+			},
+			{
+				props: [effectiveProps[8], effectiveProps[9]],
+				values: [values[8], values[9]],
+				sideBySide: settings.propertyLayout910SideBySide,
+				position: settings.propertyGroup5Position
+			},
+			{
+				props: [effectiveProps[10], effectiveProps[11]],
+				values: [values[10], values[11]],
+				sideBySide: settings.propertyLayout1112SideBySide,
+				position: settings.propertyGroup6Position
+			},
+			{
+				props: [effectiveProps[12], effectiveProps[13]],
+				values: [values[12], values[13]],
+				sideBySide: settings.propertyLayout1314SideBySide,
+				position: settings.propertyGroup7Position
 			}
-			const field1El = row1El.createDiv('property-field property-field-1');
-			if (effectiveProps[0]) this.renderPropertyContent(field1El, effectiveProps[0], values[0], card, entry, settings, onPropertyToggle);
-			const field2El = row1El.createDiv('property-field property-field-2');
-			if (effectiveProps[1]) this.renderPropertyContent(field2El, effectiveProps[1], values[1], card, entry, settings, onPropertyToggle);
+		];
+
+		// Separate groups by position
+		const topGroups: typeof propertyGroups = [];
+		const bottomGroups: typeof propertyGroups = [];
+
+		propertyGroups.forEach((group, index) => {
+			const hasContent = group.props[0] !== '' || group.props[1] !== '';
+			if (hasContent) {
+				if (group.position === 'top') {
+					topGroups.push(group);
+				} else {
+					bottomGroups.push(group);
+				}
+			}
+		});
+
+		// Render top groups (only if position is 'top' or undefined)
+		if ((position === 'top' || position === undefined) && topGroups.length > 0) {
+			const topMetaEl = cardEl.createDiv('card-properties properties-top');
+			topGroups.forEach((group, groupIndex) => {
+				const rowEl = topMetaEl.createDiv(`property-row property-row-group-${groupIndex + 1}`);
+				if (group.sideBySide) {
+					rowEl.addClass('property-row-side-by-side');
+				}
+				const field1El = rowEl.createDiv('property-field property-field-1');
+				if (group.props[0]) this.renderPropertyContent(field1El, group.props[0], group.values[0], card, entry, settings, onPropertyToggle);
+				const field2El = rowEl.createDiv('property-field property-field-2');
+				if (group.props[1]) this.renderPropertyContent(field2El, group.props[1], group.values[1], card, entry, settings, onPropertyToggle);
+			});
 		}
 
-		// Row 2
-		if (row2HasContent) {
-			const row2El = metaEl.createDiv('property-row property-row-2');
-			if (settings.propertyLayout34SideBySide) {
-				row2El.addClass('property-row-side-by-side');
-			}
-			const field3El = row2El.createDiv('property-field property-field-3');
-			if (effectiveProps[2]) this.renderPropertyContent(field3El, effectiveProps[2], values[2], card, entry, settings, onPropertyToggle);
-			const field4El = row2El.createDiv('property-field property-field-4');
-			if (effectiveProps[3]) this.renderPropertyContent(field4El, effectiveProps[3], values[3], card, entry, settings, onPropertyToggle);
+		// Render bottom groups (only if position is 'bottom' or undefined)
+		if ((position === 'bottom' || position === undefined) && bottomGroups.length > 0) {
+			const bottomMetaEl = cardEl.createDiv('card-properties properties-bottom');
+			bottomGroups.forEach((group, groupIndex) => {
+				const rowEl = bottomMetaEl.createDiv(`property-row property-row-group-${groupIndex + 1}`);
+				if (group.sideBySide) {
+					rowEl.addClass('property-row-side-by-side');
+				}
+				const field1El = rowEl.createDiv('property-field property-field-1');
+				if (group.props[0]) this.renderPropertyContent(field1El, group.props[0], group.values[0], card, entry, settings, onPropertyToggle);
+				const field2El = rowEl.createDiv('property-field property-field-2');
+				if (group.props[1]) this.renderPropertyContent(field2El, group.props[1], group.values[1], card, entry, settings, onPropertyToggle);
+			});
 		}
 	}
 
@@ -104,9 +175,6 @@ export class PropertyRenderer {
 				return;
 			}
 			if ((propertyName === 'file.tags' || propertyName === 'file tags') && card.tags.length === 0) {
-				return;
-			}
-			if ((propertyName === 'file.path' || propertyName === 'path' || propertyName === 'file path') && card.folderPath.length === 0) {
 				return;
 			}
 		}
@@ -183,27 +251,6 @@ export class PropertyRenderer {
 					}
 				});
 			});
-		} else if ((propertyName === 'file.path' || propertyName === 'path' || propertyName === 'file path') && card.path.length > 0) {
-			const pathWrapper = metaContent.createDiv('path-wrapper');
-			const segments = card.path.split('/').filter(f => f);
-			segments.forEach((segment, idx) => {
-				const span = pathWrapper.createSpan();
-				const isLastSegment = idx === segments.length - 1;
-				const segmentClass = isLastSegment ? 'path-segment filename-segment' : 'path-segment file-path-segment';
-				const segmentEl = span.createSpan({ cls: segmentClass, text: segment });
-				segmentEl.addEventListener('click', (e) => {
-					e.stopPropagation();
-					if (isLastSegment) {
-						const file = this.app.vault.getAbstractFileByPath(card.path);
-						if (file instanceof TFile) {
-							void this.app.workspace.getLeaf(false).openFile(file);
-						}
-					}
-				});
-				if (idx < segments.length - 1) {
-					span.createSpan({ cls: 'path-separator', text: '/' });
-				}
-			});
 		} else {
 			// Check if this is a checkbox property
 			const metadataCache = this.app.metadataCache as unknown as Record<string, unknown>;
@@ -241,15 +288,165 @@ export class PropertyRenderer {
 					e.stopPropagation();
 				});
 			} else {
-				// Generic property - wrap in div for proper scrolling
+				// Generic property - parse and render links
 				const textWrapper = metaContent.createDiv('text-wrapper');
-				textWrapper.appendText(resolvedValue);
+				this.renderPropertyValueWithLinks(textWrapper, resolvedValue, card.path, propertyName);
 			}
 		}
 
 		// Remove metaContent wrapper if it ended up empty
 		if (!metaContent.textContent || metaContent.textContent.trim().length === 0) {
 			metaContent.remove();
+		}
+	}
+
+	/**
+	 * Renders property value with clickable links
+	 * Detects wikilinks [[...]], markdown links [...](...), and URLs
+	 * For image properties, also makes file paths clickable (like Obsidian does)
+	 */
+	private renderPropertyValueWithLinks(container: HTMLElement, value: string | null, sourcePath: string, propertyName?: string): void {
+		if (!value) {
+			container.appendText('…');
+			return;
+		}
+
+		const trimmedValue = value.trim();
+		
+		// Check if entire value is a URL (http/https) - make it clickable
+		if ((trimmedValue.startsWith('http://') || trimmedValue.startsWith('https://')) && !trimmedValue.includes(' ')) {
+			const linkEl = container.createEl('a', {
+				cls: 'external-link',
+				href: trimmedValue
+			});
+			linkEl.textContent = trimmedValue;
+			linkEl.setAttr('target', '_blank');
+			linkEl.setAttr('rel', 'noopener');
+			linkEl.addEventListener('click', (e) => {
+				e.stopPropagation();
+			});
+			return;
+		}
+		
+		// For image properties, make file paths clickable (like Obsidian does in property editor)
+		const isImageProperty = propertyName && (
+			propertyName.toLowerCase().includes('image') || 
+			propertyName.toLowerCase() === 'cover' ||
+			propertyName.toLowerCase() === 'thumbnail'
+		);
+		
+		if (isImageProperty && !trimmedValue.includes(' ') && 
+			!trimmedValue.startsWith('http://') && 
+			!trimmedValue.startsWith('https://') &&
+			(trimmedValue.includes('/') || trimmedValue.includes('\\') || 
+			 trimmedValue.match(/\.(png|jpg|jpeg|gif|svg|webp|mp4|mov|avi)$/i))) {
+			// Make it clickable as an internal link (like Obsidian does for image properties)
+			const linkEl = container.createEl('a', {
+				cls: 'internal-link',
+				href: trimmedValue
+			});
+			linkEl.textContent = trimmedValue;
+			linkEl.addEventListener('click', (e) => {
+				e.stopPropagation();
+				e.preventDefault();
+				const newLeaf = (e as MouseEvent).metaKey || (e as MouseEvent).ctrlKey;
+				void this.app.workspace.openLinkText(trimmedValue, sourcePath, newLeaf);
+			});
+			return;
+		}
+		
+		// Parse for wikilinks [[...]] and markdown links [...](...)
+		const wikilinkRegex = /\[\[([^\]]+)\]\]/g;
+		const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+		
+		const matches: Array<{ index: number; type: 'wikilink' | 'markdown'; match: RegExpMatchArray }> = [];
+		
+		// Find wikilinks
+		for (const m of value.matchAll(wikilinkRegex)) {
+			if (m.index !== undefined) {
+				matches.push({ index: m.index, type: 'wikilink', match: m });
+			}
+		}
+		
+		// Find markdown links
+		for (const m of value.matchAll(markdownLinkRegex)) {
+			if (m.index !== undefined) {
+				matches.push({ index: m.index, type: 'markdown', match: m });
+			}
+		}
+		
+		// Sort by index
+		matches.sort((a, b) => a.index - b.index);
+		
+		let lastIndex = 0;
+		
+		// Render text and links
+		for (const { index, type, match } of matches) {
+			// Add text before the link
+			if (index > lastIndex) {
+				container.appendText(value.substring(lastIndex, index));
+			}
+			
+			if (type === 'wikilink') {
+				const linkContent = match[1];
+				const parts = linkContent.split('|');
+				const linkPath = parts[0].trim();
+				const displayText = parts.length > 1 ? parts[1].trim() : linkPath;
+				
+				const linkEl = container.createEl('a', {
+					cls: 'internal-link',
+					href: linkPath
+				});
+				linkEl.textContent = displayText;
+				
+				linkEl.addEventListener('click', (e) => {
+					e.stopPropagation();
+					e.preventDefault();
+					const newLeaf = (e as MouseEvent).metaKey || (e as MouseEvent).ctrlKey;
+					void this.app.workspace.openLinkText(linkPath, sourcePath, newLeaf);
+				});
+			} else if (type === 'markdown') {
+				const linkText = match[1];
+				const linkUrl = match[2];
+				
+				if (linkUrl.startsWith('http://') || linkUrl.startsWith('https://')) {
+					// External link
+					const linkEl = container.createEl('a', {
+						cls: 'external-link',
+						href: linkUrl
+					});
+					linkEl.textContent = linkText;
+					linkEl.setAttr('target', '_blank');
+					linkEl.setAttr('rel', 'noopener');
+					linkEl.addEventListener('click', (e) => {
+						e.stopPropagation();
+					});
+				} else {
+					// Internal link (file path or wikilink in markdown format)
+					const linkEl = container.createEl('a', {
+						cls: 'internal-link',
+						href: linkUrl
+					});
+					linkEl.textContent = linkText;
+					
+					linkEl.addEventListener('click', (e) => {
+						e.stopPropagation();
+						e.preventDefault();
+						const newLeaf = (e as MouseEvent).metaKey || (e as MouseEvent).ctrlKey;
+						void this.app.workspace.openLinkText(linkUrl, sourcePath, newLeaf);
+					});
+				}
+			}
+			
+			lastIndex = index + match[0].length;
+		}
+		
+		// Add remaining text
+		if (lastIndex < value.length) {
+			container.appendText(value.substring(lastIndex));
+		} else if (matches.length === 0) {
+			// No links found, just add the text as plain text
+			container.appendText(value);
 		}
 	}
 }

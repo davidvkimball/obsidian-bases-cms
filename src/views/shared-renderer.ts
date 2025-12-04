@@ -12,6 +12,7 @@ import { renderDraftStatusBadge } from '../utils/draft-status-badge';
 import { setupQuickEditIcon } from '../utils/quick-edit-icon';
 import { PropertyRenderer } from '../utils/property-renderer';
 import { convertGifToStatic } from '../utils/image';
+import { getDateFormat, formatDate } from '../utils/style-settings';
 
 export class SharedCardRenderer {
 	protected basesConfig?: { get?: (key: string) => unknown };
@@ -55,6 +56,8 @@ export class SharedCardRenderer {
 			cardEl.classList.add('image-format-cover');
 		} else if (settings.imageFormat === 'thumbnail') {
 			cardEl.classList.add('image-format-thumbnail');
+			// Add position class for thumbnail
+			cardEl.classList.add(`thumbnail-${settings.imagePosition}`);
 		}
 		cardEl.setAttribute('data-path', card.path);
 		cardEl.setAttribute('data-href', card.path);
@@ -215,28 +218,48 @@ export class SharedCardRenderer {
 			const dateValue = getFirstBasesPropertyValue(entry, settings.dateProperty);
 			if (dateValue) {
 				const dateObj = dateValue as { date?: Date; data?: unknown } | null;
-				let dateString = '';
+				let date: Date | null = null;
+				
 				if (dateObj && 'date' in dateObj && dateObj.date instanceof Date) {
-					dateString = dateObj.date.toLocaleDateString();
+					date = dateObj.date;
 				} else if (dateObj && 'data' in dateObj && dateObj.data) {
 					const data = dateObj.data;
 					if (data instanceof Date) {
-						dateString = data.toLocaleDateString();
+						date = data;
 					} else if (typeof data === 'string' || typeof data === 'number') {
-						const date = new Date(data);
-						if (!isNaN(date.getTime())) {
-							dateString = date.toLocaleDateString();
-						} else {
-							dateString = String(data);
+						const parsedDate = new Date(data);
+						if (!isNaN(parsedDate.getTime())) {
+							date = parsedDate;
 						}
 					}
 				}
-				if (dateString) {
+				
+				if (date) {
+					// Format date based on settings
+					let dateString: string;
+					if (settings.dateIncludeTime) {
+						// Format date and time separately, then combine (respects user's system locale)
+						// Use options to exclude seconds and match user's expected format
+						const datePart = date.toLocaleDateString();
+						const timePart = date.toLocaleTimeString(undefined, { 
+							hour: 'numeric', 
+							minute: '2-digit', 
+							hour12: true 
+						});
+						dateString = `${datePart}, ${timePart}`;
+					} else {
+						// When time is not included, use date-only format (respects user's system locale)
+						dateString = date.toLocaleDateString();
+					}
+					
 					const dateEl = cardEl.createDiv('card-date');
 					dateEl.appendText(dateString);
 				}
 			}
 		}
+
+		// Top property groups (rendered before content)
+		this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle, 'top');
 
 		// Content container
 		if (settings.showTextPreview ||
@@ -245,8 +268,9 @@ export class SharedCardRenderer {
 			(settings.imageFormat === 'cover')) {
 			const contentContainer = cardEl.createDiv('card-content');
 
-			// For thumbnail format, create a wrapper for text + tags
+			// For thumbnail format, handle positioning
 			if (settings.imageFormat === 'thumbnail') {
+				// For top/bottom positions, stack vertically; for left/right, use row layout
 				const textWrapper = contentContainer.createDiv('card-text-wrapper');
 				
 				// Text preview - always create if showTextPreview is enabled, even if snippet isn't loaded yet
@@ -339,8 +363,8 @@ export class SharedCardRenderer {
 						renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle);
 					}
 					
-					// Properties - MUST be called before returning
-					this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle);
+					// Bottom properties - MUST be called before returning (for images)
+					this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle, 'bottom');
 					
 					// Images are set via background-image, no return value needed
 					return;
@@ -356,8 +380,8 @@ export class SharedCardRenderer {
 		}
 
 
-		// Properties
-		this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle);
+		// Bottom properties (for cards without images)
+		this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle, 'bottom');
 		
 		return; // No image for this card
 	}

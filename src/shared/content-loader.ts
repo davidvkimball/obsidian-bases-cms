@@ -17,7 +17,7 @@ import { loadFilePreview } from '../utils/preview';
  * @param file - TFile object
  * @param app - Obsidian app instance
  * @param imagePropertyValues - Array of image property values
- * @param fallbackToEmbeds - Whether to extract embedded images if no property images
+ * @param fallbackToEmbeds - Whether to extract embedded images if no property images ('always' | 'if-empty' | 'never' | boolean for legacy)
  * @param imageCache - Cache object to store loaded images
  * @param hasImageCache - Cache object to track image availability
  */
@@ -26,22 +26,26 @@ export async function loadImageForEntry(
 	file: TFile,
 	app: App,
 	imagePropertyValues: unknown[],
-	fallbackToEmbeds: boolean,
+	fallbackToEmbeds: boolean | 'always' | 'if-empty' | 'never',
 	imageCache: Record<string, string | string[]>,
 	hasImageCache: Record<string, boolean>
 ): Promise<void> {
 	// Check if image property has any values at all (even if they fail to resolve)
 	const hasPropertyValues = imagePropertyValues && Array.isArray(imagePropertyValues) && imagePropertyValues.length > 0;
 	
+	// Convert fallbackToEmbeds to boolean for logic
+	const shouldFallback = fallbackToEmbeds === true || fallbackToEmbeds === 'always' || 
+		(fallbackToEmbeds === 'if-empty' && !hasPropertyValues);
+	
 	// If fallback is disabled and we have cached images, clear them to force re-evaluation
 	// This ensures cached embed images are removed when setting is turned off
-	if (!fallbackToEmbeds && path in imageCache) {
+	if (!shouldFallback && path in imageCache) {
 		delete imageCache[path];
 		delete hasImageCache[path];
 	}
 	
 	// If already in cache and no property values, skip (only if fallback is enabled)
-	if (path in imageCache && !hasPropertyValues && fallbackToEmbeds) {
+	if (path in imageCache && !hasPropertyValues && shouldFallback) {
 		return;
 	}
 
@@ -59,7 +63,7 @@ export async function loadImageForEntry(
 		// 1. No property values were set at all (not when they exist but fail to resolve)
 		// 2. No valid images were found from property
 		// 3. Fallback is enabled
-		if (validImages.length === 0 && !hasPropertyValues && fallbackToEmbeds) {
+		if (validImages.length === 0 && !hasPropertyValues && shouldFallback) {
 			validImages = await extractEmbedImages(file, app);
 		}
 
@@ -74,7 +78,7 @@ export async function loadImageForEntry(
 			// Also clear any cached embed images
 			delete imageCache[path];
 			hasImageCache[path] = true;
-		} else if (!fallbackToEmbeds) {
+		} else if (!shouldFallback) {
 			// If fallback is disabled and no property images, clear cache
 			delete imageCache[path];
 			delete hasImageCache[path];
@@ -101,7 +105,7 @@ export async function loadImagesForEntries(
 		file: TFile;
 		imagePropertyValues: unknown[];
 	}>,
-	fallbackToEmbeds: boolean,
+	fallbackToEmbeds: boolean | 'always' | 'if-empty' | 'never',
 	app: App,
 	imageCache: Record<string, string | string[]>,
 	hasImageCache: Record<string, boolean>
@@ -152,7 +156,7 @@ export async function loadImagesForEntriesSync(
 		file: TFile;
 		imagePropertyValues: unknown[];
 	}>,
-	fallbackToEmbeds: boolean,
+	fallbackToEmbeds: boolean | 'always' | 'if-empty' | 'never',
 	app: App,
 	imageCache: Record<string, string | string[]>,
 	hasImageCache: Record<string, boolean>
