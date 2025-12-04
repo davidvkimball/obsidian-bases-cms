@@ -159,22 +159,6 @@ export function getCMSViewOptions(): unknown[] {
 					default: 'thumbnail'
 				},
 				{
-					type: 'dropdown',
-					displayName: 'Image position',
-					key: 'imagePosition',
-					options: {
-						'left': 'Left',
-						'right': 'Right',
-						'top': 'Top',
-						'bottom': 'Bottom'
-					},
-					default: 'right',
-					showWhen: {
-						key: 'imageFormat',
-						value: 'thumbnail'
-					}
-				},
-				{
 					type: 'property',
 					displayName: 'Image property',
 					key: 'imageProperty',

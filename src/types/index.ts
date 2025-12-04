@@ -36,9 +36,6 @@ export interface BasesCMSSettings {
 	
 	// Appearance settings
 	forceStaticGifImages: boolean;
-	
-	// Properties info modal settings
-	showPropertiesInfoModal: boolean;
 }
 
 export const DEFAULT_SETTINGS: BasesCMSSettings = {
@@ -62,7 +59,6 @@ export const DEFAULT_SETTINGS: BasesCMSSettings = {
 	showToolbarRemove: true,
 	showToolbarDelete: true,
 	forceStaticGifImages: false,
-	showPropertiesInfoModal: true,
 };
 
 /**

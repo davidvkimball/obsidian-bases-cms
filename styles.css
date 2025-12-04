@@ -77,26 +77,6 @@ settings:
         step: 1
         format: px
     -
-        id: bases-cms-fade-truncated-text
-        title: Fade truncated text
-        description: Show gradient fade on titles, subtitles, and properties that overflow their container
-        type: class-toggle
-        default: true
-    -
-        id: bases-cms-cover-gap-setting
-        title: Cover gap setting
-        description: Which setting controls the gap between covers and card elements
-        type: class-select
-        allowEmpty: false
-        default: bases-cms-cover-gap-element-spacing
-        options:
-            -
-                label: Card element spacing
-                value: bases-cms-cover-gap-element-spacing
-            -
-                label: Card padding
-                value: bases-cms-cover-gap-card-padding
-    -
         id: bases-cms-card-border-radius
         title: Card border radius
         description: Corner roundness of cards
@@ -154,11 +134,6 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: bases-cms-ambient-background
-        title: Ambient background
-        description: Use ambient color from image as card background (only for cards with images)
-        type: class-toggle
-        default: false
     -
         id: covers-heading
         title: Covers
@@ -183,57 +158,11 @@ settings:
                 label: Bottom
                 value: bases-cms-cover-crop-bottom
     -
-        id: bases-cms-cover-background
-        title: Cover background
-        description: Background style for Contain mode
-        type: class-select
-        allowEmpty: false
-        default: bases-cms-cover-bg-ambient
-        options:
-            -
-                label: Blur
-                value: bases-cms-cover-bg-blur
-            -
-                label: Ambient
-                value: bases-cms-cover-bg-ambient
-            -
-                label: Plain
-                value: bases-cms-cover-bg-plain
-            -
-                label: Transparent
-                value: bases-cms-cover-bg-transparent
-            -
-                label: Custom color
-                value: bases-cms-cover-bg-custom
-    -
-        id: bases-cms-cover-background-custom-color
-        title: Custom cover background
-        description: Background color for "Custom color" mode
-        type: variable-themed-color
-        format: rgb
-        opacity: false
-        default-light: '#'
-        default-dark: '#'
-    -
         id: bases-cms-show-cover-placeholder
         title: Show placeholder for cards with no image
         description: If covers are enabled but a file doesn't have an image, show an empty cover. If disabled, card content will fill all available space.
-        type: class-select
-        allowEmpty: false
-        default: bases-cms-show-cover-placeholder-grid
-        options:
-            -
-                label: In Grid view
-                value: bases-cms-show-cover-placeholder-grid
-            -
-                label: Don't show
-                value: bases-cms-show-cover-placeholder-none
-    -
-        id: bases-cms-side-cover-min-height
-        title: Minimum left/right cover height
-        description: Minimum height for cards with left or right cover position
-        type: variable-text
-        default: 150px
+        type: class-toggle
+        default: true
     -
         id: properties-heading
         title: Properties
@@ -266,41 +195,6 @@ settings:
         description: Dim the empty value marker color
         type: class-toggle
         default: true
-    -
-        id: bases-cms-timestamp-recent-time-only
-        title: Only show time for recent timestamps
-        description: Omit the date for timestamps in the last 24 h. Will show timestamp as-is if it has no time.
-        type: class-toggle
-        default: true
-    -
-        id: bases-cms-timestamp-older-date-only
-        title: Only show date for older timestamps
-        description: Omit the time for timestamps older than a day.
-        type: class-toggle
-        default: true
-    -
-        id: bases-cms-timestamp-icon
-        title: Timestamp icon
-        description: Show icon next to timestamp to distinguish between modified and created timestamps
-        type: class-select
-        allowEmpty: false
-        default: bases-cms-timestamp-icon-edge
-        options:
-            -
-                label: Align left
-                value: bases-cms-timestamp-icon-left
-            -
-                label: Align right
-                value: bases-cms-timestamp-icon-right
-            -
-                label: Align to card center
-                value: bases-cms-timestamp-icon-center
-            -
-                label: Align to card edge
-                value: bases-cms-timestamp-icon-edge
-            -
-                label: Don't show
-                value: bases-cms-timestamp-icon-hide
     -
         id: bases-cms-property-master-font
         title: Property font
@@ -365,7 +259,7 @@ settings:
         title: Custom text color
         description: Custom color for property text (when Text color is set to Custom)
         type: variable-themed-color
-        format: hsl-split
+        format: hex
         default-light: '#'
         default-dark: '#'
     -
@@ -491,29 +385,9 @@ settings:
         title: Custom date color
         description: Custom color for date text (when Date color is set to Custom)
         type: variable-themed-color
-        format: hsl-split
+        format: hex
         default-light: '#'
         default-dark: '#'
-    -
-        id: bases-cms-date-format
-        title: Date format
-        description: How to display date values
-        type: class-select
-        allowEmpty: false
-        default: bases-cms-date-format-full
-        options:
-            -
-                label: Full (date and time)
-                value: bases-cms-date-format-full
-            -
-                label: Date only
-                value: bases-cms-date-format-date-only
-            -
-                label: Time only
-                value: bases-cms-date-format-time-only
-            -
-                label: Relative (e.g., "2 hours ago")
-                value: bases-cms-date-format-relative
     -
         id: bases-cms-checkbox-heading
         title: Selection Checkboxes
@@ -567,17 +441,25 @@ settings:
 	height: 100%;
 	overflow-y: auto;
 	overflow-x: hidden;
+	background-color: var(--bases-cms-view-background, transparent);
 }
 
 .bases-cms-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width, 300px), 1fr));
 	gap: var(--bases-cms-card-spacing, var(--dynamic-views-card-spacing, 8px));
 	align-items: stretch;
 	width: 100%;
 	max-width: 100%;
 	box-sizing: border-box;
 	padding: var(--bases-cms-card-padding-container, var(--dynamic-views-card-padding-container, var(--size-4-3)));
+	grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width, 300px), 1fr));
+}
+
+/* Minimum grid columns - when set to 2, ensure at least 2 columns by constraining card width */
+body[style*="--bases-cms-min-grid-columns: 2"] .bases-cms-grid,
+body[style*="--bases-cms-min-grid-columns: '2'"] .bases-cms-grid {
+	--max-card-width: calc((100% - var(--bases-cms-card-spacing, 8px)) / 2);
+	grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min-width, 300px), var(--max-card-width)), 1fr));
 }
 
 .bases-cms-group {
@@ -628,7 +510,7 @@ settings:
 .card {
 	border: 1px solid var(--bases-cms-card-border-color, var(--dynamic-views-card-border-color, var(--background-modifier-border)));
 	border-radius: var(--bases-cms-card-border-radius, var(--dynamic-views-card-border-radius, 8px));
-	padding: var(--bases-cms-card-padding, var(--dynamic-views-card-padding, 12px));
+	padding: var(--bases-cms-card-padding, var(--dynamic-views-card-padding, 12px)) !important;
 	margin: var(--bases-cms-card-spacing, var(--dynamic-views-card-spacing, 8px)) 0;
 	background-color: var(--background-primary-alt);
 	break-inside: avoid;
@@ -646,10 +528,6 @@ body.bases-cms-card-background-custom .bases-cms .card {
 	background-color: var(--bases-cms-card-background-custom-color, var(--background-primary-alt)) !important;
 }
 
-body.bases-cms-ambient-background .bases-cms .card:has(.card-cover .image-embed),
-body.bases-cms-ambient-background .bases-cms .card:has(.card-thumbnail .image-embed) {
-	background-color: var(--ambient-color, var(--background-primary-alt)) !important;
-}
 
 /* Global spacing between card elements */
 .card > * + * {
@@ -664,7 +542,8 @@ body.bases-cms-ambient-background .bases-cms .card:has(.card-thumbnail .image-em
 
 @media (hover: hover) {
 	.card:hover {
-		border-color: var(--bases-cms-card-border-color-hover, var(--dynamic-views-card-border-color-hover, var(--text-faint)));
+		--hover-color: var(--bases-cms-card-border-color-hover);
+		border-color: var(--hover-color, var(--text-faint)) !important;
 	}
 }
 
@@ -736,6 +615,7 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	position: relative;
 	padding-right: 42px; /* 18px (icon position) + ~20px (icon width) + 4px (spacing) */
 }
+
 
 /* For non-cover views, add more padding to make room for checkbox + icon */
 .card.image-format-none .card-title,
@@ -893,8 +773,13 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 }
 
 /* When placeholder exists, push title down similar to cover image */
-.card.image-format-cover:has(.card-cover-placeholder) .card-title {
+body.bases-cms-show-cover-placeholder .bases-cms .card.image-format-cover:has(.card-cover-placeholder) .card-title {
 	margin-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
+}
+
+/* Hide placeholder when setting is disabled */
+body:not(.bases-cms-show-cover-placeholder) .bases-cms .card-cover-placeholder {
+	display: none !important;
 }
 
 .card.image-format-cover .card-cover {
@@ -938,6 +823,12 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	filter: blur(0.5px);
 }
 
+/* Cover background styles apply to the cover container, visible when image doesn't fill (contain mode) */
+/* For cover mode, background is only visible if image has transparency or doesn't fill the area */
+.card.image-format-cover .card-cover {
+	background-color: var(--background-secondary);
+}
+
 /* Cover crop alignment */
 body.bases-cms-cover-crop-top .bases-cms .card.image-format-cover .card-cover .image-embed {
 	background-position: center top !important;
@@ -952,37 +843,9 @@ body:not(.bases-cms-cover-crop-top):not(.bases-cms-cover-crop-bottom) .bases-cms
 	background-position: center center !important;
 }
 
-/* Cover background styles (for cover images) */
-body.bases-cms-cover-bg-blur .bases-cms .card.image-format-cover .card-cover .image-embed::before {
-	content: "";
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background-image: inherit;
-	background-size: cover;
-	background-position: center;
-	filter: blur(20px);
-	transform: scale(1.1);
-	z-index: 0;
-	opacity: 0.5;
-}
-
-body.bases-cms-cover-bg-ambient .bases-cms .card.image-format-cover .card-cover {
-	background-color: var(--ambient-color, var(--background-secondary));
-}
-
-body.bases-cms-cover-bg-plain .bases-cms .card.image-format-cover .card-cover {
-	background-color: var(--background-primary);
-}
-
-body.bases-cms-cover-bg-transparent .bases-cms .card.image-format-cover .card-cover {
-	background-color: transparent;
-}
-
-body.bases-cms-cover-bg-custom .bases-cms .card.image-format-cover .card-cover {
-	background-color: var(--bases-cms-cover-background-custom-color, var(--background-secondary));
+/* Cover background */
+.bases-cms .card.image-format-cover .card-cover {
+	background-color: var(--background-secondary);
 }
 
 /* ============================================
@@ -1195,11 +1058,79 @@ body.bases-cms-badge-style-custom .bases-cms .card-status-badge.status-published
 }
 
 .property-content {
-	font-size: var(--dynamic-views-property-master-font-size, 0.9em);
+	font-family: var(--bases-cms-property-master-font, inherit) !important;
+	font-size: var(--bases-cms-property-master-font-size, var(--dynamic-views-property-master-font-size, 0.9em)) !important;
 	color: var(--dynamic-views-property-master-color, var(--text-muted));
 	word-break: break-word;
 	overflow-wrap: break-word;
 	overflow: visible;
+}
+
+/* Property color presets */
+body.bases-cms-property-color-faint .bases-cms .property-content {
+	color: var(--text-faint) !important;
+}
+
+body.bases-cms-property-color-muted .bases-cms .property-content {
+	color: var(--text-muted) !important;
+}
+
+body.bases-cms-property-color-normal .bases-cms .property-content {
+	color: var(--text-normal) !important;
+}
+
+body.bases-cms-property-color-accent .bases-cms .property-content {
+	color: var(--text-accent) !important;
+}
+
+body.bases-cms-property-color-red .bases-cms .property-content {
+	color: var(--text-error) !important;
+}
+
+body.bases-cms-property-color-orange .bases-cms .property-content {
+	color: var(--color-orange, #ff9800) !important;
+}
+
+body.bases-cms-property-color-yellow .bases-cms .property-content {
+	color: var(--color-yellow, #fdd835) !important;
+}
+
+body.bases-cms-property-color-green .bases-cms .property-content {
+	color: var(--color-green, #4caf50) !important;
+}
+
+body.bases-cms-property-color-cyan .bases-cms .property-content {
+	color: var(--color-cyan, #00bcd4) !important;
+}
+
+body.bases-cms-property-color-blue .bases-cms .property-content {
+	color: var(--color-blue, #2196f3) !important;
+}
+
+body.bases-cms-property-color-purple .bases-cms .property-content {
+	color: var(--color-purple, #9c27b0) !important;
+}
+
+body.bases-cms-property-color-pink .bases-cms .property-content {
+	color: var(--color-pink, #e91e63) !important;
+}
+
+body.bases-cms-property-color-custom .bases-cms .property-content {
+	color: var(--bases-cms-property-color-custom, var(--text-muted)) !important;
+}
+
+/* Fade empty marker */
+body.bases-cms-fade-empty-marker .bases-cms .property-empty-marker {
+	opacity: 0.5;
+}
+
+/* When inline labels are enabled, make content flow inline */
+.property-content-inline {
+	display: inline;
+}
+
+.property-content-inline .text-wrapper {
+	display: inline;
 }
 
 .property-content .text-wrapper {

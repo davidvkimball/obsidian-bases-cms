@@ -7,6 +7,14 @@ import { App, BasesEntry, TFile } from 'obsidian';
 import type { CardData, CMSSettings } from '../shared/data-transform';
 import { resolveBasesProperty } from '../shared/data-transform';
 import { getPropertyLabel, getFirstBasesPropertyValue } from './property';
+import { 
+	shouldHideMissingProperties, 
+	shouldHideEmptyProperties,
+	getListSeparator,
+	getEmptyValueMarker,
+	getTagStyle,
+	showTagHashPrefix
+} from './style-settings';
 
 export class PropertyRenderer {
 	constructor(
@@ -119,18 +127,77 @@ export class PropertyRenderer {
 			}
 		});
 
+		// Helper function to check if property should be hidden
+		const shouldHideProperty = (propName: string, propValue: string | null): boolean => {
+			if (!propName || propName === '') return true;
+			
+			const isEmptyValue = propValue === null || 
+				propValue === '' || 
+				(typeof propValue === 'string' && propValue.trim() === '');
+			
+			// Check if property exists in frontmatter
+			let propertyExists = false;
+			try {
+				const file = entry.file;
+				if (file) {
+					const metadata = this.app.metadataCache.getFileCache(file);
+					if (metadata && metadata.frontmatter) {
+						const propertyNames = propName.split(',').map(p => p.trim()).filter(p => p);
+						for (const prop of propertyNames) {
+							const propKey = prop.replace(/^(note|formula|file)\./, '');
+							if (propKey in metadata.frontmatter) {
+								propertyExists = true;
+								break;
+							}
+						}
+					}
+				}
+			} catch {
+				// Ignore
+			}
+			
+			// Hide missing properties
+			if (shouldHideMissingProperties() && !propertyExists) {
+				return true;
+			}
+			
+			// Hide empty properties
+			if (shouldHideEmptyProperties() && propertyExists && isEmptyValue) {
+				return true;
+			}
+			
+			// Also hide if empty and hide empty is enabled (fallback for formula properties)
+			if (shouldHideEmptyProperties() && isEmptyValue) {
+				return true;
+			}
+			
+			return false;
+		};
+
 		// Render top groups (only if position is 'top' or undefined)
 		if ((position === 'top' || position === undefined) && topGroups.length > 0) {
 			const topMetaEl = cardEl.createDiv('card-properties properties-top');
 			topGroups.forEach((group, groupIndex) => {
+				// Check if either property should be rendered
+				const prop1ShouldRender = group.props[0] && !shouldHideProperty(group.props[0], group.values[0]);
+				const prop2ShouldRender = group.props[1] && !shouldHideProperty(group.props[1], group.values[1]);
+				
+				if (!prop1ShouldRender && !prop2ShouldRender) {
+					return; // Skip this group entirely if both properties are hidden
+				}
+				
 				const rowEl = topMetaEl.createDiv(`property-row property-row-group-${groupIndex + 1}`);
 				if (group.sideBySide) {
 					rowEl.addClass('property-row-side-by-side');
 				}
 				const field1El = rowEl.createDiv('property-field property-field-1');
-				if (group.props[0]) this.renderPropertyContent(field1El, group.props[0], group.values[0], card, entry, settings, onPropertyToggle);
+				if (prop1ShouldRender) {
+					this.renderPropertyContent(field1El, group.props[0], group.values[0], card, entry, settings, onPropertyToggle);
+				}
 				const field2El = rowEl.createDiv('property-field property-field-2');
-				if (group.props[1]) this.renderPropertyContent(field2El, group.props[1], group.values[1], card, entry, settings, onPropertyToggle);
+				if (prop2ShouldRender) {
+					this.renderPropertyContent(field2El, group.props[1], group.values[1], card, entry, settings, onPropertyToggle);
+				}
 			});
 		}
 
@@ -138,14 +205,26 @@ export class PropertyRenderer {
 		if ((position === 'bottom' || position === undefined) && bottomGroups.length > 0) {
 			const bottomMetaEl = cardEl.createDiv('card-properties properties-bottom');
 			bottomGroups.forEach((group, groupIndex) => {
+				// Check if either property should be rendered
+				const prop1ShouldRender = group.props[0] && !shouldHideProperty(group.props[0], group.values[0]);
+				const prop2ShouldRender = group.props[1] && !shouldHideProperty(group.props[1], group.values[1]);
+				
+				if (!prop1ShouldRender && !prop2ShouldRender) {
+					return; // Skip this group entirely if both properties are hidden
+				}
+				
 				const rowEl = bottomMetaEl.createDiv(`property-row property-row-group-${groupIndex + 1}`);
 				if (group.sideBySide) {
 					rowEl.addClass('property-row-side-by-side');
 				}
 				const field1El = rowEl.createDiv('property-field property-field-1');
-				if (group.props[0]) this.renderPropertyContent(field1El, group.props[0], group.values[0], card, entry, settings, onPropertyToggle);
+				if (prop1ShouldRender) {
+					this.renderPropertyContent(field1El, group.props[0], group.values[0], card, entry, settings, onPropertyToggle);
+				}
 				const field2El = rowEl.createDiv('property-field property-field-2');
-				if (group.props[1]) this.renderPropertyContent(field2El, group.props[1], group.values[1], card, entry, settings, onPropertyToggle);
+				if (prop2ShouldRender) {
+					this.renderPropertyContent(field2El, group.props[1], group.values[1], card, entry, settings, onPropertyToggle);
+				}
 			});
 		}
 	}
@@ -163,6 +242,21 @@ export class PropertyRenderer {
 		onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>
 	): void {
 		if (propertyName === '') return;
+
+		// Match Dynamic Views behavior:
+		// - resolvedValue === null means property doesn't exist (missing)
+		// - resolvedValue === "" means property exists but is empty
+		// This matches how resolveBasesProperty works
+		
+		// Hide missing properties if toggle enabled (resolvedValue is null for missing properties)
+		if (resolvedValue === null && shouldHideMissingProperties()) {
+			return;
+		}
+		
+		// Hide empty properties if toggle enabled (resolvedValue is '' for empty properties)
+		if (resolvedValue === "" && shouldHideEmptyProperties()) {
+			return;
+		}
 
 		// If no value and labels are hidden, render nothing
 		if (!resolvedValue && settings.propertyLabels === 'hide') {
@@ -197,6 +291,11 @@ export class PropertyRenderer {
 
 		// Universal wrapper for all content types
 		const metaContent = container.createDiv('property-content');
+		
+		// Add class for inline labels to enable proper CSS styling
+		if (settings.propertyLabels === 'inline') {
+			metaContent.addClass('property-content-inline');
+		}
 
 		// Add inline label if enabled (inside metaContent)
 		if (settings.propertyLabels === 'inline') {
@@ -206,11 +305,12 @@ export class PropertyRenderer {
 
 		// If no value but labels are enabled, show placeholder
 		if (!resolvedValue) {
-			metaContent.appendText('…');
+			const emptyMarker = metaContent.createSpan('property-empty-marker');
+			emptyMarker.textContent = getEmptyValueMarker();
 			return;
 		}
 
-		// Handle timestamp properties
+		// Handle timestamp properties - render as-is without Style Settings logic
 		const isKnownTimestampProperty = propertyName === 'file.mtime' || propertyName === 'file.ctime' ||
 			propertyName === 'modified time' || propertyName === 'created time';
 
@@ -220,10 +320,15 @@ export class PropertyRenderer {
 		} else if ((propertyName === 'tags' || propertyName === 'note.tags') && card.yamlTags.length > 0) {
 			// YAML tags only
 			const tagsWrapper = metaContent.createDiv('tags-wrapper');
+			const tagStyle = getTagStyle();
+			if (tagStyle !== 'plain') {
+				tagsWrapper.addClass(`tag-style-${tagStyle}`);
+			}
+			
 			card.yamlTags.forEach(tag => {
 				const tagEl = tagsWrapper.createEl('a', {
 					cls: 'tag',
-					text: tag,
+					text: showTagHashPrefix() ? `#${tag}` : tag,
 					href: '#'
 				});
 				tagEl.addEventListener('click', (e) => {
@@ -237,10 +342,15 @@ export class PropertyRenderer {
 		} else if ((propertyName === 'file.tags' || propertyName === 'file tags') && card.tags.length > 0) {
 			// tags in YAML + note body
 			const tagsWrapper = metaContent.createDiv('tags-wrapper');
+			const tagStyle = getTagStyle();
+			if (tagStyle !== 'plain') {
+				tagsWrapper.addClass(`tag-style-${tagStyle}`);
+			}
+			
 			card.tags.forEach(tag => {
 				const tagEl = tagsWrapper.createEl('a', {
 					cls: 'tag',
-					text: tag,
+					text: showTagHashPrefix() ? `#${tag}` : tag,
 					href: '#'
 				});
 				tagEl.addEventListener('click', (e) => {
@@ -307,7 +417,7 @@ export class PropertyRenderer {
 	 */
 	private renderPropertyValueWithLinks(container: HTMLElement, value: string | null, sourcePath: string, propertyName?: string): void {
 		if (!value) {
-			container.appendText('…');
+			container.appendText(getEmptyValueMarker());
 			return;
 		}
 

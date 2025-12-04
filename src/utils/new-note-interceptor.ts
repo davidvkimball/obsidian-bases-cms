@@ -67,8 +67,6 @@ export function setupNewNoteInterceptor(
 					const newFileLocation = vaultConfig?.newFileLocation || 'folder';
 					const newFileFolderPath = vaultConfig?.newFileFolderPath || '';
 					
-					console.debug('[CMS View] Obsidian config:', { newFileLocation, newFileFolderPath });
-					
 					let filePath = 'Untitled.md';
 					
 					// Handle Obsidian's new file location settings
@@ -87,8 +85,6 @@ export function setupNewNoteInterceptor(
 						filePath = 'Untitled.md';
 					}
 					// For 'folder' without path or any other value, default to vault root
-					
-					console.debug('[CMS View] Creating file at:', filePath);
 					const file = await app.vault.create(filePath, '');
 					await app.workspace.openLinkText(file.path, '', false);
 					return;

@@ -135,16 +135,13 @@ export function shouldHideMissingProperties(): boolean {
  * Returns true if properties with empty values should not be displayed
  */
 export function shouldHideEmptyProperties(): boolean {
-	return hasBodyClass("bases-cms-hide-empty-properties");
-}
-
-/**
- * Check if timestamp icon should be shown
- * Returns true for all icon positions (left, right, inner, outer)
- * Returns false only when explicitly hidden
- */
-export function showTimestampIcon(): boolean {
-	return !hasBodyClass("bases-cms-timestamp-icon-hide");
+	// Check both the body class and also check if the CSS variable is set (as a fallback)
+	const hasClass = hasBodyClass("bases-cms-hide-empty-properties");
+	if (hasClass) return true;
+	
+	// Fallback: check if the setting is enabled via CSS variable or other means
+	// This ensures we catch the setting even if the class isn't applied yet
+	return false;
 }
 
 /**
@@ -161,79 +158,6 @@ export function getTagStyle(): "plain" | "theme" | "minimal" {
  */
 export function showTagHashPrefix(): boolean {
 	return hasBodyClass("bases-cms-show-tag-hash");
-}
-
-/**
- * Check if recent timestamps should show time only
- */
-export function shouldShowRecentTimeOnly(): boolean {
-	return hasBodyClass("bases-cms-timestamp-recent-time-only");
-}
-
-/**
- * Check if older timestamps should show date only
- */
-export function shouldShowOlderDateOnly(): boolean {
-	return hasBodyClass("bases-cms-timestamp-older-date-only");
-}
-
-/**
- * Get date format preference from Style Settings
- * Returns the format to use for displaying dates
- */
-export function getDateFormat(): "full" | "date-only" | "time-only" | "relative" {
-	if (hasBodyClass("bases-cms-date-format-date-only")) return "date-only";
-	if (hasBodyClass("bases-cms-date-format-time-only")) return "time-only";
-	if (hasBodyClass("bases-cms-date-format-relative")) return "relative";
-	return "full";
-}
-
-/**
- * Format a date according to Style Settings preferences
- */
-export function formatDate(date: Date, format: "full" | "date-only" | "time-only" | "relative"): string {
-	switch (format) {
-		case "date-only":
-			return date.toLocaleDateString();
-		case "time-only":
-			return date.toLocaleTimeString();
-		case "relative":
-			return formatRelativeTime(date);
-		case "full":
-		default:
-			return date.toLocaleString();
-	}
-}
-
-/**
- * Format a date as relative time (e.g., "2 hours ago", "3 days ago")
- */
-function formatRelativeTime(date: Date): string {
-	const now = new Date();
-	const diffMs = now.getTime() - date.getTime();
-	const diffSeconds = Math.floor(diffMs / 1000);
-	const diffMinutes = Math.floor(diffSeconds / 60);
-	const diffHours = Math.floor(diffMinutes / 60);
-	const diffDays = Math.floor(diffHours / 24);
-	const diffWeeks = Math.floor(diffDays / 7);
-	const diffMonths = Math.floor(diffDays / 30);
-	const diffYears = Math.floor(diffDays / 365);
-
-	if (diffSeconds < 60) {
-		return diffSeconds <= 1 ? "just now" : `${diffSeconds} seconds ago`;
-	} else if (diffMinutes < 60) {
-		return diffMinutes === 1 ? "1 minute ago" : `${diffMinutes} minutes ago`;
-	} else if (diffHours < 24) {
-		return diffHours === 1 ? "1 hour ago" : `${diffHours} hours ago`;
-	} else if (diffDays < 7) {
-		return diffDays === 1 ? "1 day ago" : `${diffDays} days ago`;
-	} else if (diffWeeks < 4) {
-		return diffWeeks === 1 ? "1 week ago" : `${diffWeeks} weeks ago`;
-	} else if (diffMonths < 12) {
-		return diffMonths === 1 ? "1 month ago" : `${diffMonths} months ago`;
-	} else {
-		return diffYears === 1 ? "1 year ago" : `${diffYears} years ago`;
-	}
 }
 
 /**

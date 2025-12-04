@@ -5,6 +5,7 @@
 
 import type { BasesEntry } from 'obsidian';
 import { getFirstBasesPropertyValue } from '../utils/property';
+import { getListSeparator } from '../utils/style-settings';
 
 /**
  * Remove duplication from a string (e.g., "valuevalue" -> "value")
@@ -381,8 +382,15 @@ export function resolveBasesProperty(
 
 	// For non-date properties, extract .data
 	const data = valueObj.data;
-	if (data == null || data === '') {
-		return null;
+	
+	// IMPORTANT: Return "" for empty (property exists but is empty), null for missing (property doesn't exist)
+	// This matches Dynamic Views behavior for hide missing/empty properties
+	if (data == null) {
+		return null; // Property doesn't exist
+	}
+	
+	if (data === '') {
+		return ""; // Property exists but is empty
 	}
 
 	// Handle arrays (e.g., aliases, lists)
@@ -390,7 +398,7 @@ export function resolveBasesProperty(
 	if (typeof data === 'string') {
 		const trimmed = data.trim();
 		if (trimmed.length === 0) {
-			return null;
+			return ""; // Empty string
 		}
 		// Remove duplication if present (handles cases where Bases returns duplicated strings)
 		return removeDuplication(trimmed);
@@ -398,7 +406,7 @@ export function resolveBasesProperty(
 	
 	if (Array.isArray(data)) {
 		if (data.length === 0) {
-			return null;
+			return ""; // Empty array
 		}
 		// Convert array items to strings and join, removing duplicates
 		const uniqueItems = new Set<string>();
@@ -433,7 +441,10 @@ export function resolveBasesProperty(
 			}
 		}
 		
-		return result.length > 0 ? result.join(', ') : null;
+		if (result.length > 0) {
+			return result.join(getListSeparator());
+		}
+		return null;
 	}
 
 	// Convert to string

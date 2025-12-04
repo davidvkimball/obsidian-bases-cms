@@ -12,7 +12,7 @@ import { renderDraftStatusBadge } from '../utils/draft-status-badge';
 import { setupQuickEditIcon } from '../utils/quick-edit-icon';
 import { PropertyRenderer } from '../utils/property-renderer';
 import { convertGifToStatic } from '../utils/image';
-import { getDateFormat, formatDate } from '../utils/style-settings';
+import { getTagStyle, showTagHashPrefix } from '../utils/style-settings';
 
 export class SharedCardRenderer {
 	protected basesConfig?: { get?: (key: string) => unknown };
@@ -287,13 +287,18 @@ export class SharedCardRenderer {
 				// Tags as pills (under text preview)
 				if (settings.showTags && card.displayTags && card.displayTags.length > 0) {
 					const tagsContainer = textWrapper.createDiv('card-tags');
+					const tagStyle = getTagStyle();
+					if (tagStyle !== 'plain') {
+						tagsContainer.addClass(`tag-style-${tagStyle}`);
+					}
+					
 					const maxTags = settings.maxTagsToShow;
 					const tagsToShow = card.displayTags.slice(0, maxTags);
 					const remainingCount = card.displayTags.length - maxTags;
 					
 					tagsToShow.forEach(tag => {
 						const tagEl = tagsContainer.createSpan('card-tag');
-						tagEl.appendText(tag);
+						tagEl.appendText(showTagHashPrefix() ? `#${tag}` : tag);
 					});
 					
 					if (remainingCount > 0) {
@@ -317,13 +322,18 @@ export class SharedCardRenderer {
 				// Tags as pills (under text preview)
 				if (settings.showTags && card.displayTags && card.displayTags.length > 0) {
 					const tagsContainer = contentContainer.createDiv('card-tags');
+					const tagStyle = getTagStyle();
+					if (tagStyle !== 'plain') {
+						tagsContainer.addClass(`tag-style-${tagStyle}`);
+					}
+					
 					const maxTags = settings.maxTagsToShow;
 					const tagsToShow = card.displayTags.slice(0, maxTags);
 					const remainingCount = card.displayTags.length - maxTags;
 					
 					tagsToShow.forEach(tag => {
 						const tagEl = tagsContainer.createSpan('card-tag');
-						tagEl.appendText(tag);
+						tagEl.appendText(showTagHashPrefix() ? `#${tag}` : tag);
 					});
 					
 					if (remainingCount > 0) {
@@ -344,6 +354,7 @@ export class SharedCardRenderer {
 				if (imageUrls.length > 0) {
 					const imageEmbedContainer = imageEl.createDiv('image-embed');
 					const originalUrl = imageUrls[0];
+					
 					
 					// Convert GIF to static if setting is enabled
 					void (async () => {
