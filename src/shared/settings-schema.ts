@@ -14,70 +14,75 @@ interface BasesConfig {
  * Read CMS settings from Bases config with plugin defaults
  */
 export function readCMSSettings(
-	config: BasesConfig,
+	config: BasesConfig | undefined,
 	pluginSettings: BasesCMSSettings
 ): CMSSettings {
+	// Helper to safely get config values
+	const getConfig = (key: string): unknown => {
+		return config?.get?.(key);
+	};
+	
 	return {
-		titleProperty: (config.get('titleProperty') as string) || '',
-		descriptionProperty: (config.get('descriptionProperty') as string) || '',
-		imageProperty: (config.get('imageProperty') as string) || '',
-		showTitle: (config.get('showTitle') as boolean) ?? true,
-		showDate: (config.get('showDate') as boolean) ?? false,
-		dateProperty: (config.get('dateProperty') as string) || '',
-		dateIncludeTime: (config.get('dateIncludeTime') as boolean) ?? false,
-		showTextPreview: (config.get('showTextPreview') as boolean) ?? true,
-		fallbackToContent: (config.get('fallbackToContent') as boolean) ?? true,
+		titleProperty: (getConfig('titleProperty') as string) || '',
+		descriptionProperty: (getConfig('descriptionProperty') as string) || '',
+		imageProperty: (getConfig('imageProperty') as string) || '',
+		showTitle: (getConfig('showTitle') as boolean) ?? true,
+		showDate: (getConfig('showDate') as boolean) ?? false,
+		dateProperty: (getConfig('dateProperty') as string) || '',
+		dateIncludeTime: (getConfig('dateIncludeTime') as boolean) ?? false,
+		showTextPreview: (getConfig('showTextPreview') as boolean) ?? true,
+		fallbackToContent: (getConfig('fallbackToContent') as boolean) ?? true,
 		fallbackToEmbeds: (() => {
-			const value = config.get('fallbackToEmbeds');
+			const value = getConfig('fallbackToEmbeds');
 			if (value === 'always' || value === 'if-empty' || value === 'never') {
 				return value;
 			}
 			// Legacy boolean support - default to 'if-empty' for backward compatibility
 			return (value === false) ? 'never' : 'if-empty';
 		})(),
-		propertyDisplay1: (config.get('propertyDisplay1') as string) || '',
-		propertyDisplay2: (config.get('propertyDisplay2') as string) || '',
-		propertyDisplay3: (config.get('propertyDisplay3') as string) || '',
-		propertyDisplay4: (config.get('propertyDisplay4') as string) || '',
-		propertyDisplay5: (config.get('propertyDisplay5') as string) || '',
-		propertyDisplay6: (config.get('propertyDisplay6') as string) || '',
-		propertyDisplay7: (config.get('propertyDisplay7') as string) || '',
-		propertyDisplay8: (config.get('propertyDisplay8') as string) || '',
-		propertyDisplay9: (config.get('propertyDisplay9') as string) || '',
-		propertyDisplay10: (config.get('propertyDisplay10') as string) || '',
-		propertyDisplay11: (config.get('propertyDisplay11') as string) || '',
-		propertyDisplay12: (config.get('propertyDisplay12') as string) || '',
-		propertyDisplay13: (config.get('propertyDisplay13') as string) || '',
-		propertyDisplay14: (config.get('propertyDisplay14') as string) || '',
-		propertyLayout12SideBySide: (config.get('propertyLayout12SideBySide') as boolean) ?? false,
-		propertyLayout34SideBySide: (config.get('propertyLayout34SideBySide') as boolean) ?? false,
-		propertyLayout56SideBySide: (config.get('propertyLayout56SideBySide') as boolean) ?? false,
-		propertyLayout78SideBySide: (config.get('propertyLayout78SideBySide') as boolean) ?? false,
-		propertyLayout910SideBySide: (config.get('propertyLayout910SideBySide') as boolean) ?? false,
-		propertyLayout1112SideBySide: (config.get('propertyLayout1112SideBySide') as boolean) ?? false,
-		propertyLayout1314SideBySide: (config.get('propertyLayout1314SideBySide') as boolean) ?? false,
-		propertyGroup1Position: (config.get('propertyGroup1Position') as 'top' | 'bottom') || 'bottom',
-		propertyGroup2Position: (config.get('propertyGroup2Position') as 'top' | 'bottom') || 'bottom',
-		propertyGroup3Position: (config.get('propertyGroup3Position') as 'top' | 'bottom') || 'bottom',
-		propertyGroup4Position: (config.get('propertyGroup4Position') as 'top' | 'bottom') || 'bottom',
-		propertyGroup5Position: (config.get('propertyGroup5Position') as 'top' | 'bottom') || 'bottom',
-		propertyGroup6Position: (config.get('propertyGroup6Position') as 'top' | 'bottom') || 'bottom',
-		propertyGroup7Position: (config.get('propertyGroup7Position') as 'top' | 'bottom') || 'bottom',
-		imageFormat: (config.get('imageFormat') as 'none' | 'thumbnail' | 'cover') || 'thumbnail',
-		imagePosition: (config.get('imagePosition') as 'left' | 'right' | 'top' | 'bottom') || 'right',
-		propertyLabels: (config.get('propertyLabels') as 'hide' | 'inline' | 'above') || 'hide',
-		showDraftStatus: (config.get('showDraftStatus') as boolean) ?? false,
-		draftStatusProperty: (config.get('draftStatusProperty') as string) || '',
-		draftStatusReverse: (config.get('draftStatusReverse') as boolean) ?? false,
-		draftStatusUseFilenamePrefix: (config.get('draftStatusUseFilenamePrefix') as boolean) ?? false,
-		showTags: (config.get('showTags') as boolean) ?? false,
-		tagsProperty: (config.get('tagsProperty') as string) || '',
-		maxTagsToShow: (config.get('maxTagsToShow') as number) ?? 3,
-		customizeNewButton: (config.get('customizeNewButton') as boolean) ?? false,
-		newNoteLocation: (config.get('newNoteLocation') as string) || '',
-		hideQuickEditIcon: (config.get('hideQuickEditIcon') as boolean) ?? false,
-		cardSize: (config.get('cardSize') as number) ?? 250,
-		imageAspectRatio: (config.get('imageAspectRatio') as number) ?? 0.55,
+		propertyDisplay1: (getConfig('propertyDisplay1') as string) || '',
+		propertyDisplay2: (getConfig('propertyDisplay2') as string) || '',
+		propertyDisplay3: (getConfig('propertyDisplay3') as string) || '',
+		propertyDisplay4: (getConfig('propertyDisplay4') as string) || '',
+		propertyDisplay5: (getConfig('propertyDisplay5') as string) || '',
+		propertyDisplay6: (getConfig('propertyDisplay6') as string) || '',
+		propertyDisplay7: (getConfig('propertyDisplay7') as string) || '',
+		propertyDisplay8: (getConfig('propertyDisplay8') as string) || '',
+		propertyDisplay9: (getConfig('propertyDisplay9') as string) || '',
+		propertyDisplay10: (getConfig('propertyDisplay10') as string) || '',
+		propertyDisplay11: (getConfig('propertyDisplay11') as string) || '',
+		propertyDisplay12: (getConfig('propertyDisplay12') as string) || '',
+		propertyDisplay13: (getConfig('propertyDisplay13') as string) || '',
+		propertyDisplay14: (getConfig('propertyDisplay14') as string) || '',
+		propertyLayout12SideBySide: (getConfig('propertyLayout12SideBySide') as boolean) ?? false,
+		propertyLayout34SideBySide: (getConfig('propertyLayout34SideBySide') as boolean) ?? false,
+		propertyLayout56SideBySide: (getConfig('propertyLayout56SideBySide') as boolean) ?? false,
+		propertyLayout78SideBySide: (getConfig('propertyLayout78SideBySide') as boolean) ?? false,
+		propertyLayout910SideBySide: (getConfig('propertyLayout910SideBySide') as boolean) ?? false,
+		propertyLayout1112SideBySide: (getConfig('propertyLayout1112SideBySide') as boolean) ?? false,
+		propertyLayout1314SideBySide: (getConfig('propertyLayout1314SideBySide') as boolean) ?? false,
+		propertyGroup1Position: (getConfig('propertyGroup1Position') as 'top' | 'bottom') || 'bottom',
+		propertyGroup2Position: (getConfig('propertyGroup2Position') as 'top' | 'bottom') || 'bottom',
+		propertyGroup3Position: (getConfig('propertyGroup3Position') as 'top' | 'bottom') || 'bottom',
+		propertyGroup4Position: (getConfig('propertyGroup4Position') as 'top' | 'bottom') || 'bottom',
+		propertyGroup5Position: (getConfig('propertyGroup5Position') as 'top' | 'bottom') || 'bottom',
+		propertyGroup6Position: (getConfig('propertyGroup6Position') as 'top' | 'bottom') || 'bottom',
+		propertyGroup7Position: (getConfig('propertyGroup7Position') as 'top' | 'bottom') || 'bottom',
+		imageFormat: (getConfig('imageFormat') as 'none' | 'thumbnail' | 'cover') || 'thumbnail',
+		imagePosition: (getConfig('imagePosition') as 'left' | 'right' | 'top' | 'bottom') || 'right',
+		propertyLabels: (getConfig('propertyLabels') as 'hide' | 'inline' | 'above') || 'hide',
+		showDraftStatus: (getConfig('showDraftStatus') as boolean) ?? false,
+		draftStatusProperty: (getConfig('draftStatusProperty') as string) || '',
+		draftStatusReverse: (getConfig('draftStatusReverse') as boolean) ?? false,
+		draftStatusUseFilenamePrefix: (getConfig('draftStatusUseFilenamePrefix') as boolean) ?? false,
+		showTags: (getConfig('showTags') as boolean) ?? false,
+		tagsProperty: (getConfig('tagsProperty') as string) || '',
+		maxTagsToShow: (getConfig('maxTagsToShow') as number) ?? 3,
+		customizeNewButton: (getConfig('customizeNewButton') as boolean) ?? false,
+		newNoteLocation: (getConfig('newNoteLocation') as string) || '',
+		hideQuickEditIcon: (getConfig('hideQuickEditIcon') as boolean) ?? false,
+		cardSize: (getConfig('cardSize') as number) ?? 250,
+		imageAspectRatio: (getConfig('imageAspectRatio') as number) ?? 0.55,
 	};
 }
 
@@ -567,13 +572,15 @@ export function getCMSViewOptions(): unknown[] {
 			items: [
 				{
 					type: 'toggle',
-					displayName: 'Customize new button behavior',
+					displayName: 'Open new notes directly',
+					description: 'Skip the Bases modal and create notes directly (like the file explorer). When disabled, uses normal Bases behavior with the property popup.',
 					key: 'customizeNewButton',
 					default: false
 				},
 				{
 					type: 'text',
-					displayName: 'Default location for new notes',
+					displayName: 'Location for new notes',
+					description: 'Folder path where new notes will be created. Use / for vault root, or specify a folder path. Works independently of "Open new notes directly".',
 					key: 'newNoteLocation',
 					placeholder: 'Simply use / for vault folder',
 					default: ''

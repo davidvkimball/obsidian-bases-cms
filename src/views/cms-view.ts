@@ -84,16 +84,6 @@ export class BasesCMSView extends BasesView {
 			(cleanup) => this.register(cleanup)
 		);
 
-		// Intercept new note button clicks
-		setupNewNoteInterceptor(
-			this.app,
-			this.containerEl,
-			this.config,
-			this.plugin.settings,
-			(cleanup) => this.register(cleanup)
-		);
-
-		
 		// Setup view switch listener - wraps handleSelectionChange
 		const originalHandleSelectionChange = this.handleSelectionChange.bind(this);
 		this.handleSelectionChange = this.viewSwitchListener.setup(originalHandleSelectionChange);
@@ -146,6 +136,26 @@ export class BasesCMSView extends BasesView {
 		void (async () => {
 			const groupedData = this.data.groupedData;
 			const allEntries = this.data.data;
+
+			// Set up interceptor once config is available (only on first call)
+			if (this.config && !(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup) {
+				(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup = true;
+				// Store the config on the container so the interceptor can retrieve it
+				// Also store a reference to this view instance so we can get the config dynamically
+				const containerWithConfig = this.containerEl as unknown as { 
+					__cmsConfig?: { get: (key: string) => unknown };
+					__cmsView?: BasesCMSView;
+				};
+				containerWithConfig.__cmsConfig = this.config;
+				containerWithConfig.__cmsView = this;
+				setupNewNoteInterceptor(
+					this.app,
+					this.containerEl,
+					this.config,
+					this.plugin.settings,
+					(cleanup) => this.register(cleanup)
+				);
+			}
 
 			// Read settings from Bases config
 			const settings = readCMSSettings(
@@ -804,24 +814,57 @@ export class BasesCMSView extends BasesView {
 			this.plugin.settings
 		);
 
-		if (settings.customizeNewButton && settings.newNoteLocation && settings.newNoteLocation.trim() !== '') {
+		if (settings.customizeNewButton) {
 			try {
-				// Create new note in the specified location
-				const folderPath = settings.newNoteLocation.trim().replace(/^\/+|\/+$/g, ''); // Remove leading/trailing slashes
+				const locationInput = settings.newNoteLocation?.trim() || '';
+				
+				// If location is empty, use Obsidian's default new note location
+				if (locationInput === '') {
+					// Use Obsidian's default new note creation behavior
+					const vaultConfig = (this.app.vault as { config?: { newFileLocation?: string; newFileFolderPath?: string } }).config;
+					const newFileLocation = vaultConfig?.newFileLocation || 'folder';
+					const newFileFolderPath = vaultConfig?.newFileFolderPath || '';
+					
+					let filePath = 'Untitled.md';
+					
+					// Handle Obsidian's new file location settings
+					if (newFileLocation === 'folder' && newFileFolderPath) {
+						filePath = `${newFileFolderPath}/Untitled.md`;
+					} else if (newFileLocation === 'current') {
+						const activeFile = this.app.workspace.getActiveFile();
+						if (activeFile && activeFile.parent) {
+							filePath = `${activeFile.parent.path}/Untitled.md`;
+						}
+					} else if (newFileLocation === 'root') {
+						filePath = 'Untitled.md';
+					}
+					
+					const file = await this.app.vault.create(filePath, '');
+					await this.app.workspace.openLinkText(file.path, '', false);
+					return true;
+				}
+				
+				// If location is "/" or just slashes, use vault root
+				if (locationInput === '/' || locationInput.replace(/\//g, '') === '') {
+					const newFile = await this.app.vault.create('Untitled.md', '');
+					await this.app.workspace.openLinkText(newFile.path, '', false);
+					return true;
+				}
+				
+				// Otherwise, use the specified folder
+				const folderPath = locationInput.replace(/^\/+|\/+$/g, '');
 				
 				let folder = this.app.vault.getAbstractFileByPath(folderPath);
 				
 				if (!folder || !('children' in folder)) {
-					// Folder doesn't exist, create it first
 					await this.app.vault.createFolder(folderPath);
 					folder = this.app.vault.getAbstractFileByPath(folderPath);
 				}
 				
 				if (folder && 'children' in folder) {
-					// Folder exists, create note there
 					const newFile = await this.app.vault.create(`${folderPath}/Untitled.md`, '');
 					await this.app.workspace.openLinkText(newFile.path, '', false);
-					return true; // Indicate we handled it
+					return true;
 				}
 			} catch (error) {
 				console.error('[CMS View] Error creating new note:', error);
@@ -829,6 +872,6 @@ export class BasesCMSView extends BasesView {
 		}
 		
 		// Default behavior - let Bases handle it
-		return false; // Let Bases handle it
+		return false;
 	}
 }

@@ -196,6 +196,17 @@ settings:
         type: class-toggle
         default: true
     -
+        id: bases-cms-property-label-spacing
+        title: Property label spacing
+        description: Spacing between property labels and content above them
+        type: variable-number-slider
+        default: 6
+        min: 0
+        max: 24
+        step: 1
+        format: px
+    -
+    -
         id: bases-cms-property-master-font
         title: Property font
         description: Font name as it appears on your system. Can be overridden by individual item options below.
@@ -572,7 +583,7 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 
 .bases-cms-select-checkbox input[type="checkbox"] {
 	cursor: default;
-	margin: 0;
+	margin: 0 auto;
 	padding: 0;
 	flex-shrink: 0;
 }
@@ -582,11 +593,6 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	--checkbox-click-radius: var(--bases-cms-checkbox-click-radius, 14px);
 	padding: calc((var(--checkbox-click-radius) - 14px) / 2);
 	margin: calc((var(--checkbox-click-radius) - 14px) / -2);
-}
-
-.bases-cms-select-checkbox input[type="checkbox"] {
-	width: var(--checkbox-click-radius, 14px);
-	height: var(--checkbox-click-radius, 14px);
 }
 
 /* For cover images, add subtle drop shadow for visibility on light images */
@@ -773,13 +779,8 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 }
 
 /* When placeholder exists, push title down similar to cover image */
-body.bases-cms-show-cover-placeholder .bases-cms .card.image-format-cover:has(.card-cover-placeholder) .card-title {
+.card.image-format-cover:has(.card-cover-placeholder) .card-title {
 	margin-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
-}
-
-/* Hide placeholder when setting is disabled */
-body:not(.bases-cms-show-cover-placeholder) .bases-cms .card-cover-placeholder {
-	display: none !important;
 }
 
 .card.image-format-cover .card-cover {
@@ -811,6 +812,7 @@ body:not(.bases-cms-show-cover-placeholder) .bases-cms .card-cover-placeholder {
 	overflow: visible;
 }
 
+
 .card.image-format-cover .card-cover .image-embed {
 	position: absolute;
 	top: 0;
@@ -826,7 +828,7 @@ body:not(.bases-cms-show-cover-placeholder) .bases-cms .card-cover-placeholder {
 /* Cover background styles apply to the cover container, visible when image doesn't fill (contain mode) */
 /* For cover mode, background is only visible if image has transparency or doesn't fill the area */
 .card.image-format-cover .card-cover {
-	background-color: var(--background-secondary);
+	background-color: var(--background-modifier-border);
 }
 
 /* Cover crop alignment */
@@ -845,7 +847,7 @@ body:not(.bases-cms-cover-crop-top):not(.bases-cms-cover-crop-bottom) .bases-cms
 
 /* Cover background */
 .bases-cms .card.image-format-cover .card-cover {
-	background-color: var(--background-secondary);
+	background-color: var(--background-modifier-border);
 }
 
 /* ============================================
@@ -1025,12 +1027,13 @@ body.bases-cms-badge-style-custom .bases-cms .card-status-badge.status-published
 .property-row {
 	display: flex;
 	flex-direction: column;
-	gap: var(--bases-cms-element-spacing, var(--dynamic-views-element-spacing, 8px));
+	gap: calc(var(--bases-cms-property-label-spacing, 6px) * 1.5);
 	align-items: flex-start;
 }
 
 .property-row-side-by-side {
 	flex-direction: row;
+	gap: var(--bases-cms-element-spacing, var(--dynamic-views-element-spacing, 8px));
 }
 
 .property-field {
@@ -1039,9 +1042,14 @@ body.bases-cms-badge-style-custom .bases-cms .card-status-badge.status-published
 	overflow: visible;
 }
 
+.property-field:last-child {
+	margin-bottom: 0;
+}
+
 .property-label {
 	font-size: 0.7em;
 	color: var(--text-muted);
+	margin-top: var(--bases-cms-property-label-spacing, 6px);
 	margin-bottom: 3px;
 	font-weight: 500;
 	letter-spacing: 0.3px;
@@ -1119,8 +1127,8 @@ body.bases-cms-property-color-custom .bases-cms .property-content {
 	color: var(--bases-cms-property-color-custom, var(--text-muted)) !important;
 }
 
-/* Fade empty marker */
-body.bases-cms-fade-empty-marker .bases-cms .property-empty-marker {
+/* Fade empty marker - dimmed by default (works without Style Settings) */
+.bases-cms .property-empty-marker {
 	opacity: 0.5;
 }
 
