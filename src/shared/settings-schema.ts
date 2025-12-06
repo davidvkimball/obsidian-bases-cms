@@ -26,7 +26,7 @@ export function readCMSSettings(
 		titleProperty: (getConfig('titleProperty') as string) || '',
 		descriptionProperty: (getConfig('descriptionProperty') as string) || '',
 		imageProperty: (getConfig('imageProperty') as string) || '',
-		showTitle: true, // Always show title (defaults to filename if no property)
+		showTitle: true, // Always show title, defaulting to file name if no property set
 		showDate: (getConfig('showDate') as boolean) ?? false,
 		dateProperty: (getConfig('dateProperty') as string) || '',
 		dateIncludeTime: (getConfig('dateIncludeTime') as boolean) ?? false,

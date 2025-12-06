@@ -8,15 +8,15 @@ import type BasesCMSPlugin from '../main';
 import { transformBasesEntries, type CardData, type CMSSettings } from '../shared/data-transform';
 import { readCMSSettings } from '../shared/settings-schema';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
-import { loadSnippetsForEntries, loadImagesForEntries, loadEmbedImagesForEntries } from '../shared/content-loader';
+import { loadSnippetsForEntries, loadImagesForEntries } from '../shared/content-loader';
 import { SharedCardRenderer } from './shared-renderer';
 import { BATCH_SIZE } from '../shared/constants';
 import { BulkToolbar } from '../components/bulk-toolbar';
 import { setupNewNoteInterceptor } from '../utils/new-note-interceptor';
 import { PropertyToggleHandler } from '../utils/property-toggle-handler';
-import { ScrollLayoutManager } from '../utils/scroll-layout-manager';
 import { ViewSwitchListener } from '../utils/view-switch-listener';
 import { convertGifToStatic } from '../utils/image';
+import { getMinGridColumns, getCardSpacing } from '../utils/style-settings';
 
 export const CMS_VIEW_TYPE = 'bases-cms';
 
@@ -34,13 +34,23 @@ export class BasesCMSView extends BasesView {
 	private bulkToolbar: BulkToolbar | null = null;
 	private isRefreshingWithSelection: boolean = false;
 	private propertyToggleHandler: PropertyToggleHandler | null = null;
-	private scrollLayoutManager: ScrollLayoutManager;
 	private viewSwitchListener: ViewSwitchListener | null = null;
+	
+	// Simple infinite scroll properties (like Dynamic Views)
+	private displayedCount: number = 50;
+	private isLoading: boolean = false;
+	private scrollListener: (() => void) | null = null;
+	private scrollThrottleTimeout: number | null = null;
+	private resizeObserver: ResizeObserver | null = null;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: BasesCMSPlugin) {
 		super(controller);
 		this.containerEl = containerEl;
 		this.plugin = plugin;
+		
+		// Set initial batch size based on device
+		const isMobile = (this.app as { isMobile?: boolean }).isMobile ?? false;
+		this.displayedCount = isMobile ? 25 : BATCH_SIZE;
 		
 		// Initialize shared card renderer (config will be set later in onDataUpdated)
 		this.cardRenderer = new SharedCardRenderer(
@@ -55,52 +65,40 @@ export class BasesCMSView extends BasesView {
 		// Add CMS container classes
 		this.containerEl.addClass('bases-cms');
 		this.containerEl.addClass('bases-cms-container');
-		
+
 		// Initialize managers with error handling
 		try {
-		this.propertyToggleHandler = new PropertyToggleHandler(
-			this.app,
-			this.config as { get: (key: string) => unknown },
-			this.plugin.settings,
-			() => this.onDataUpdated()
-		);
+			this.propertyToggleHandler = new PropertyToggleHandler(
+				this.app,
+				this.config as { get: (key: string) => unknown },
+				this.plugin.settings,
+				() => this.onDataUpdated()
+			);
 		} catch (error) {
+			console.error('Bases CMS: Failed to initialize PropertyToggleHandler:', error);
 			this.propertyToggleHandler = null;
 		}
 
 		try {
-		this.scrollLayoutManager = new ScrollLayoutManager(
-			this.containerEl,
-			this.app,
-			this.config as { get: (key: string) => unknown },
-			this.plugin.settings,
-			() => this.onDataUpdated(),
-			(cleanup) => this.register(cleanup)
-		);
+			this.viewSwitchListener = new ViewSwitchListener(
+				this.containerEl,
+				this.plugin,
+				this.config as { getName?: () => string; name?: string },
+				(this as unknown as { controller?: { getBaseName?: () => string; baseName?: string } }).controller,
+				this.data as { baseName?: string } | undefined,
+				this.selectedFiles,
+				() => this.updateSelectionUI(),
+				(cleanup) => this.register(cleanup)
+			);
 		} catch (error) {
-			// Re-throw - this is critical and view won't work without it
-			throw error;
-		}
-
-		try {
-		this.viewSwitchListener = new ViewSwitchListener(
-			this.containerEl,
-			this.plugin,
-			this.config as { getName?: () => string; name?: string },
-			(this as unknown as { controller?: { getBaseName?: () => string; baseName?: string } }).controller,
-			this.data as { baseName?: string } | undefined,
-			this.selectedFiles,
-			() => this.updateSelectionUI(),
-			(cleanup) => this.register(cleanup)
-		);
-		} catch (error) {
+			console.error('Bases CMS: Failed to initialize ViewSwitchListener:', error);
 			this.viewSwitchListener = null;
 		}
 
 		// Setup view switch listener - wraps handleSelectionChange
 		if (this.viewSwitchListener) {
-		const originalHandleSelectionChange = this.handleSelectionChange.bind(this);
-		this.handleSelectionChange = this.viewSwitchListener.setup(originalHandleSelectionChange);
+			const originalHandleSelectionChange = this.handleSelectionChange.bind(this);
+			this.handleSelectionChange = this.viewSwitchListener.setup(originalHandleSelectionChange);
 		}
 	}
 	
@@ -108,167 +106,332 @@ export class BasesCMSView extends BasesView {
 	onDataUpdated(): void {
 		void (async () => {
 			try {
-				// Guard: return early if data not yet initialized (race condition with MutationObserver)
+				// Guard: wait for data to be ready - NEVER return early and leave blank screen
 				if (!this.data) {
+					// Show loading state instead of blank screen
+					if (this.containerEl.children.length === 0) {
+						const loadingEl = this.containerEl.createDiv('bases-cms-loading');
+						loadingEl.setText('Loading...');
+						loadingEl.style.padding = '20px';
+						loadingEl.style.textAlign = 'center';
+					}
+					// Retry after a short delay
+					setTimeout(() => {
+						if (this.data) {
+							this.onDataUpdated();
+						}
+					}, 100);
 					return;
 				}
 
-			const groupedData = this.data.groupedData;
-			const allEntries = this.data.data;
-
-			// Read settings from Bases config
-			const settings = readCMSSettings(
-				this.config,
-				this.plugin.settings
-			);
-
-			// Update grid layout using scroll layout manager
-			this.scrollLayoutManager.updateGridLayout(settings);
-
-			// Save scroll position before re-rendering
-			const savedScrollTop = this.containerEl.scrollTop;
-
-			// Get sort method
-			const sortMethod = this.getSortMethod();
-
-			// Process groups
-			const processedGroups = groupedData.map(group => ({
-				group,
-				entries: [...group.entries]
-			}));
-
-			// Collect visible entries across all groups (up to displayedCount)
-			const visibleEntries: BasesEntry[] = [];
-			let remainingCount = this.scrollLayoutManager.getDisplayedCount();
-
-			for (const processedGroup of processedGroups) {
-				if (remainingCount <= 0) break;
-				const entriesToTake = Math.min(processedGroup.entries.length, remainingCount);
-				visibleEntries.push(...processedGroup.entries.slice(0, entriesToTake));
-				remainingCount -= entriesToTake;
-			}
-
-			// Load snippets and images ONLY for displayed entries (EXACTLY like dynamic-views)
-			await this.loadContentForEntries(visibleEntries, settings);
-
-			// Set up interceptor once config is available (only on first call)
-			if (this.config && !(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup) {
-				try {
-					(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup = true;
-					const containerWithConfig = this.containerEl as unknown as { 
-						__cmsConfig?: { get: (key: string) => unknown };
-						__cmsView?: BasesCMSView;
-					};
-					containerWithConfig.__cmsConfig = this.config;
-					containerWithConfig.__cmsView = this;
-					setupNewNoteInterceptor(
-							this.app,
-						this.containerEl,
-						this.config,
-						this.plugin.settings,
-						(cleanup) => this.register(cleanup)
-					);
-				} catch (error) {
-					// Failed to setup interceptor - continue anyway
-					(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup = true;
-				}
-			}
-
-			// Update card renderer with config (now available)
-			(this.cardRenderer as unknown as { basesConfig?: { get?: (key: string) => unknown } }).basesConfig = this.config;
-
-			// Clear and re-render (EXACTLY like dynamic-views - after content is loaded)
-			this.containerEl.empty();
-
-			// Disconnect old property observers before re-rendering
-			this.propertyObservers.forEach(obs => obs.disconnect());
-			this.propertyObservers = [];
-
-			// Create cards feed container
-			const feedEl = this.containerEl.createDiv('bases-cms-grid');
-
-			// Render groups with headers
-			let displayedSoFar = 0;
-			let totalCardsRendered = 0;
-			
-			for (const processedGroup of processedGroups) {
-				if (displayedSoFar >= this.scrollLayoutManager.getDisplayedCount()) break;
-
-				const entriesToDisplay = Math.min(processedGroup.entries.length, this.scrollLayoutManager.getDisplayedCount() - displayedSoFar);
-				if (entriesToDisplay === 0) continue;
-
-				const groupEntries = processedGroup.entries.slice(0, entriesToDisplay);
-
-				// Create group container
-				const groupEl = feedEl.createDiv('bases-cms-group');
-
-				// Render group header if key exists
-				if (processedGroup.group.hasKey()) {
-					const headerEl = groupEl.createDiv('bases-cms-group-heading');
-					const valueEl = headerEl.createDiv('bases-cms-group-value');
-					const keyValue = processedGroup.group.key?.toString() || '';
-					valueEl.setText(keyValue);
+				// Ensure we have valid data structures
+				if (!this.data.groupedData || !this.data.data) {
+					console.warn('Bases CMS: Data structure incomplete, waiting...');
+					setTimeout(() => {
+						if (this.data && this.data.groupedData && this.data.data) {
+							this.onDataUpdated();
+						}
+					}, 100);
+					return;
 				}
 
-				// Render cards in this group
-				const cards = transformBasesEntries(
-					groupEntries,
-					settings,
-					sortMethod,
-					false,
-					this.snippets,
-					this.images,
-					this.hasImageAvailable
+				const groupedData = this.data.groupedData;
+				const allEntries = this.data.data;
+
+				// Read settings from Bases config
+				const settings = readCMSSettings(
+					this.config,
+					this.plugin.settings
 				);
 
-				for (let i = 0; i < cards.length; i++) {
-					const card = cards[i];
-					const entry = groupEntries[i];
-					this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
-					totalCardsRendered++;
+				// Calculate grid columns (like Dynamic Views)
+				const containerWidth = this.containerEl.clientWidth;
+				const cardSize = settings.cardSize;
+				const minColumns = getMinGridColumns();
+				const gap = getCardSpacing();
+				const cols = Math.max(
+					minColumns,
+					Math.floor((containerWidth + gap) / (cardSize + gap)),
+				);
+
+				// Set CSS variables for grid layout
+				this.containerEl.style.setProperty("--grid-columns", String(cols));
+				this.containerEl.style.setProperty(
+					"--dynamic-views-image-aspect-ratio",
+					String(settings.imageAspectRatio),
+				);
+
+				// Save scroll position before re-rendering
+				const savedScrollTop = this.containerEl.scrollTop;
+
+				// Get sort method
+				const sortMethod = this.getSortMethod();
+
+				// Process groups
+				const processedGroups = groupedData.map(group => ({
+					group,
+					entries: [...group.entries]
+				}));
+
+				// Collect visible entries across all groups (up to displayedCount)
+				const visibleEntries: BasesEntry[] = [];
+				let remainingCount = this.displayedCount;
+
+				for (const processedGroup of processedGroups) {
+					if (remainingCount <= 0) break;
+					const entriesToTake = Math.min(processedGroup.entries.length, remainingCount);
+					visibleEntries.push(...processedGroup.entries.slice(0, entriesToTake));
+					remainingCount -= entriesToTake;
 				}
 
-				displayedSoFar += entriesToDisplay;
-			}
-			
-			// Images are now set via background-image in renderCard, so no batch loading needed
-			// Images will be updated by updateCardImage when they load
+				// Load snippets and images ONLY for displayed entries (EXACTLY like dynamic-views)
+				await this.loadContentForEntries(visibleEntries, settings);
 
-			// Restore scroll position after rendering
-			if (savedScrollTop > 0) {
-				this.containerEl.scrollTop = savedScrollTop;
-			}
+				// Set up interceptor once config is available (only on first call)
+				if (this.config && !(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup) {
+					try {
+						(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup = true;
+						const containerWithConfig = this.containerEl as unknown as { 
+							__cmsConfig?: { get: (key: string) => unknown };
+							__cmsView?: BasesCMSView;
+						};
+						containerWithConfig.__cmsConfig = this.config;
+						containerWithConfig.__cmsView = this;
+						setupNewNoteInterceptor(
+							this.app,
+							this.containerEl,
+							this.config,
+							this.plugin.settings,
+							(cleanup) => this.register(cleanup)
+						);
+					} catch (error) {
+						console.warn('Bases CMS: Failed to setup new note interceptor:', error);
+						(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup = true;
+					}
+				}
 
-			// Setup infinite scroll and resize observer
-			this.scrollLayoutManager.setupInfiniteScroll(allEntries.length);
-			this.scrollLayoutManager.setupResizeObserver();
+				// Update card renderer with config (now available)
+				(this.cardRenderer as unknown as { basesConfig?: { get?: (key: string) => unknown } }).basesConfig = this.config;
 
-			// Update selection UI
-			this.updateSelectionUI();
+				// Clear and re-render (EXACTLY like dynamic-views - after content is loaded)
+				// CRITICAL: Only clear if we have entries to render, otherwise we get blank screen
+				if (allEntries.length === 0 && groupedData.length === 0) {
+					// No data - show empty state instead of blank screen
+					this.containerEl.empty();
+					const emptyEl = this.containerEl.createDiv('bases-cms-empty');
+					emptyEl.setText('No entries found');
+					emptyEl.style.padding = '20px';
+					emptyEl.style.textAlign = 'center';
+					this.isLoading = false;
+					return;
+				}
 
-				// Clear loading flag after async work completes
-				this.scrollLayoutManager.setIsLoading(false);
-			} catch (error) {
+				// We have data - clear and render
+				this.containerEl.empty();
+
+				// Disconnect old property observers before re-rendering
+				this.propertyObservers.forEach(obs => obs.disconnect());
+				this.propertyObservers = [];
+
+				// Create cards feed container
+				const feedEl = this.containerEl.createDiv('bases-cms-grid');
+
+				// Render groups with headers
+				let displayedSoFar = 0;
+				let totalCardsRendered = 0;
 				
-				// Ensure loading flag is cleared even on error
-				try {
-					this.scrollLayoutManager.setIsLoading(false);
-				} catch (e) {
-					// Ignore errors in cleanup
+				for (const processedGroup of processedGroups) {
+					if (displayedSoFar >= this.displayedCount) break;
+
+					const entriesToDisplay = Math.min(processedGroup.entries.length, this.displayedCount - displayedSoFar);
+					if (entriesToDisplay === 0) continue;
+
+					const groupEntries = processedGroup.entries.slice(0, entriesToDisplay);
+
+					// Create group container
+					const groupEl = feedEl.createDiv('bases-cms-group');
+
+					// Render group header if key exists
+					if (processedGroup.group.hasKey()) {
+						const headerEl = groupEl.createDiv('bases-cms-group-heading');
+						const valueEl = headerEl.createDiv('bases-cms-group-value');
+						const keyValue = processedGroup.group.key?.toString() || '';
+						valueEl.setText(keyValue);
+					}
+
+					// Render cards in this group
+					const cards = transformBasesEntries(
+						groupEntries,
+						settings,
+						sortMethod,
+						false,
+						this.snippets,
+						this.images,
+						this.hasImageAvailable
+					);
+
+					for (let i = 0; i < cards.length; i++) {
+						const card = cards[i];
+						const entry = groupEntries[i];
+						try {
+							this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
+							totalCardsRendered++;
+						} catch (error) {
+							console.error(`Bases CMS: Error rendering card ${i} for ${entry.file.path}:`, error);
+							// Continue rendering other cards even if one fails
 						}
-				
-				// If container is empty due to error, show error message
-				if (this.containerEl && this.containerEl.isConnected) {
+					}
+
+					displayedSoFar += entriesToDisplay;
+				}
+
+				// CRITICAL: If no cards were rendered, show error instead of blank screen
+				if (totalCardsRendered === 0 && allEntries.length > 0) {
+					console.error('Bases CMS: No cards rendered despite having entries!');
 					this.containerEl.empty();
 					const errorEl = this.containerEl.createDiv('bases-cms-error');
-					errorEl.setText('Error loading view. Check console for details.');
+					errorEl.setText('Error rendering cards. Check console for details.');
 					errorEl.style.padding = '20px';
 					errorEl.style.textAlign = 'center';
 					errorEl.style.color = 'var(--text-error)';
-					errorEl.style.margin = '20px';
+					this.isLoading = false;
+					return;
+				}
+
+				// Restore scroll position after rendering
+				if (savedScrollTop > 0) {
+					this.containerEl.scrollTop = savedScrollTop;
+				}
+
+				// Setup infinite scroll (like Dynamic Views)
+				this.setupInfiniteScroll(allEntries.length);
+
+				// Setup ResizeObserver for dynamic grid updates (like Dynamic Views)
+				if (!this.resizeObserver) {
+					this.resizeObserver = new ResizeObserver(() => {
+						const containerWidth = this.containerEl.clientWidth;
+						const cardSize = settings.cardSize;
+						const minColumns = getMinGridColumns();
+						const gap = getCardSpacing();
+						const cols = Math.max(
+							minColumns,
+							Math.floor((containerWidth + gap) / (cardSize + gap)),
+						);
+						this.containerEl.style.setProperty("--grid-columns", String(cols));
+					});
+					this.resizeObserver.observe(this.containerEl);
+					this.register(() => {
+						if (this.resizeObserver) {
+							this.resizeObserver.disconnect();
+						}
+					});
+				}
+
+				// Update selection UI
+				this.updateSelectionUI();
+
+				// Clear loading flag after async work completes
+				this.isLoading = false;
+			} catch (error) {
+				console.error('Bases CMS: Error in onDataUpdated:', error);
+				console.error('Bases CMS: Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+				
+				// Ensure loading flag is cleared even on error
+				this.isLoading = false;
+				
+				// CRITICAL: ALWAYS show something - never leave blank screen
+				if (this.containerEl && this.containerEl.isConnected) {
+					// Check if container is empty or only has loading message
+					const isEmpty = this.containerEl.children.length === 0 || 
+						(this.containerEl.children.length === 1 && 
+						 this.containerEl.querySelector('.bases-cms-loading'));
+					
+					if (isEmpty) {
+						this.containerEl.empty();
+						const errorEl = this.containerEl.createDiv('bases-cms-error');
+						errorEl.setText('Error loading view. Check console for details.');
+						errorEl.style.padding = '20px';
+						errorEl.style.textAlign = 'center';
+						errorEl.style.color = 'var(--text-error)';
+						errorEl.style.margin = '20px';
+					}
+					// If container has content, don't clear it - just log the error
 				}
 			}
 		})();
+	}
+
+	private setupInfiniteScroll(totalEntries: number): void {
+		// Clean up existing listener
+		if (this.scrollListener) {
+			this.containerEl.removeEventListener("scroll", this.scrollListener);
+			this.scrollListener = null;
+		}
+
+		// Skip if all items already displayed
+		if (this.displayedCount >= totalEntries) {
+			return;
+		}
+
+		// Create scroll handler with throttling
+		this.scrollListener = () => {
+			// Throttle: skip if cooldown active
+			if (this.scrollThrottleTimeout !== null) {
+				return;
+			}
+
+			// Skip if already loading
+			if (this.isLoading) {
+				return;
+			}
+
+			// Calculate distance from bottom
+			const scrollTop = this.containerEl.scrollTop;
+			const scrollHeight = this.containerEl.scrollHeight;
+			const clientHeight = this.containerEl.clientHeight;
+			const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+			// Dynamic threshold based on viewport and device
+			const isMobile = (this.app as { isMobile?: boolean }).isMobile ?? false;
+			const viewportMultiplier = isMobile ? 1 : 2;
+			const threshold = clientHeight * viewportMultiplier;
+
+			// Check if should load more
+			if (
+				distanceFromBottom < threshold &&
+				this.displayedCount < totalEntries
+			) {
+				this.isLoading = true;
+
+				// Dynamic batch size: 50 items
+				const batchSize = 50;
+				this.displayedCount = Math.min(
+					this.displayedCount + batchSize,
+					totalEntries,
+				);
+
+				// Re-render (this will call setupInfiniteScroll again)
+				this.onDataUpdated();
+			}
+
+			// Start throttle cooldown
+			this.scrollThrottleTimeout = window.setTimeout(() => {
+				this.scrollThrottleTimeout = null;
+			}, 100);
+		};
+
+		// Attach listener
+		this.containerEl.addEventListener("scroll", this.scrollListener);
+
+		// Register cleanup
+		this.register(() => {
+			if (this.scrollListener) {
+				this.containerEl.removeEventListener("scroll", this.scrollListener);
+			}
+			if (this.scrollThrottleTimeout !== null) {
+				window.clearTimeout(this.scrollThrottleTimeout);
+			}
+		});
 	}
 
 	private async loadContentForEntries(
@@ -298,8 +461,7 @@ export class BasesCMSView extends BasesView {
 						settings.fallbackToContent,
 						false,
 						this.app,
-						this.snippets,
-						settings.truncatePreviewProperty
+						this.snippets
 					);
 				}
 			}
@@ -323,7 +485,7 @@ export class BasesCMSView extends BasesView {
 				if (imageEntries.length > 0) {
 					await loadImagesForEntries(
 						imageEntries,
-						settings.fallbackToEmbeds,
+						settings.fallbackToEmbeds === false ? 'never' : (settings.fallbackToEmbeds === true ? 'always' : settings.fallbackToEmbeds),
 						this.app,
 						this.images,
 						this.hasImageAvailable
@@ -331,6 +493,7 @@ export class BasesCMSView extends BasesView {
 				}
 			}
 		} catch (error) {
+			console.error('Bases CMS: Error in loadContentForEntries:', error);
 			throw error; // Re-throw to be caught by outer handler
 		}
 	}
@@ -482,8 +645,6 @@ export class BasesCMSView extends BasesView {
 		return 'mtime-desc';
 	}
 
-
-
 	private handleSelectionChange(path: string, selected: boolean): void {
 		if (selected) {
 			this.selectedFiles.add(path);
@@ -512,7 +673,7 @@ export class BasesCMSView extends BasesView {
 
 	private async handlePropertyToggle(path: string, property: string, value: unknown): Promise<void> {
 		if (this.propertyToggleHandler) {
-		await this.propertyToggleHandler.handlePropertyToggle(path, property, value);
+			await this.propertyToggleHandler.handlePropertyToggle(path, property, value);
 		}
 	}
 
@@ -670,9 +831,11 @@ export class BasesCMSView extends BasesView {
 	}
 
 	onClose(): void {
-		this.scrollLayoutManager.cleanup();
+		if (this.resizeObserver) {
+			this.resizeObserver.disconnect();
+		}
 		if (this.viewSwitchListener) {
-		this.viewSwitchListener.cleanup();
+			this.viewSwitchListener.cleanup();
 		}
 		this.propertyObservers.forEach(obs => obs.disconnect());
 		this.propertyObservers = [];
@@ -685,7 +848,7 @@ export class BasesCMSView extends BasesView {
 		orphanedToolbars.forEach(toolbar => toolbar.remove());
 		
 		// Remove from plugin tracking
-		const pluginWithMethod = this.plugin as { removeView?: (view: BasesCMSView) => void };
+		const pluginWithMethod = this.plugin as unknown as { removeView?: (view: BasesCMSView) => void };
 		if (pluginWithMethod && typeof pluginWithMethod.removeView === 'function') {
 			pluginWithMethod.removeView(this);
 		}
@@ -753,7 +916,7 @@ export class BasesCMSView extends BasesView {
 					return true;
 				}
 			} catch (error) {
-				// Error creating new note - silently fail
+				console.error('[CMS View] Error creating new note:', error);
 			}
 		}
 		

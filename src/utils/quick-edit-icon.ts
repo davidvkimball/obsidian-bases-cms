@@ -105,7 +105,7 @@ function isProblematicCommand(commandId: string, commandName: string): boolean {
 }
 
 /**
- * Setup quick edit icon on title element
+ * Setup quick edit icon on title element (or card if title is hidden)
  */
 export function setupQuickEditIcon(
 	app: App,
@@ -123,6 +123,7 @@ export function setupQuickEditIcon(
 		return;
 	}
 	
+	// Attach to titleEl (title is always shown now)
 	const quickEditIcon = titleEl.createSpan('bases-cms-quick-edit-icon');
 	quickEditIcon.addClass('bases-cms-cursor-default');
 	setIcon(quickEditIcon, plugin.settings.quickEditIcon || 'pencil-line');

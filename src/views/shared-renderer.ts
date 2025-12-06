@@ -52,6 +52,12 @@ export class SharedCardRenderer {
 	): void {
 		// Create card element
 		const cardEl = container.createDiv('card bases-cms-card');
+		
+		// CRITICAL: Force immediate layout reflow to prevent Folder Notes plugin interference
+		// Inline styles trigger layout calculation before Folder Notes' MutationObserver processes the element
+		cardEl.style.display = 'block';
+		cardEl.style.position = 'relative';
+		
 		if (settings.imageFormat === 'cover') {
 			cardEl.classList.add('image-format-cover');
 		} else if (settings.imageFormat === 'thumbnail') {
@@ -204,11 +210,11 @@ export class SharedCardRenderer {
 			}
 		});
 
-		// Title - always show (defaults to filename if no property is set)
+		// Title - always render (defaults to file name if no title property is set)
 		const titleEl = cardEl.createDiv('card-title');
 		titleEl.appendText(card.title);
-		
-		// Quick edit icon
+			
+		// Quick edit icon - attach to titleEl
 		setupQuickEditIcon(this.app, this.plugin, titleEl, cardEl, card.path, settings);
 
 		// Date (below title)
@@ -370,44 +376,44 @@ export class SharedCardRenderer {
 			// Cover image
 			if (settings.imageFormat === 'cover') {
 				if (card.imageUrl) {
-					const rawUrls = Array.isArray(card.imageUrl) ? card.imageUrl : [card.imageUrl];
-					const imageUrls = rawUrls.filter(url => url && typeof url === 'string' && url.trim().length > 0);
+				const rawUrls = Array.isArray(card.imageUrl) ? card.imageUrl : [card.imageUrl];
+				const imageUrls = rawUrls.filter(url => url && typeof url === 'string' && url.trim().length > 0);
 
-					if (imageUrls.length > 0) {
+				if (imageUrls.length > 0) {
 						const imageEl = contentContainer.createDiv('card-cover');
-						const imageEmbedContainer = imageEl.createDiv('image-embed');
-						const originalUrl = imageUrls[0];
-						
-						// Convert GIF to static if setting is enabled
-						void (async () => {
-							const finalUrl = await convertGifToStatic(originalUrl, this.plugin.settings.forceStaticGifImages);
-							imageEmbedContainer.style.backgroundImage = `url("${finalUrl}")`;
-						})();
-						
-						// Set initial background image (will be updated if GIF conversion is needed)
-						imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
-						imageEmbedContainer.style.backgroundSize = 'cover';
-						imageEmbedContainer.style.backgroundPosition = 'center center';
-						imageEmbedContainer.style.backgroundRepeat = 'no-repeat';
-						
-						// Draft status badge (top-left, clickable to toggle)
+					const imageEmbedContainer = imageEl.createDiv('image-embed');
+					const originalUrl = imageUrls[0];
+					
+					// Convert GIF to static if setting is enabled
+					void (async () => {
+						const finalUrl = await convertGifToStatic(originalUrl, this.plugin.settings.forceStaticGifImages);
+						imageEmbedContainer.style.backgroundImage = `url("${finalUrl}")`;
+					})();
+					
+					// Set initial background image (will be updated if GIF conversion is needed)
+					imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
+					imageEmbedContainer.style.backgroundSize = 'cover';
+					imageEmbedContainer.style.backgroundPosition = 'center center';
+					imageEmbedContainer.style.backgroundRepeat = 'no-repeat';
+					
+					// Draft status badge (top-left, clickable to toggle)
 						if (settings.showDraftStatus) {
-							renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle);
-						}
-						
-						// Bottom properties - MUST be called before returning (for images)
-						this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle, 'bottom');
-						
-						// Images are set via background-image, no return value needed
-						return;
+						renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle);
 					}
+					
+					// Bottom properties - MUST be called before returning (for images)
+					this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle, 'bottom');
+					
+					// Images are set via background-image, no return value needed
+					return;
+				}
 				}
 				
 				// For cover format, render placeholder if image is expected but not loaded yet, or always
 				if (card.hasImageAvailable && !card.imageUrl) {
 					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
-					// Draft status badge on placeholder (top-left, clickable to toggle)
-					renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle);
+				// Draft status badge on placeholder (top-left, clickable to toggle)
+				renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle);
 				} else if (!card.imageUrl) {
 					// No image and not expected - create placeholder anyway for cover format
 					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
