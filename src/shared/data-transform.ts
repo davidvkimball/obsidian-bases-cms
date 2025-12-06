@@ -104,6 +104,7 @@ export interface CMSSettings {
 	dateIncludeTime: boolean;
 	showTextPreview: boolean;
 	fallbackToContent: boolean;
+	truncatePreviewProperty: boolean;
 	fallbackToEmbeds: boolean | 'always' | 'if-empty' | 'never';
 	propertyDisplay1: string;
 	propertyDisplay2: string;

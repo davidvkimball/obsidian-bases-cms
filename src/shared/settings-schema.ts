@@ -26,12 +26,13 @@ export function readCMSSettings(
 		titleProperty: (getConfig('titleProperty') as string) || '',
 		descriptionProperty: (getConfig('descriptionProperty') as string) || '',
 		imageProperty: (getConfig('imageProperty') as string) || '',
-		showTitle: (getConfig('showTitle') as boolean) ?? true,
+		showTitle: true, // Always show title (defaults to filename if no property)
 		showDate: (getConfig('showDate') as boolean) ?? false,
 		dateProperty: (getConfig('dateProperty') as string) || '',
 		dateIncludeTime: (getConfig('dateIncludeTime') as boolean) ?? false,
 		showTextPreview: (getConfig('showTextPreview') as boolean) ?? true,
 		fallbackToContent: (getConfig('fallbackToContent') as boolean) ?? true,
+		truncatePreviewProperty: (getConfig('truncatePreviewProperty') as boolean) ?? false,
 		fallbackToEmbeds: (() => {
 			const value = getConfig('fallbackToEmbeds');
 			if (value === 'always' || value === 'if-empty' || value === 'never') {
@@ -107,12 +108,6 @@ export function getCMSViewOptions(): unknown[] {
 			displayName: 'Title',
 			items: [
 				{
-					type: 'toggle',
-					displayName: 'Show title',
-					key: 'showTitle',
-					default: true
-				},
-				{
 					type: 'property',
 					displayName: 'Title property',
 					key: 'titleProperty',
@@ -144,6 +139,12 @@ export function getCMSViewOptions(): unknown[] {
 					displayName: 'Use note content if text preview property unavailable',
 					key: 'fallbackToContent',
 					default: true
+				},
+				{
+					type: 'toggle',
+					displayName: 'Truncate preview property',
+					key: 'truncatePreviewProperty',
+					default: false
 				}
 			]
 		},

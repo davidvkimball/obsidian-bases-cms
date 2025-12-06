@@ -212,7 +212,8 @@ export async function loadSnippetsForEntries(
 	fallbackToContent: boolean,
 	omitFirstLine: boolean,
 	app: App,
-	snippetCache: Record<string, string>
+	snippetCache: Record<string, string>,
+	truncatePreviewProperty?: boolean
 ): Promise<void> {
 	await Promise.all(
 		entries.map(async (entry) => {
@@ -229,7 +230,8 @@ export async function loadSnippetsForEntries(
 						entry.descriptionData,
 						{
 							fallbackToContent,
-							omitFirstLine
+							omitFirstLine,
+							truncatePreviewProperty
 						},
 						entry.fileName,
 						entry.titleString

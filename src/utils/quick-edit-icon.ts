@@ -115,7 +115,7 @@ export function setupQuickEditIcon(
 	cardPath: string,
 	settings: CMSSettings
 ): void {
-	// Quick edit icon (only if enabled, command is set, title is shown, and not hidden in this view)
+	// Quick edit icon (only if enabled, command is set, and not hidden in this view)
 	if (!plugin.settings.enableQuickEdit || 
 		!plugin.settings.quickEditCommand || 
 		plugin.settings.quickEditCommand === '' ||

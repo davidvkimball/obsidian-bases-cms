@@ -204,14 +204,12 @@ export class SharedCardRenderer {
 			}
 		});
 
-		// Title
-		if (settings.showTitle) {
-			const titleEl = cardEl.createDiv('card-title');
-			titleEl.appendText(card.title);
-			
-			// Quick edit icon
-			setupQuickEditIcon(this.app, this.plugin, titleEl, cardEl, card.path, settings);
-		}
+		// Title - always show (defaults to filename if no property is set)
+		const titleEl = cardEl.createDiv('card-title');
+		titleEl.appendText(card.title);
+		
+		// Quick edit icon
+		setupQuickEditIcon(this.app, this.plugin, titleEl, cardEl, card.path, settings);
 
 		// Date (below title)
 		if (settings.showDate && settings.dateProperty) {
@@ -261,16 +259,42 @@ export class SharedCardRenderer {
 		// Top property groups (rendered before content)
 		this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle, 'top');
 
-		// Content container
+		// Content container - always create if showTextPreview is enabled, or if there are other content elements
+		// For thumbnail and cover formats, always create container
 		if (settings.showTextPreview ||
 			(settings.showTags && card.displayTags && card.displayTags.length > 0) ||
-			(settings.imageFormat !== 'none' && (card.imageUrl || card.hasImageAvailable)) ||
-			(settings.imageFormat === 'cover')) {
+			(settings.imageFormat === 'thumbnail') ||
+			(settings.imageFormat === 'cover') ||
+			(settings.imageFormat !== 'none' && (card.imageUrl || card.hasImageAvailable))) {
 			const contentContainer = cardEl.createDiv('card-content');
+
+			// For thumbnail format, create thumbnail FIRST (before text-wrapper) for proper positioning
+			if (settings.imageFormat === 'thumbnail' && card.imageUrl) {
+				const rawUrls = Array.isArray(card.imageUrl) ? card.imageUrl : [card.imageUrl];
+				const imageUrls = rawUrls.filter(url => url && typeof url === 'string' && url.trim().length > 0);
+
+				if (imageUrls.length > 0) {
+					const imageEl = contentContainer.createDiv('card-thumbnail');
+					const imageEmbedContainer = imageEl.createDiv('image-embed');
+					const originalUrl = imageUrls[0];
+					
+					// Convert GIF to static if setting is enabled
+					void (async () => {
+						const finalUrl = await convertGifToStatic(originalUrl, this.plugin.settings.forceStaticGifImages);
+						imageEmbedContainer.style.backgroundImage = `url("${finalUrl}")`;
+					})();
+					
+					// Set initial background image (will be updated if GIF conversion is needed)
+					imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
+					imageEmbedContainer.style.backgroundSize = 'cover';
+					imageEmbedContainer.style.backgroundPosition = 'center center';
+					imageEmbedContainer.style.backgroundRepeat = 'no-repeat';
+				}
+			}
 
 			// For thumbnail format, handle positioning
 			if (settings.imageFormat === 'thumbnail') {
-				// For top/bottom positions, stack vertically; for left/right, use row layout
+				// Create text wrapper
 				const textWrapper = contentContainer.createDiv('card-text-wrapper');
 				
 				// Text preview - always create if showTextPreview is enabled, even if snippet isn't loaded yet
@@ -343,51 +367,53 @@ export class SharedCardRenderer {
 				}
 			}
 
-			// Thumbnail or cover
-			if (settings.imageFormat !== 'none' && card.imageUrl) {
-				const rawUrls = Array.isArray(card.imageUrl) ? card.imageUrl : [card.imageUrl];
-				const imageUrls = rawUrls.filter(url => url && typeof url === 'string' && url.trim().length > 0);
+			// Cover image
+			if (settings.imageFormat === 'cover') {
+				if (card.imageUrl) {
+					const rawUrls = Array.isArray(card.imageUrl) ? card.imageUrl : [card.imageUrl];
+					const imageUrls = rawUrls.filter(url => url && typeof url === 'string' && url.trim().length > 0);
 
-				const imageClassName = settings.imageFormat === 'cover' ? 'card-cover' : 'card-thumbnail';
-				const imageEl = contentContainer.createDiv(imageClassName);
-
-				if (imageUrls.length > 0) {
-					const imageEmbedContainer = imageEl.createDiv('image-embed');
-					const originalUrl = imageUrls[0];
-					
-					
-					// Convert GIF to static if setting is enabled
-					void (async () => {
-						const finalUrl = await convertGifToStatic(originalUrl, this.plugin.settings.forceStaticGifImages);
-						imageEmbedContainer.style.backgroundImage = `url("${finalUrl}")`;
-					})();
-					
-					// Set initial background image (will be updated if GIF conversion is needed)
-					imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
-					imageEmbedContainer.style.backgroundSize = 'cover';
-					imageEmbedContainer.style.backgroundPosition = 'center center';
-					imageEmbedContainer.style.backgroundRepeat = 'no-repeat';
-					
-					// Draft status badge (top-left, clickable to toggle)
-					// For cover images, place badge on the cover AFTER image-embed is created
-					if (settings.showDraftStatus && settings.imageFormat === 'cover') {
-						renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle);
+					if (imageUrls.length > 0) {
+						const imageEl = contentContainer.createDiv('card-cover');
+						const imageEmbedContainer = imageEl.createDiv('image-embed');
+						const originalUrl = imageUrls[0];
+						
+						// Convert GIF to static if setting is enabled
+						void (async () => {
+							const finalUrl = await convertGifToStatic(originalUrl, this.plugin.settings.forceStaticGifImages);
+							imageEmbedContainer.style.backgroundImage = `url("${finalUrl}")`;
+						})();
+						
+						// Set initial background image (will be updated if GIF conversion is needed)
+						imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
+						imageEmbedContainer.style.backgroundSize = 'cover';
+						imageEmbedContainer.style.backgroundPosition = 'center center';
+						imageEmbedContainer.style.backgroundRepeat = 'no-repeat';
+						
+						// Draft status badge (top-left, clickable to toggle)
+						if (settings.showDraftStatus) {
+							renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle);
+						}
+						
+						// Bottom properties - MUST be called before returning (for images)
+						this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle, 'bottom');
+						
+						// Images are set via background-image, no return value needed
+						return;
 					}
-					
-					// Bottom properties - MUST be called before returning (for images)
-					this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle, 'bottom');
-					
-					// Images are set via background-image, no return value needed
-					return;
 				}
-			} else if (settings.imageFormat === 'cover') {
-				// For cover format, render placeholder and add badge if needed
-				const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
 				
-				// Draft status badge on placeholder (top-left, clickable to toggle)
-				renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle);
+				// For cover format, render placeholder if image is expected but not loaded yet, or always
+				if (card.hasImageAvailable && !card.imageUrl) {
+					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
+					// Draft status badge on placeholder (top-left, clickable to toggle)
+					renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle);
+				} else if (!card.imageUrl) {
+					// No image and not expected - create placeholder anyway for cover format
+					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
+					renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle);
+				}
 			}
-			// For thumbnail format, don't render placeholder when no image - just skip it
 		}
 
 

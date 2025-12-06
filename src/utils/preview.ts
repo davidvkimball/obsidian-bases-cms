@@ -148,6 +148,7 @@ export async function loadFilePreview(
 	settings: {
 		fallbackToContent: boolean;
 		omitFirstLine: boolean;
+		truncatePreviewProperty?: boolean;
 	},
 	fileName?: string,
 	titleValue?: string
@@ -157,7 +158,16 @@ export async function loadFilePreview(
 		String(propertyValue).trim().length > 0;
 
 	if (hasValidDesc) {
-		return String(propertyValue).trim();
+		let result = String(propertyValue).trim();
+		// Truncate if setting is enabled
+		if (settings.truncatePreviewProperty) {
+			const wasTruncated = result.length > 500;
+			result = result.substring(0, 500);
+			if (wasTruncated) {
+				result += '…';
+			}
+		}
+		return result;
 	}
 
 	if (settings.fallbackToContent) {

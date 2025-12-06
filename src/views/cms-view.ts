@@ -331,7 +331,8 @@ export class BasesCMSView extends BasesView {
 					settings.fallbackToContent,
 					false,
 					this.app,
-					this.snippets
+					this.snippets,
+					settings.truncatePreviewProperty
 				).then(() => {
 					// Update text preview elements for cards that now have snippets
 					requestAnimationFrame(() => {
@@ -538,7 +539,7 @@ export class BasesCMSView extends BasesView {
 	 * Called asynchronously after images load
 	 */
 	private updateCardImage(path: string, imageUrl: string | string[]): void {
-		const cardEl = this.containerEl.querySelector(`.card[data-path="${path}"]`);
+		const cardEl = this.containerEl.querySelector(`.card[data-path="${path}"]`) as HTMLElement;
 		if (!cardEl) return;
 
 		const url = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl;
@@ -547,23 +548,40 @@ export class BasesCMSView extends BasesView {
 		// Check if image-embed container exists
 		let imageEmbedContainer = cardEl.querySelector('.image-embed') as HTMLElement;
 		if (!imageEmbedContainer) {
-			// No image container - need to create it (replace placeholder)
+			// No image container - need to create it
 			const placeholder = cardEl.querySelector('.card-cover-placeholder, .card-thumbnail-placeholder');
+			const isThumbnail = cardEl.classList.contains('image-format-thumbnail');
+			const isCover = cardEl.classList.contains('image-format-cover');
+			
 			if (placeholder) {
-				// Preserve badge if it exists on placeholder
+				// Replace placeholder
 				const existingBadge = placeholder.querySelector('.card-status-badge');
-				
 				const imageClassName = placeholder.classList.contains('card-cover-placeholder') ? 'card-cover' : 'card-thumbnail';
 				const imageEl = placeholder.parentElement?.createDiv(imageClassName);
 				if (imageEl) {
 					imageEmbedContainer = imageEl.createDiv('image-embed');
-					
-					// Move badge from placeholder to new image element if it exists
 					if (existingBadge) {
 						imageEl.appendChild(existingBadge);
 					}
-					
 					placeholder.remove();
+				}
+			} else if (isThumbnail) {
+				// For thumbnails, create element directly in contentContainer (no placeholders)
+				const contentContainer = cardEl.querySelector('.card-content') as HTMLElement;
+				if (contentContainer) {
+					// Insert thumbnail BEFORE text-wrapper for proper positioning
+					const textWrapper = contentContainer.querySelector('.card-text-wrapper');
+					const imageEl = textWrapper
+						? contentContainer.insertBefore(contentContainer.createDiv('card-thumbnail'), textWrapper)
+						: contentContainer.createDiv('card-thumbnail');
+					imageEmbedContainer = imageEl.createDiv('image-embed');
+				}
+			} else if (isCover) {
+				// For cover, create in contentContainer
+				const contentContainer = cardEl.querySelector('.card-content') as HTMLElement;
+				if (contentContainer) {
+					const imageEl = contentContainer.createDiv('card-cover');
+					imageEmbedContainer = imageEl.createDiv('image-embed');
 				}
 			}
 		}

@@ -641,6 +641,7 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	pointer-events: auto;
 }
 
+
 /* ============================================
    CARD CONTENT (Text Preview & Images)
    ============================================ */
@@ -710,6 +711,7 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	overflow-wrap: break-word;
 }
 
+
 /* ============================================
    THUMBNAIL STYLING
    ============================================ */
@@ -764,7 +766,8 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 
 .card.image-format-cover > .card-title:first-child,
 .card.image-format-cover > .card-content:first-child,
-.card.image-format-cover > .card-properties:first-child {
+.card.image-format-cover > .card-properties:first-child,
+.card.image-format-cover > .card-date:first-child {
 	padding-top: 12px;
 }
 
@@ -782,6 +785,8 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 .card.image-format-cover:has(.card-cover-placeholder) .card-title {
 	margin-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
 }
+
+/* Title is always shown - no special handling needed for missing titles */
 
 .card.image-format-cover .card-cover {
 	position: absolute;
