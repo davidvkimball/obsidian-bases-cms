@@ -129,6 +129,7 @@ export function resolveInternalImagePaths(
 /**
  * Extract image URLs from file embeds
  * Validates external URLs in parallel for better performance
+ * Also parses file content for external images in markdown and HTML
  */
 export async function extractEmbedImages(
 	file: TFile,
@@ -137,29 +138,64 @@ export async function extractEmbedImages(
 	const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
 	const metadata = app.metadataCache.getFileCache(file);
 
-	if (!metadata?.embeds) return [];
-
 	const bodyResourcePaths: string[] = [];
-	const bodyExternalUrlCandidates: string[] = [];
+	const bodyExternalUrlCandidates: Set<string> = new Set();
 
-	// First pass: separate internal paths and external URL candidates
-	for (const embed of metadata.embeds) {
-		const embedLink = embed.link;
-		if (isExternalUrl(embedLink)) {
-			if (hasValidImageExtension(embedLink) || !embedLink.includes('.')) {
-				bodyExternalUrlCandidates.push(embedLink);
-			}
-		} else {
-			const targetFile = app.metadataCache.getFirstLinkpathDest(embedLink, file.path);
-			if (targetFile && validImageExtensions.includes(targetFile.extension)) {
-				const resourcePath = app.vault.getResourcePath(targetFile);
-				bodyResourcePaths.push(resourcePath);
+	// First pass: check metadata embeds (fast, from cache)
+	if (metadata?.embeds) {
+		for (const embed of metadata.embeds) {
+			const embedLink = embed.link;
+			if (isExternalUrl(embedLink)) {
+				if (hasValidImageExtension(embedLink) || !embedLink.includes('.')) {
+					bodyExternalUrlCandidates.add(embedLink);
+				}
+			} else {
+				const targetFile = app.metadataCache.getFirstLinkpathDest(embedLink, file.path);
+				if (targetFile && validImageExtensions.includes(targetFile.extension)) {
+					const resourcePath = app.vault.getResourcePath(targetFile);
+					bodyResourcePaths.push(resourcePath);
+				}
 			}
 		}
 	}
 
-	// Second pass: validate external URLs in parallel (much faster)
-	const validationPromises = bodyExternalUrlCandidates.map(url => 
+	// Second pass: parse file content for external images (markdown and HTML)
+	// This catches external images that might not be in metadata.embeds
+	if (file.extension === 'md') {
+		try {
+			const content = await app.vault.cachedRead(file);
+			
+			// Extract markdown image syntax: ![alt](url) or ![alt](url "title")
+			const markdownImageRegex = /!\[([^\]]*)\]\((https?:\/\/[^\s\)]+)/gi;
+			let match;
+			while ((match = markdownImageRegex.exec(content)) !== null) {
+				const url = match[2].trim();
+				// Remove trailing quotes, parentheses, or whitespace that might be part of title
+				const cleanUrl = url.replace(/["')\s]+$/, '');
+				if (isExternalUrl(cleanUrl) && (hasValidImageExtension(cleanUrl) || !cleanUrl.includes('.'))) {
+					bodyExternalUrlCandidates.add(cleanUrl);
+				}
+			}
+
+			// Extract HTML img tags: <img src="url"> or <img src='url'> or <img src=url>
+			const htmlImgRegex = /<img[^>]+src\s*=\s*["']?(https?:\/\/[^\s"'<>]+)/gi;
+			while ((match = htmlImgRegex.exec(content)) !== null) {
+				const url = match[1].trim();
+				// Remove trailing quotes or whitespace
+				const cleanUrl = url.replace(/["'\s>]+$/, '');
+				if (isExternalUrl(cleanUrl) && (hasValidImageExtension(cleanUrl) || !cleanUrl.includes('.'))) {
+					bodyExternalUrlCandidates.add(cleanUrl);
+				}
+			}
+		} catch (error) {
+			// If file read fails, just continue with what we found in metadata
+			console.warn(`Failed to read file content for image extraction: ${file.path}`, error);
+		}
+	}
+
+	// Third pass: validate external URLs in parallel (much faster)
+	const externalUrlArray = Array.from(bodyExternalUrlCandidates);
+	const validationPromises = externalUrlArray.map(url => 
 		validateImageUrl(url).then(isValid => isValid ? url : null)
 	);
 	const validatedUrls = await Promise.all(validationPromises);
