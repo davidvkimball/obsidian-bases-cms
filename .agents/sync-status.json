@@ -1,0 +1,50 @@
+{
+  "lastFullSync": "2025-12-15",
+  "lastSyncSource": "Full sync check of all 6 core repos - all up to date",
+  "filesSynced": [
+    "project-overview.md",
+    "environment.md",
+    "file-conventions.md",
+    "coding-conventions.md",
+    "manifest.md",
+    "testing.md",
+    "commands-settings.md",
+    "versioning-releases.md",
+    "security-privacy.md",
+    "ux-copy.md",
+    "performance.md",
+    "mobile.md",
+    "agent-dos-donts.md",
+    "common-tasks.md",
+    "troubleshooting.md",
+    "references.md",
+    "release-readiness.md"
+  ],
+  "sourceRepos": {
+    "obsidian-sample-plugin": {
+      "lastChecked": "2025-12-15",
+      "lastSynced": "2025-12-15"
+    },
+    "obsidian-api": {
+      "lastChecked": "2025-12-15",
+      "lastSynced": "2025-12-15"
+    },
+    "obsidian-developer-docs": {
+      "lastChecked": "2025-12-15",
+      "lastSynced": "2025-12-15"
+    },
+    "obsidian-plugin-docs": {
+      "lastChecked": "2025-12-15",
+      "lastSynced": "2025-12-15"
+    },
+    "obsidian-sample-theme": {
+      "lastChecked": "2025-12-15",
+      "lastSynced": "2025-12-15"
+    },
+    "eslint-plugin": {
+      "lastChecked": "2025-12-15",
+      "lastSynced": "2025-12-15"
+    }
+  }
+}
+

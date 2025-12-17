@@ -1,251 +1,481 @@
-# Obsidian community plugin
+# AI Agent Instructions
 
-## Project overview
+This file serves as the **project-specific entry point** for AI agents working on this Obsidian plugin project. General-purpose instructions are located in the [`.agents`](.agents/) directory.
 
-- Target: Obsidian Community Plugin (TypeScript → bundled JavaScript).
-- Entry point: `main.ts` compiled to `main.js` and loaded by Obsidian.
-- Required release artifacts: `main.js`, `manifest.json`, and optional `styles.css`.
+**Note**: The `.agents/` directory contains general-purpose guidance files for Obsidian plugin and theme development.
 
-## Environment & tooling
+---
 
-- Node.js: use current LTS (Node 18+ recommended).
-- **Package manager: npm** (required for this sample - `package.json` defines npm scripts and dependencies).
-- **Bundler: esbuild** (required for this sample - `esbuild.config.mjs` and build scripts depend on it). Alternative bundlers like Rollup or webpack are acceptable for other projects if they bundle all external dependencies into `main.js`.
-- Types: `obsidian` type definitions.
+## Project Context
 
-**Note**: This sample project has specific technical dependencies on npm and esbuild. If you're creating a plugin from scratch, you can choose different tools, but you'll need to replace the build configuration accordingly.
+<!--
+Source: Project-specific (not synced from reference repos)
+Last updated: [Maintain manually - this file is project-specific]
+Applicability: Plugin
+-->
 
-### Install
+### Project Overview
 
-```bash
-npm install
-```
+This is the **Obsidian Sample Plugin** - a reference/template plugin that demonstrates basic Obsidian plugin API functionality. It serves as:
 
-### Dev (watch)
+- A learning resource for new plugin developers
+- A template for creating new Obsidian plugins
+- A reference implementation for common plugin patterns
 
-```bash
-npm run dev
-```
+**Current functionality:**
+- Adds a ribbon icon that shows a Notice when clicked
+- Adds a command "Open Sample Modal" which opens a Modal
+- Adds a plugin setting tab to the settings page
+- Registers a global click event and outputs 'click' to the console
+- Registers a global interval which logs 'setInterval' to the console
 
-### Production build
+### Important Project-Specific Details
 
-```bash
-npm run build
-```
+- **Project Type**: Template/Reference plugin (not intended for production use)
+- **Purpose**: Educational and template purposes
+- **Status**: Maintained by Obsidian team as a reference implementation
+- This plugin demonstrates basic patterns that other plugins can learn from
 
-## Linting
+### Maintenance Tasks
 
-- To use eslint install eslint from terminal: `npm install -g eslint`
-- To use eslint to analyze this project use this command: `eslint main.ts`
-- eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder: `eslint ./src/`
+- **README.md**: When asked to update documentation or when making significant changes, review and update `README.md` to ensure it accurately reflects the current state of the project, including features, installation instructions, and usage examples.
+- Keep the sample functionality simple and clear for educational purposes
+- Ensure all examples follow Obsidian best practices
 
-## File & folder conventions
+### Project-Specific Conventions
 
-- **Organize code into multiple files**: Split functionality across separate modules rather than putting everything in `main.ts`.
-- Source lives in `src/`. Keep `main.ts` small and focused on plugin lifecycle (loading, unloading, registering commands).
-- **Example file structure**:
-  ```
-  src/
-    main.ts           # Plugin entry point, lifecycle management
-    settings.ts       # Settings interface and defaults
-    commands/         # Command implementations
-      command1.ts
-      command2.ts
-    ui/              # UI components, modals, views
-      modal.ts
-      view.ts
-    utils/           # Utility functions, helpers
-      helpers.ts
-      constants.ts
-    types.ts         # TypeScript interfaces and types
-  ```
-- **Do not commit build artifacts**: Never commit `node_modules/`, `main.js`, or other generated files to version control.
-- Keep the plugin small. Avoid large dependencies. Prefer browser-compatible packages.
-- Generated output should be placed at the plugin root or `dist/` depending on your build setup. Release artifacts must end up at the top level of the plugin folder in the vault (`main.js`, `manifest.json`, `styles.css`).
+- Code should remain simple and well-commented for educational purposes
+- Examples should demonstrate one concept clearly rather than complex integrations
+- Follow the standard Obsidian plugin structure (main.ts, manifest.json, styles.css)
 
-## Manifest rules (`manifest.json`)
+### Project-Specific References
 
-- Must include (non-exhaustive):  
-  - `id` (plugin ID; for local dev it should match the folder name)  
-  - `name`  
-  - `version` (Semantic Versioning `x.y.z`)  
-  - `minAppVersion`  
-  - `description`  
-  - `isDesktopOnly` (boolean)  
-  - Optional: `author`, `authorUrl`, `fundingUrl` (string or map)
-- Never change `id` after release. Treat it as stable API.
-- Keep `minAppVersion` accurate when using newer APIs.
-- Canonical requirements are coded here: https://github.com/obsidianmd/obsidian-releases/blob/master/.github/workflows/validate-plugin-entry.yml
+If this project references specific plugins or themes that are relevant to its development, document them here. These should be symlinked in `.ref/plugins/` or `.ref/themes/` as needed.
 
-## Testing
+**Example structure**:
+- `.ref/plugins/plugin-name/` - Reference to a specific plugin that demonstrates patterns used in this project
+- `.ref/themes/theme-name/` - Reference to a specific theme that demonstrates patterns used in this project
 
-- Manual install for testing: copy `main.js`, `manifest.json`, `styles.css` (if any) to:
-  ```
-  <Vault>/.obsidian/plugins/<plugin-id>/
-  ```
-- Reload Obsidian and enable the plugin in **Settings → Community plugins**.
+**Note**: The 6 core Obsidian projects (obsidian-api, obsidian-sample-plugin, obsidian-developer-docs, obsidian-plugin-docs, obsidian-sample-theme, eslint-plugin) are always relevant and should be in every project's `.ref` folder. Only document project-specific plugins/themes here.
 
-## Commands & settings
+**Note**: While this is a plugin repo, theme references are kept for users who may want to create themes using this template or reference theme-related resources.
 
-- Any user-facing commands should be added via `this.addCommand(...)`.
-- If the plugin has configuration, provide a settings tab and sensible defaults.
-- Persist settings using `this.loadData()` / `this.saveData()`.
-- Use stable command IDs; avoid renaming once released.
+**Current project-specific references**:
+- `.ref/dynamic-views/` - Reference to Dynamic Views plugin (https://github.com/greetclammy/dynamic-views) - Used for card styling patterns and CSS scoping reference to prevent style leakage between plugins
+- `.ref/plugins/obsidian-style-settings/` - Reference to Style Settings plugin (https://github.com/mgmeyers/obsidian-style-settings) - Used for Style Settings configuration patterns and CSS variable management
 
-## Versioning & releases
+### Overrides (Optional)
 
-- Bump `version` in `manifest.json` (SemVer) and update `versions.json` to map plugin version → minimum app version.
-- Create a GitHub release whose tag exactly matches `manifest.json`'s `version`. Do not use a leading `v`.
-- Attach `manifest.json`, `main.js`, and `styles.css` (if present) to the release as individual assets.
-- After the initial release, follow the process to add/update your plugin in the community catalog as required.
+None currently. This project follows the general `.agents` guidance.
 
-## Security, privacy, and compliance
+### Key Files and Their Purposes
 
-Follow Obsidian's **Developer Policies** and **Plugin Guidelines**. In particular:
+- `main.ts` - Main plugin entry point with sample functionality
+- `manifest.json` - Plugin metadata and configuration
+- `styles.css` - Plugin-specific styles (currently minimal)
+- `README.md` - Project documentation and usage instructions
+- `package.json` - Node.js dependencies and build scripts
+- `esbuild.config.mjs` - Build configuration for TypeScript compilation
+- `version-bump.mjs` - Script for version management
+- `versions.json` - Version compatibility mapping
 
-- Default to local/offline operation. Only make network requests when essential to the feature.
-- No hidden telemetry. If you collect optional analytics or call third-party services, require explicit opt-in and document clearly in `README.md` and in settings.
-- Never execute remote code, fetch and eval scripts, or auto-update plugin code outside of normal releases.
-- Minimize scope: read/write only what's necessary inside the vault. Do not access files outside the vault.
-- Clearly disclose any external services used, data sent, and risks.
-- Respect user privacy. Do not collect vault contents, filenames, or personal information unless absolutely necessary and explicitly consented.
-- Avoid deceptive patterns, ads, or spammy notifications.
-- Register and clean up all DOM, app, and interval listeners using the provided `register*` helpers so the plugin unloads safely.
+### Development Notes
 
-## UX & copy guidelines (for UI text, commands, settings)
+- This is a template project - when used as a template, developers should customize this `AGENTS.md` file with their own project details
+- The `.agents` folder structure is designed to be reusable across projects
+- When syncing updates from reference repos, only general `.agents` files are updated; this `AGENTS.md` file is preserved
 
-- Prefer sentence case for headings, buttons, and titles.
-- Use clear, action-oriented imperatives in step-by-step copy.
-- Use **bold** to indicate literal UI labels. Prefer "select" for interactions.
-- Use arrow notation for navigation: **Settings → Community plugins**.
-- Keep in-app strings short, consistent, and free of jargon.
+### When to Consider Using `.agents/.context/` Directory
 
-## Performance
+If your project needs project-specific versions of multiple `.agents` files (e.g., custom `build-workflow.md`, `code-patterns.md`, etc.), consider creating a `.agents/.context/` directory structure. This advanced feature is optional and only needed for complex projects. See the Navigation section below for details on the `.context/` directory structure.
 
-- Keep startup light. Defer heavy work until needed.
-- Avoid long-running tasks during `onload`; use lazy initialization.
-- Batch disk access and avoid excessive vault scans.
-- Debounce/throttle expensive operations in response to file system events.
+---
 
-## Coding conventions
+## Quick Start
 
-- TypeScript with `"strict": true` preferred.
-- **Keep `main.ts` minimal**: Focus only on plugin lifecycle (onload, onunload, addCommand calls). Delegate all feature logic to separate modules.
-- **Split large files**: If any file exceeds ~200-300 lines, consider breaking it into smaller, focused modules.
-- **Use clear module boundaries**: Each file should have a single, well-defined responsibility.
-- Bundle everything into `main.js` (no unbundled runtime deps).
-- Avoid Node/Electron APIs if you want mobile compatibility; set `isDesktopOnly` accordingly.
-- Prefer `async/await` over promise chains; handle errors gracefully.
+**All general-purpose agent instructions are located in the [`.agents`](.agents/) directory**.
 
-## Mobile
+**Quick Commands**: See [quick-reference.md](.agents/quick-reference.md#quick-commands) for one-word commands like `build`, `sync`, `release ready?`, `summarize`, `bump the version`, etc. **AI Agents: Execute these commands automatically when users type them** (detailed execution instructions are in the Help sections below).
 
-- Where feasible, test on iOS and Android.
-- Don't assume desktop-only behavior unless `isDesktopOnly` is `true`.
-- Avoid large in-memory structures; be mindful of memory and storage constraints.
+**New to this project?** Start here:
 
-## Agent do/don't
+0. **Set up reference materials**: Check if `.ref` folder exists and has symlinks. If not, run the setup script:
+   - **Windows**: `scripts\setup-ref-links.bat`
+   - **macOS/Linux**: `./scripts/setup-ref-links.sh`
+   - The script will automatically create `../.ref/obsidian-dev/` (if needed), clone the 6 core Obsidian projects (or update them if they already exist), and create symlinks
 
-**Do**
-- Add commands with stable IDs (don't rename once released).
-- Provide defaults and validation in settings.
-- Write idempotent code paths so reload/unload doesn't leak listeners or intervals.
-- Use `this.register*` helpers for everything that needs cleanup.
+1. Read the **Project Context** section above for project-specific information and overrides
 
-**Don't**
-- Introduce network calls without an obvious user-facing reason and documentation.
-- Ship features that require cloud services without clear disclosure and explicit opt-in.
-- Store or transmit vault contents unless essential and consented.
+3. Read [project-overview.md](.agents/project-overview.md) to understand the structure
 
-## Common tasks
+4. Check [environment.md](.agents/environment.md) for setup requirements
 
-### Organize code across multiple files
+5. Review [common-tasks.md](.agents/common-tasks.md) for quick code snippets
 
-**main.ts** (minimal, lifecycle only):
-```ts
-import { Plugin } from "obsidian";
-import { MySettings, DEFAULT_SETTINGS } from "./settings";
-import { registerCommands } from "./commands";
+6. See [code-patterns.md](.agents/code-patterns.md) for complete examples
 
-export default class MyPlugin extends Plugin {
-  settings: MySettings;
+7. Bookmark [quick-reference.md](.agents/quick-reference.md) for common commands
 
-  async onload() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-    registerCommands(this);
-  }
-}
-```
+**Note**: For complex projects, see `.agents/.context/` directory (optional advanced feature).
 
-**settings.ts**:
-```ts
-export interface MySettings {
-  enabled: boolean;
-  apiKey: string;
-}
+## When to Check .ref Folder Setup
 
-export const DEFAULT_SETTINGS: MySettings = {
-  enabled: true,
-  apiKey: "",
-};
-```
+**AI Agents: Only check `.ref` folder setup when user explicitly asks about:**
+- "What does the Obsidian API say about X?"
+- "Check the latest Obsidian documentation"
+- "What's the latest API?"
+- "Look up [feature] in the Obsidian docs"
+- "What does the Obsidian documentation say?"
+- "Check obsidian-api for..."
+- Similar explicit requests about API or documentation
 
-**commands/index.ts**:
-```ts
-import { Plugin } from "obsidian";
-import { doSomething } from "./my-command";
+**Do NOT check `.ref` automatically for regular coding tasks.** Most users may never need it, and it shouldn't be a barrier to getting work done.
 
-export function registerCommands(plugin: Plugin) {
-  plugin.addCommand({
-    id: "do-something",
-    name: "Do something",
-    callback: () => doSomething(plugin),
-  });
-}
-```
+**When triggered:**
+1. Check if `.ref/obsidian-api` exists (note: this may be a symlink pointing to a central location)
+2. If missing, run setup script: `scripts\setup-ref-links.bat` (Windows) or `./scripts/setup-ref-links.sh` (Unix)
+3. If it exists but git commands fail, check if it's a symlink and navigate to the actual target location
+4. Then proceed with the API/documentation lookup
 
-### Add a command
+**Quick check commands:**
+- Windows: `Test-Path .ref/obsidian-api`
+- Unix: `test -d .ref/obsidian-api`
 
-```ts
-this.addCommand({
-  id: "your-command-id",
-  name: "Do the thing",
-  callback: () => this.doTheThing(),
-});
-```
+## Help: Interactive Guidance
 
-### Persist settings
+**When the user asks for "help"**:
+1. **First, display the Quick Commands table**: Read and show the Quick Commands section from [quick-reference.md](.agents/quick-reference.md#quick-commands) (the table with all one-word commands)
+2. **Then, present these additional options** below for more detailed workflows:
 
-```ts
-interface MySettings { enabled: boolean }
-const DEFAULT_SETTINGS: MySettings = { enabled: true };
+**When the user asks for "what's the latest"**, present these options and guide them based on their choice:
 
-async onload() {
-  this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-  await this.saveData(this.settings);
-}
-```
+---
 
-### Register listeners safely
+### Option 0: Check for Updates / "What's the Latest"
 
-```ts
-this.registerEvent(this.app.workspace.on("file-open", f => { /* ... */ }));
-this.registerDomEvent(window, "resize", () => { /* ... */ });
-this.registerInterval(window.setInterval(() => { /* ... */ }, 1000));
-```
+**Present this option when**: User explicitly asks "what's the latest", "check for updates", "what does the Obsidian documentation say", or wants to see what's new in reference repos.
+
+**Important**: Updates are **optional**. The reference materials work fine with whatever version was cloned initially. Most users never need to update. This is only for users who want the latest documentation.
+
+**Instructions for AI agent**:
+1. **First, ensure `.ref` folder is set up**: Check if `.ref/obsidian-api` exists. If not, run the setup script first (see "When to Check .ref Folder Setup" above).
+2. **Determine setup**: Check if `.ref` contains symlinks (see [sync-procedure.md](.agents/sync-procedure.md#step-1-determine-your-ref-setup) for how to check). If symlinks, note the target location (usually `..\.ref\obsidian-dev`).
+3. **Check for updates** (read-only, safe):
+   - **For core Obsidian projects**: Check `.ref/` root (all 6: obsidian-api, obsidian-sample-plugin, obsidian-developer-docs, obsidian-plugin-docs, obsidian-sample-theme, eslint-plugin)
+   - **For project-specific repos**: Check `.ref/plugins/` or `.ref/themes/` (only if documented in this `AGENTS.md`)
+4. **Use read-only git commands** (from actual target location if using symlinks):
+   ```bash
+   # If using symlinks, navigate to central location first (usually ..\.ref\obsidian-dev)
+   # If using local clones, use .ref/obsidian-api directly
+   cd ../.ref/obsidian-dev/obsidian-api  # or .ref/obsidian-api for local clones
+   git fetch
+   git log HEAD..origin/main --oneline  # Shows what's new
+   ```
+5. **Report findings**: Show what's new and ask if they want to pull updates
+6. **Never automatically pull** - always ask first (see [agent-dos-donts.md](.agents/agent-dos-donts.md))
+
+**Key files**: [ref-instructions.md](.agents/ref-instructions.md#checking-for-updates-to-reference-repos), [quick-sync-guide.md](.agents/quick-sync-guide.md), [sync-procedure.md](.agents/sync-procedure.md)
+
+---
+
+### Option 1: Sync Reference Documentation
+
+**Present this option when**: User says "sync" or "quick sync" - they want to pull latest changes from all 6 core `.ref` repos.
+
+**Instructions for AI agent** (execute automatically, don't just show commands):
+1. **Determine setup**: Check if `.ref` contains symlinks (see [sync-procedure.md](.agents/sync-procedure.md#step-1-determine-your-ref-setup)). This determines where to run git commands.
+2. **Execute git pull commands**: Actually run `git pull` for all 6 core repos:
+   - Navigate to the actual target location (usually `../.ref/obsidian-dev` if using symlinks)
+   - Run `git pull` in each of the 6 repos: obsidian-api, obsidian-sample-plugin, obsidian-developer-docs, obsidian-plugin-docs, obsidian-sample-theme, eslint-plugin
+   - See [quick-sync-guide.md](.agents/quick-sync-guide.md) for exact commands
+3. **Review changes**: Check git logs to see what changed in each repo (optional, but helpful)
+4. **Update `.agents/` files**: If user wants, compare changes and update relevant files (optional)
+5. **Update sync status**: Update `.agents/sync-status.json` with current date
+
+**The 6 core Obsidian projects** (always relevant):
+- obsidian-api
+- obsidian-sample-plugin
+- obsidian-developer-docs
+- obsidian-plugin-docs
+- obsidian-sample-theme
+- eslint-plugin
+
+**Key files**: [sync-procedure.md](.agents/sync-procedure.md), [quick-sync-guide.md](.agents/quick-sync-guide.md)
+
+---
+
+### Option 2: Add a Project to Your References
+
+**Present this option when**: User says "add ref [name]" or "add ref [name] [URL/path]" - they want to reference another project.
+
+**Instructions for AI agent** (execute automatically, don't just show commands):
+1. **Parse the command**: Extract the name and optional URL/path from user input
+   - If URL provided (starts with `http://`, `https://`, `git@`, etc.) → External repository
+   - If path provided (starts with `../`, `./`, `/`, `C:\`, etc.) → Local project
+   - If only name provided → Ask user: "Is this an external repository (GitHub, GitLab, etc.) or a local project path?"
+   
+2. **If external repository** (execute these steps):
+   - **Determine type**: Is it a plugin, theme, or other project? (infer from URL or ask)
+   - **Check if already exists**: Check `../.ref/obsidian-dev/plugins/<name>/` (for plugins), `../.ref/obsidian-dev/themes/<name>/` (for themes), or `../.ref/obsidian-dev/<name>/` (for other projects)
+   - **Execute clone command** (NOT into a `.ref` subfolder!):
+     - For plugins: Run `cd ../.ref/obsidian-dev/plugins && git clone <URL> <name>` → Creates `../.ref/obsidian-dev/plugins/<name>/` (the actual repo)
+     - For themes: Run `cd ../.ref/obsidian-dev/themes && git clone <URL> <name>` → Creates `../.ref/obsidian-dev/themes/<name>/` (the actual repo)
+     - For other projects: Run `cd ../.ref/obsidian-dev && git clone <URL> <name>` → Creates `../.ref/obsidian-dev/<name>/` (the actual repo)
+   - **Execute symlink creation**: Create symlink at `.ref/plugins/<name>/` (or `.ref/themes/<name>/` or `.ref/<name>/`) pointing to the global location
+   - **Document if project-specific**: Document in this `AGENTS.md` if it's project-specific
+   
+   **IMPORTANT**: Clone the repo directly into the target folder (e.g., `../.ref/obsidian-dev/plugins/plugin-name/`), NOT into a `.ref` subfolder. The repo folder name should match the project name.
+   
+3. **If local project** (execute these steps):
+   - **Verify path exists**: Check that the local path exists
+   - **Execute symlink creation**: Create symlink directly in project's `.ref/` folder pointing to the local project (e.g., `../my-other-plugin`)
+   - **Do NOT** clone to global `.ref/obsidian-dev/` - this is project-specific
+   - Document in this `AGENTS.md` if relevant
+
+4. **Verify**: Check that the symlink was created and works (test by listing directory or reading a file)
+
+**Key file**: [ref-instructions.md](.agents/ref-instructions.md) - See "Adding Additional References" section
+
+---
+
+### Option 3: Bump the Version
+
+**Present this option when**: User says "bump the version", "bump version", or similar - they want to increment the version number.
+
+**Instructions for AI agent** (execute automatically, don't just show commands):
+1. **Parse the command**: Extract the version increment type from user input
+   - If no type specified → Default to `patch` (bumps by 0.0.1)
+   - If user specifies `patch`, `minor`, or `major` → Use that type
+   - If user specifies an exact version (e.g., "1.2.3") → Use that version
+   
+2. **Execute version bump**:
+   - Run `npm version <type>` where `<type>` is one of:
+     - `patch` (default) - bumps patch version: 1.0.0 → 1.0.1
+     - `minor` - bumps minor version: 1.0.0 → 1.1.0
+     - `major` - bumps major version: 1.0.0 → 2.0.0
+     - Or exact version: `1.2.3` (sets to that version)
+   - The `npm version` command automatically:
+     - Updates `package.json` version
+     - Runs the `version` script in `package.json` (which updates `manifest.json` and `versions.json` via `version-bump.mjs`)
+     - Stages `manifest.json` and `versions.json` for commit
+   
+3. **Verify**: Check that both `package.json` and `manifest.json` have the new version
+
+**Examples**:
+- `bump the version` → Runs `npm version patch` (default: 0.0.1 increment)
+- `bump version minor` → Runs `npm version minor`
+- `bump version major` → Runs `npm version major`
+- `bump version 1.2.3` → Runs `npm version 1.2.3`
+
+**Key files**: [versioning-releases.md](.agents/versioning-releases.md), `package.json`, `manifest.json`, `version-bump.mjs`
+
+---
+
+### Option 4: Start a New Plugin Project
+
+**Present this option when**: User wants to create a new Obsidian plugin.
+
+**Instructions for AI agent** - Follow this funnel:
+
+1. **Plugin Funnel** - Ask these questions in order:
+   - "What functionality do you want your plugin to provide?" (core purpose)
+   - "Will it need user settings or configuration?" → If yes, point to [commands-settings.md](.agents/commands-settings.md)
+   - "What will it interact with?" (vault files, editor, UI components, workspace)
+   - "Do you need any external API integrations?" → If yes, review [security-privacy.md](.agents/security-privacy.md) for guidelines
+   - "Will it work on mobile, or desktop-only?" → Point to [mobile.md](.agents/mobile.md) and `isDesktopOnly` in [manifest.md](.agents/manifest.md)
+
+2. **After gathering answers**, guide them to:
+   - [project-overview.md](.agents/project-overview.md) - Project structure
+   - [environment.md](.agents/environment.md) - Setup and tooling
+   - [file-conventions.md](.agents/file-conventions.md) - File organization
+   - [common-tasks.md](.agents/common-tasks.md) - Code examples
+   - [references.md](.agents/references.md) - Official documentation links
+   - **Set up `.ref` folder**: Run the setup script (`scripts/setup-ref-links.bat` or `.sh`) to configure reference materials
+
+**Key files**: [project-overview.md](.agents/project-overview.md), [common-tasks.md](.agents/common-tasks.md), [references.md](.agents/references.md), [ref-instructions.md](.agents/ref-instructions.md)
+
+## Static vs. Project-Specific Files
+
+**General `.agents` files** (most files in the `.agents/` directory):
+- Are synced from reference repos (Sample Plugin, API, etc.)
+- Should remain static and not be edited directly in plugin projects
+- Provide general-purpose guidance for all Obsidian plugins/themes
+- Can be updated by syncing from reference repositories
+
+**Project-specific files**:
+- **This `AGENTS.md` file** - Contains project-specific information and overrides (replaces the old `project-context.md`)
+  - Contains project overview, specific details, maintenance tasks, and conventions
+  - Can override general `.agents` guidance when project-specific needs differ
+  - Is preserved when syncing updates from reference repos
+- **`.agents/.context/` directory** - Optional advanced feature for complex projects
+  - Use when you need project-specific versions of multiple `.agents` files
+  - Only create files that differ from general guidance
+  - Structure mirrors `.agents/` directory (e.g., `.context/build-workflow.md`, `.context/code-patterns.md`)
+  - Entry point: `.agents/.context/AGENTS.md` (if it exists)
+
+**Precedence**: When conflicts exist, project-specific files take precedence over general guidance.
+
+## How to Use This Documentation
+
+This documentation is organized into topic-based files in the `.agents/` directory. Most files are **general-purpose** and apply to all Obsidian plugins/themes. Some files are **project-specific** and can override general guidance.
+
+**Key concepts**:
+- **General files**: Synced from official Obsidian repos, provide standard guidance
+- **Project-specific files**: This `AGENTS.md` file (and optional `.agents/.context/` directory) contain project-specific information
+- **Precedence**: Project-specific files override general guidance when conflicts exist
+- **`.ref` folder**: Contains symlinks to reference materials (not actual files). See [ref-instructions.md](.agents/ref-instructions.md) for details.
+- **`.agents/` folder**: Contains general-purpose guidance files for Obsidian plugin and theme development
+
+**Quick Links by Task**:
+- **Starting a new project** → [project-overview.md](.agents/project-overview.md), [environment.md](.agents/environment.md), [file-conventions.md](.agents/file-conventions.md)
+- **Making code changes** → [build-workflow.md](.agents/build-workflow.md) (run build after changes!), [common-tasks.md](.agents/common-tasks.md), [code-patterns.md](.agents/code-patterns.md)
+- **Preparing for release** → [release-readiness.md](.agents/release-readiness.md) (comprehensive checklist), [versioning-releases.md](.agents/versioning-releases.md), [testing.md](.agents/testing.md)
+- **Troubleshooting** → [troubleshooting.md](.agents/troubleshooting.md), [common-pitfalls.md](.agents/common-pitfalls.md), [build-workflow.md](.agents/build-workflow.md)
+- **Quick reference** → [quick-reference.md](.agents/quick-reference.md) (one-page cheat sheet)
+
+## Navigation
+
+**When to use each file**:
+- **Starting a new project** → See Quick Start above
+- **Need to understand project structure** → [project-overview.md](.agents/project-overview.md)
+- **Setting up development environment** → [environment.md](.agents/environment.md)
+- **Looking for code examples** → [common-tasks.md](.agents/common-tasks.md) (quick) or [code-patterns.md](.agents/code-patterns.md) (comprehensive)
+- **Troubleshooting issues** → [troubleshooting.md](.agents/troubleshooting.md) or [common-pitfalls.md](.agents/common-pitfalls.md)
+- **Need a quick command reference** → [quick-reference.md](.agents/quick-reference.md)
+- **Working with `.ref` folder** → [ref-instructions.md](.agents/ref-instructions.md)
+
+### Project-Specific
+- **This `AGENTS.md` file** - Project-specific information and overrides (simple, recommended)
+- **`.agents/.context/` directory** - Optional project-specific structure for complex projects (advanced)
+
+### Core Development
+- **[project-overview.md](.agents/project-overview.md)** - Project structure, entry points, and artifacts (Plugin/Theme)
+- **[environment.md](.agents/environment.md)** - Development environment and tooling (Plugin/Theme)
+- **[file-conventions.md](.agents/file-conventions.md)** - File organization and folder structure (Plugin/Theme)
+- **[coding-conventions.md](.agents/coding-conventions.md)** - Code standards and organization (Plugin)
+
+### Configuration
+- **[manifest.md](.agents/manifest.md)** - `manifest.json` rules and requirements (Plugin/Theme)
+- **[commands-settings.md](.agents/commands-settings.md)** - Commands and settings patterns (Plugin)
+- **[versioning-releases.md](.agents/versioning-releases.md)** - Versioning and GitHub release workflow (Both)
+
+### Best Practices
+- **[security-privacy.md](.agents/security-privacy.md)** - Security, privacy, and compliance guidelines (Both)
+- **[ux-copy.md](.agents/ux-copy.md)** - UX guidelines and UI text conventions (Both)
+- **[performance.md](.agents/performance.md)** - Performance optimization best practices (Both)
+- **[mobile.md](.agents/mobile.md)** - Mobile compatibility considerations (Both)
+
+### Development Workflow
+- **[build-workflow.md](.agents/build-workflow.md)** - **CRITICAL**: Build commands to run after changes (Plugin/Theme)
+- **[testing.md](.agents/testing.md)** - Testing and manual installation procedures (Plugin/Theme)
+- **[release-readiness.md](.agents/release-readiness.md)** - Comprehensive release readiness checklist (Plugin)
+- **[common-tasks.md](.agents/common-tasks.md)** - Code examples and common patterns - expanded with settings, modals, views, status bar, ribbon icons (Plugin/Theme)
+- **[code-patterns.md](.agents/code-patterns.md)** - Comprehensive code patterns for settings tabs, modals, views, file operations, workspace events (Plugin)
+- **[common-pitfalls.md](.agents/common-pitfalls.md)** - Common mistakes and gotchas to avoid (Plugin)
+- **[troubleshooting.md](.agents/troubleshooting.md)** - Common issues, error messages, and debugging techniques (Both)
+- **[quick-reference.md](.agents/quick-reference.md)** - One-page cheat sheet for common tasks and commands (Both)
+- **[agent-dos-donts.md](.agents/agent-dos-donts.md)** - Specific do's and don'ts for AI agents (Both)
+- **[summarize-commands.md](.agents/summarize-commands.md)** - How to generate commit messages and release notes
+
+### Reference Materials
+- **[references.md](.agents/references.md)** - External links and resources
+- **[ref-instructions.md](.agents/ref-instructions.md)** - Instructions for using the `.ref` folder
+- **[sync-procedure.md](.agents/sync-procedure.md)** - Procedure for syncing content from Sample Plugin and API
+- **[sync-status.json](.agents/sync-status.json)** - Central tracking of sync dates and status
+- **[quick-sync-guide.md](.agents/quick-sync-guide.md)** - Quick reference for pulling updates from reference repos
+
+## Important: .ref Folder
+
+The `.ref` folder contains **symlinks** to reference materials (not actual files). It's gitignored and acts as a "portal" to other locations on the computer.
+
+**For AI Agents**:
+- **Only when user explicitly asks about API/docs**: Check if `.ref/obsidian-api` exists. If not, run the setup script to create it (see "When to Check .ref Folder Setup" above)
+- **When asked to reference something**: Actively search for it using `list_dir`, `glob_file_search`, or `read_file`
+- **When adding references**: 
+  - External repos → Clone to `../.ref/obsidian-dev/` (global), then symlink in project's `.ref/`
+  - Local projects → Symlink directly in project's `.ref/` (don't clone to global)
+- **The `.ref` folder may be hidden** by default in file explorers, but it exists in the project root
+
+**Setup**: The setup scripts (`scripts/setup-ref-links.*`) automatically:
+1. Create `../.ref/` if it doesn't exist
+2. Create `../.ref/obsidian-dev/` subfolder if it doesn't exist
+3. Clone the 6 core Obsidian projects to `../.ref/obsidian-dev/` if they don't exist, or pull latest changes if they do exist
+4. Create `../.ref/obsidian-dev/plugins/` and `../.ref/obsidian-dev/themes/` folders
+5. Create symlinks in the project's `.ref/` folder pointing to `../.ref/obsidian-dev/`
+
+**Philosophy**: It "just works" out of the box. The reference materials are cloned once and work indefinitely. The setup scripts automatically update repos when run, so you can keep them up to date by simply re-running the setup script. Updates are optional and only needed if you want the latest documentation. Most users never update, and that's perfectly fine.
+
+See [ref-instructions.md](.agents/ref-instructions.md) for complete details.
+
+## Important: .agents Folder
+
+The `.agents/` directory contains general-purpose guidance files for Obsidian plugin and theme development. This directory structure provides:
+
+- **Reusable guidance**: General `.agents` files provide standard guidance for all Obsidian plugins/themes
+- **Project-specific content**: This `AGENTS.md` file remains project-specific and contains project-specific information
+- **Easy maintenance**: Files can be updated by syncing from reference repositories
+
+**Note**: The `.agents/` folder may be hidden by default in some file explorers, but it exists in the project root.
+
+## Source Attribution
+
+Each file in `.agents` includes a header comment with:
+- Source(s) of the information
+- Last sync date (for reference; see [sync-status.json](.agents/sync-status.json) for authoritative dates)
+- Update frequency guidance
+
+**Central Sync Tracking**: All sync dates are tracked centrally in [sync-status.json](.agents/sync-status.json). When syncing content, update this file with the actual current date (never use placeholder dates).
+
+## Updating Content
+
+Content in the `.agents/` directory is based on:
+- **Obsidian API** (`.ref/obsidian-api/obsidian.d.ts`) - **Authoritative source** for all API information
+- Obsidian Sample Plugin repository - Implementation patterns and best practices
+- Obsidian Sample Theme repository - Theme patterns
+- Obsidian Plugin Docs and Developer Docs - General guidance (may be outdated, always verify against API)
+- Community best practices
+
+**Important**: The `obsidian-api` repository is the authoritative source. When information conflicts between API and documentation, the API takes precedence. Always check `.ref/obsidian-api/obsidian.d.ts` first, especially for new features (e.g., `SettingGroup` since 1.11.0).
+
+Check the source attribution in each file header for update frequency guidance. When the Obsidian Sample Plugin, Sample Theme, or API documentation is updated, relevant files here should be reviewed and updated accordingly.
+
+**See [sync-procedure.md](.agents/sync-procedure.md) for the standard procedure to sync content from the latest Sample Plugin, Sample Theme, and API updates.**
+
+## General Purpose / Reusable
+
+The `.agents` directory structure and content is designed to be **general-purpose and reusable** across Obsidian plugin and theme projects. The content is based on official Obsidian repositories and documentation, not project-specific code. You can:
+
+- Copy this structure to other Obsidian projects
+- Use it as a template for new projects
+- Share it with other developers
+- Adapt it for your specific needs
+
+The only project-specific content is in:
+- This `AGENTS.md` file - Project-specific information and overrides (maintained by developer)
+- `.agents/.context/` directory - Optional project-specific structure for complex projects (if it exists)
+- `ref-instructions.md` - OS-agnostic setup instructions that may need path adjustments
+
+Everything else syncs from official Obsidian sources.
 
 ## Troubleshooting
 
-- Plugin doesn't load after build: ensure `main.js` and `manifest.json` are at the top level of the plugin folder under `<Vault>/.obsidian/plugins/<plugin-id>/`. 
-- Build issues: if `main.js` is missing, run `npm run build` or `npm run dev` to compile your TypeScript source code.
-- Commands not appearing: verify `addCommand` runs after `onload` and IDs are unique.
-- Settings not persisting: ensure `loadData`/`saveData` are awaited and you re-render the UI after changes.
-- Mobile-only issues: confirm you're not using desktop-only APIs; check `isDesktopOnly` and adjust.
+**If `.ref` folder is missing or empty**:
+- Run the setup script: `scripts\setup-ref-links.bat` (Windows) or `./scripts/setup-ref-links.sh` (macOS/Linux)
+- The script will automatically set everything up
 
-## References
+**If `.agents` folder is missing**:
+- The `.agents/` folder should exist in the project root
+- If it's missing, it may need to be created or restored from the project template
 
-- Obsidian sample plugin: https://github.com/obsidianmd/obsidian-sample-plugin
-- API documentation: https://docs.obsidian.md
-- Developer policies: https://docs.obsidian.md/Developer+policies
-- Plugin guidelines: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines
-- Style guide: https://help.obsidian.md/style-guide
+**If symlinks are broken**:
+- Re-run the appropriate setup script - it will recreate the symlinks
+
+**If you can't find a reference**:
+- Check [ref-instructions.md](.agents/ref-instructions.md) for organization
+- Check this `AGENTS.md` file for project-specific references
+- Use `list_dir` or `glob_file_search` to search `.ref/` folder
+
+**If build fails**:
+- See [build-workflow.md](.agents/build-workflow.md) for build commands
+- See [troubleshooting.md](.agents/troubleshooting.md) for common issues
+- See [common-pitfalls.md](.agents/common-pitfalls.md) for common mistakes
