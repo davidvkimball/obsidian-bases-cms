@@ -2,14 +2,11 @@
 Source: Based on Obsidian community troubleshooting
 Last synced: See sync-status.json for authoritative sync dates
 Update frequency: Update as common issues are identified
-Applicability: Both
 -->
 
 # Troubleshooting
 
 **Source**: Based on common errors from developer docs, community patterns, and API best practices. Always verify API details in `.ref/obsidian-api/obsidian.d.ts`.
-
-## Plugins
 
 ### Build and Loading Issues
 
@@ -41,14 +38,6 @@ Applicability: Both
 
 - **Mobile-only issues**: Confirm you're not using desktop-only APIs; check `isDesktopOnly` in `manifest.json` and adjust.
 - **Status bar not working on mobile**: Status bar items are not supported on mobile. Use feature detection.
-
-## Themes
-
-- **Theme doesn't appear**: Ensure `manifest.json` and `theme.css` are at the top level of the theme folder under `<Vault>/.obsidian/themes/<theme-name>/`.
-- **Theme not applying**: Check that `manifest.json` has correct `name` field matching the folder name.
-- **CSS not loading**: Verify `theme.css` exists and is properly formatted.
-- **SCSS compilation issues**: If using SCSS, ensure build process runs and outputs `theme.css`.
-- **Mobile display issues**: Test CSS on mobile devices and check for viewport-specific styles.
 
 ## AI Agent Issues
 

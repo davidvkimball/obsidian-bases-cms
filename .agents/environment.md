@@ -1,13 +1,10 @@
 <!--
-Source: Based on Obsidian Sample Plugin and Sample Theme
+Source: Based on Obsidian Sample Plugin
 Last synced: See sync-status.json for authoritative sync dates
-Update frequency: Check Obsidian Sample Plugin and Sample Theme repos for updates
-Applicability: Plugin / Theme
+Update frequency: Check Obsidian Sample Plugin repo for updates
 -->
 
 # Environment & tooling
-
-## Plugins
 
 - Node.js: use current LTS (Node 18+ recommended).
 - **Package manager: npm** (required for this sample - `package.json` defines npm scripts and dependencies).
@@ -42,80 +39,51 @@ npm run build
 
 **Quick Setup**:
 ```bash
-npm install --save-dev eslint@^8.57.1 eslint-plugin-obsidianmd@^0.1.9 @typescript-eslint/eslint-plugin@latest @typescript-eslint/parser@latest typescript-eslint@latest @eslint/json
+npm install --save-dev eslint@^9.39.1 eslint-plugin-obsidianmd@^0.1.9 @typescript-eslint/eslint-plugin@^8.33.1 @typescript-eslint/parser@^8.33.1 typescript-eslint@^8.35.1 @eslint/js@^9.30.1 @eslint/json@^0.14.0
 ```
 
-**Important**: Use ESLint v8 (not v9) for compatibility with `.eslintrc` format. ESLint v9 requires the new flat config format (`eslint.config.js`).
+**Important**: ESLint v9 is required (the plugin requires `eslint >=9.0.0 <10.0.0`). ESLint 9 uses the flat config format (`eslint.config.mjs`).
 
-**Basic .eslintrc configuration**:
-```json
-{
-  "root": true,
-  "parser": "@typescript-eslint/parser",
-  "env": { "node": true },
-  "plugins": ["@typescript-eslint", "obsidianmd"],
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/eslint-recommended",
-    "plugin:@typescript-eslint/recommended"
-  ],
-  "parserOptions": { "sourceType": "module" },
-  "rules": {
-    "no-unused-vars": "off",
-    "@typescript-eslint/no-unused-vars": ["error", { "args": "none" }],
-    "@typescript-eslint/ban-ts-comment": "off",
-    "no-prototype-builtins": "off",
-    "@typescript-eslint/no-empty-function": "off"
-  }
-}
+**Basic eslint.config.mjs configuration**:
+```javascript
+// eslint.config.mjs
+import tsparser from "@typescript-eslint/parser";
+import { defineConfig } from "eslint/config";
+import obsidianmd from "eslint-plugin-obsidianmd";
+
+export default defineConfig([
+  ...obsidianmd.configs.recommended,
+  {
+    files: ["**/*.ts"],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: { 
+        project: "./tsconfig.json",
+        sourceType: "module"
+      },
+    },
+    // You can add your own configuration to override or add rules
+    rules: {
+      "@typescript-eslint/ban-ts-comment": "off",
+      "@typescript-eslint/no-empty-function": "off",
+      "no-prototype-builtins": "off",
+    },
+  },
+]);
 ```
 
-**Note**: The `plugin:obsidianmd/recommended` config is not available, but the plugin still works when loaded in the `plugins` array. The rules are automatically applied.
+**Note**: The `obsidianmd.configs.recommended` config includes all recommended Obsidian plugin linting rules and is the same configuration used by the Obsidian Review Bot.
 
 **Run ESLint**:
 ```bash
-npm run lint
+npm run lint        # Uses lint-wrapper.mjs for helpful success messages
+npm run lint:fix    # Auto-fix issues where possible
 # Or for specific files:
 npx eslint src/**/*.ts
 ```
 
+**Note**: The setup script (`node scripts/setup-eslint.mjs`) automatically creates `scripts/lint-wrapper.mjs` which adds helpful success messages when linting passes. The wrapper is included in the template and copied during setup.
+
 **Common issues caught by `eslint-plugin-obsidianmd`**: See [common-pitfalls.md](common-pitfalls.md#common-linting-issues) for details on style manipulation, settings headings, UI text case, file deletion, and more.
-
-## Themes
-
-- **Optional**: Node.js and npm if using SCSS/Sass preprocessors or build tools.
-- **Simple themes**: Can be developed with just CSS and `manifest.json` (no build tools required).
-- **SCSS themes**: Use Sass/SCSS compiler (e.g., `sass`, `node-sass`, or build tools like Vite).
-- No TypeScript or bundler required for basic themes.
-
-### Simple Theme Setup
-
-No build tools needed - just edit `theme.css` directly.
-
-### SCSS Theme Setup
-
-```bash
-npm install -D sass
-npm run build  # Compile SCSS to CSS
-```
-
-### Theme Build Tools (Optional)
-
-Simple themes with just CSS don't need build tools. More complex themes might use Grunt, npm scripts, or other build tools for tasks like SCSS compilation, minification, or preprocessing:
-
-```bash
-# For themes using Grunt
-npx grunt build
-
-# For themes using npm scripts
-npm run build
-```
-
-Only use build commands if your theme has a `Gruntfile.js`, `package.json` with build scripts, or other build configuration files.
-
-### Linting (Optional)
-
-- Use `stylelint` for CSS/SCSS linting: `npm install -D stylelint`
-- Configure stylelint for Obsidian theme conventions
 
 

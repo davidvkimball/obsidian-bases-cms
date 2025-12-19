@@ -4,6 +4,7 @@
  */
 
 import { App, BasesEntry, TFile, Menu } from 'obsidian';
+import { setCssProps } from '../utils/css-props';
 import type BasesCMSPlugin from '../main';
 import type { CardData } from '../shared/data-transform';
 import type { CMSSettings } from '../shared/data-transform';
@@ -173,20 +174,24 @@ export class SharedCardRenderer {
 				menu.showAtMouseEvent(e);
 				
 				setTimeout(() => {
-					const menuEl = document.querySelector('.menu') as HTMLElement | null;
+					const menuEl = document.querySelector('.menu');
 					if (!menuEl) return;
-					const menuItems = Array.from(menuEl.querySelectorAll('.menu-item')) as HTMLElement[];
+					const menuItems = Array.from(menuEl.querySelectorAll('.menu-item'));
 					const deleteItem = menuItems.find(item => item.textContent?.trim() === 'Delete');
 					if (deleteItem) {
 						deleteItem.addClass('is-danger');
 						const icon = deleteItem.querySelector('svg');
 						if (icon) {
-							icon.style.color = 'var(--text-error)';
-							icon.style.stroke = 'var(--text-error)';
+							setCssProps(icon, {
+								color: 'var(--text-error)',
+								stroke: 'var(--text-error)'
+							});
 						}
 						const title = deleteItem.querySelector('.menu-item-title');
-						if (title) {
-							(title as HTMLElement).style.color = 'var(--text-error)';
+					if (title) {
+						setCssProps(title as HTMLElement, {
+								color: 'var(--text-error)'
+							});
 						}
 					}
 				}, 0);

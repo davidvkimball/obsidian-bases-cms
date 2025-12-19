@@ -4,6 +4,7 @@
  */
 
 import { App, BasesEntry, TFile, Menu } from 'obsidian';
+import { setCssProps } from '../utils/css-props';
 import type BasesCMSPlugin from '../main';
 import type { CardData } from '../shared/data-transform';
 import type { CMSSettings } from '../shared/data-transform';
@@ -55,8 +56,10 @@ export class SharedCardRenderer {
 		
 		// CRITICAL: Force immediate layout reflow to prevent Folder Notes plugin interference
 		// Inline styles trigger layout calculation before Folder Notes' MutationObserver processes the element
-		cardEl.style.display = 'block';
-		cardEl.style.position = 'relative';
+		setCssProps(cardEl, {
+			display: 'block',
+			position: 'relative'
+		});
 		
 		if (settings.imageFormat === 'cover') {
 			cardEl.classList.add('image-format-cover');
@@ -184,10 +187,10 @@ export class SharedCardRenderer {
 				
 				// Style Delete menu item as destructive (red/warning color)
 				setTimeout(() => {
-					const menuEl = document.querySelector('.menu') as HTMLElement | null;
+					const menuEl = document.querySelector('.menu');
 					if (!menuEl) return;
 					
-					const menuItems = Array.from(menuEl.querySelectorAll('.menu-item')) as HTMLElement[];
+					const menuItems = Array.from(menuEl.querySelectorAll('.menu-item'));
 					const deleteItem = menuItems.find(item => {
 						const title = item.textContent?.trim();
 						return title === 'Delete';
@@ -198,12 +201,16 @@ export class SharedCardRenderer {
 						// Style the icon and text with error color
 						const icon = deleteItem.querySelector('svg');
 						if (icon) {
-							icon.style.color = 'var(--text-error)';
-							icon.style.stroke = 'var(--text-error)';
+							setCssProps(icon, {
+								color: 'var(--text-error)',
+								stroke: 'var(--text-error)'
+							});
 						}
 						const title = deleteItem.querySelector('.menu-item-title');
-						if (title) {
-							(title as HTMLElement).style.color = 'var(--text-error)';
+					if (title) {
+						setCssProps(title as HTMLElement, {
+								color: 'var(--text-error)'
+							});
 						}
 					}
 				}, 0);
@@ -290,15 +297,17 @@ export class SharedCardRenderer {
 						imageEmbedContainer.style.backgroundImage = `url("${finalUrl}")`;
 					})();
 					
-					// Set initial background image (will be updated if GIF conversion is needed)
-					imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
-					imageEmbedContainer.style.backgroundSize = 'cover';
-					imageEmbedContainer.style.backgroundPosition = 'center center';
-					imageEmbedContainer.style.backgroundRepeat = 'no-repeat';
-				}
+				// Set initial background image (will be updated if GIF conversion is needed)
+				imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
+				setCssProps(imageEmbedContainer, {
+					backgroundSize: 'cover',
+					backgroundPosition: 'center center',
+					backgroundRepeat: 'no-repeat'
+				});
 			}
+		}
 
-			// For thumbnail format, handle positioning
+		// For thumbnail format, handle positioning
 			if (settings.imageFormat === 'thumbnail') {
 				// Create text wrapper
 				const textWrapper = contentContainer.createDiv('card-text-wrapper');
@@ -391,12 +400,14 @@ export class SharedCardRenderer {
 					})();
 					
 					// Set initial background image (will be updated if GIF conversion is needed)
-					imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
-					imageEmbedContainer.style.backgroundSize = 'cover';
-					imageEmbedContainer.style.backgroundPosition = 'center center';
-					imageEmbedContainer.style.backgroundRepeat = 'no-repeat';
-					
-					// Draft status badge (top-left, clickable to toggle)
+				imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
+				setCssProps(imageEmbedContainer, {
+					backgroundSize: 'cover',
+					backgroundPosition: 'center center',
+					backgroundRepeat: 'no-repeat'
+				});
+				
+				// Draft status badge (top-left, clickable to toggle)
 						if (settings.showDraftStatus) {
 						renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle);
 					}

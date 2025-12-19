@@ -166,7 +166,7 @@ export async function extractEmbedImages(
 			const content = await app.vault.cachedRead(file);
 			
 			// Extract markdown image syntax: ![alt](url) or ![alt](url "title")
-			const markdownImageRegex = /!\[([^\]]*)\]\((https?:\/\/[^\s\)]+)/gi;
+			const markdownImageRegex = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)/gi;
 			let match;
 			while ((match = markdownImageRegex.exec(content)) !== null) {
 				const url = match[2].trim();

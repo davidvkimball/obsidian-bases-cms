@@ -6,11 +6,10 @@
 import { App, BasesEntry, TFile } from 'obsidian';
 import type { CardData, CMSSettings } from '../shared/data-transform';
 import { resolveBasesProperty } from '../shared/data-transform';
-import { getPropertyLabel, getFirstBasesPropertyValue } from './property';
+import { getPropertyLabel } from './property';
 import { 
 	shouldHideMissingProperties, 
 	shouldHideEmptyProperties,
-	getListSeparator,
 	getEmptyValueMarker,
 	getTagStyle,
 	showTagHashPrefix
@@ -138,22 +137,27 @@ export class PropertyRenderer {
 			// Check if property exists in frontmatter
 			let propertyExists = false;
 			try {
-				const file = entry.file;
-				if (file) {
-					const metadata = this.app.metadataCache.getFileCache(file);
-					if (metadata && metadata.frontmatter) {
-						const propertyNames = propName.split(',').map(p => p.trim()).filter(p => p);
-						for (const prop of propertyNames) {
-							const propKey = prop.replace(/^(note|formula|file)\./, '');
-							if (propKey in metadata.frontmatter) {
-								propertyExists = true;
-								break;
+				// Get file from vault to ensure it's a proper TFile (like other parts of the codebase)
+				const filePath = entry?.file?.path;
+				if (filePath && this.app?.vault && this.app?.metadataCache) {
+					const file = this.app.vault.getAbstractFileByPath(filePath);
+					if (file instanceof TFile) {
+						const metadata = this.app.metadataCache.getFileCache(file);
+						if (metadata && metadata.frontmatter) {
+							const propertyNames = propName.split(',').map(p => p.trim()).filter(p => p);
+							for (const prop of propertyNames) {
+								const propKey = prop.replace(/^(note|formula|file)\./, '');
+								if (propKey in metadata.frontmatter) {
+									propertyExists = true;
+									break;
+								}
 							}
 						}
 					}
 				}
 			} catch {
-				// Ignore
+				// Silently ignore errors when checking property existence
+				// This can happen if metadataCache isn't ready yet
 			}
 			
 			// Hide missing properties
@@ -363,14 +367,39 @@ export class PropertyRenderer {
 			});
 		} else {
 			// Check if this is a checkbox property
-			const metadataCache = this.app.metadataCache as unknown as Record<string, unknown>;
-			const propertyInfos = (typeof metadataCache.getAllPropertyInfos === 'function' 
-				? metadataCache.getAllPropertyInfos() 
-				: {}) as Record<string, { widget?: string }>;
-			const propInfo = propertyInfos[propertyName.toLowerCase()];
+			// Guard: ensure app and metadataCache exist
+			if (!this.app || !this.app.metadataCache) {
+				// Fallback to regular property rendering
+				const textWrapper = metaContent.createDiv('text-wrapper');
+				this.renderPropertyValueWithLinks(textWrapper, resolvedValue, card.path, propertyName);
+				return;
+			}
+			
+			// Try to get property info - wrap in try-catch as getAllPropertyInfos might fail
+			// This is optional - we can detect checkboxes from entry value alone
+			let propInfo: { widget?: string } | undefined = undefined;
+			try {
+				const metadataCache = this.app.metadataCache as unknown as Record<string, unknown>;
+				const getAllPropertyInfos = metadataCache.getAllPropertyInfos as (() => Record<string, { widget?: string }>) | undefined;
+				if (typeof getAllPropertyInfos === 'function') {
+					const propertyInfos = getAllPropertyInfos() as Record<string, { widget?: string }>;
+					propInfo = propertyInfos[propertyName.toLowerCase()];
+				}
+			} catch {
+				// Silently fail - getAllPropertyInfos may not be available or may fail
+				// We can still detect checkboxes from entry value
+			}
 			
 			// Try to get value from entry to check if it's boolean
-			const entryValue = entry.getValue(propertyName as `note.${string}` | `formula.${string}` | `file.${string}`) as { data?: unknown } | null;
+			// Guard: ensure entry exists and has getValue method
+			let entryValue: { data?: unknown } | null = null;
+			try {
+				if (entry && typeof entry.getValue === 'function') {
+					entryValue = entry.getValue(propertyName as `note.${string}` | `formula.${string}` | `file.${string}`) as { data?: unknown } | null;
+				}
+			} catch {
+				// Silently fail - entry might not have this property
+			}
 			const isCheckbox = propInfo?.widget === 'checkbox' || 
 				(entryValue && 'data' in entryValue && typeof entryValue.data === 'boolean');
 
@@ -382,17 +411,19 @@ export class PropertyRenderer {
 				// Use the property label (which uses getDisplayName) instead of raw property name
 				metaContent.createSpan({ text: propertyLabel });
 				
-				checkbox.addEventListener('change', async (e) => {
+				checkbox.addEventListener('change', (e) => {
 					e.stopPropagation();
 					const checked = checkbox.checked;
-					try {
-						// Strip "note." prefix before toggling
-						const cleanProperty = propertyName.startsWith('note.') ? propertyName.substring(5) : propertyName;
-						await onPropertyToggle(card.path, cleanProperty, checked);
-					} catch (error) {
-						console.error('Error toggling property:', error);
-						checkbox.checked = !checked;
-					}
+					void (async () => {
+						try {
+							// Strip "note." prefix before toggling
+							const cleanProperty = propertyName.startsWith('note.') ? propertyName.substring(5) : propertyName;
+							await onPropertyToggle(card.path, cleanProperty, checked);
+						} catch {
+							// Revert checkbox on error
+							checkbox.checked = !checked;
+						}
+					})();
 				});
 				checkbox.addEventListener('click', (e) => {
 					e.stopPropagation();
@@ -456,10 +487,10 @@ export class PropertyRenderer {
 				href: trimmedValue
 			});
 			linkEl.textContent = trimmedValue;
-			linkEl.addEventListener('click', (e) => {
+			linkEl.addEventListener('click', (e: MouseEvent) => {
 				e.stopPropagation();
 				e.preventDefault();
-				const newLeaf = (e as MouseEvent).metaKey || (e as MouseEvent).ctrlKey;
+				const newLeaf = e.metaKey || e.ctrlKey;
 				void this.app.workspace.openLinkText(trimmedValue, sourcePath, newLeaf);
 			});
 			return;
@@ -509,10 +540,10 @@ export class PropertyRenderer {
 				});
 				linkEl.textContent = displayText;
 				
-				linkEl.addEventListener('click', (e) => {
+				linkEl.addEventListener('click', (e: MouseEvent) => {
 					e.stopPropagation();
 					e.preventDefault();
-					const newLeaf = (e as MouseEvent).metaKey || (e as MouseEvent).ctrlKey;
+					const newLeaf = e.metaKey || e.ctrlKey;
 					void this.app.workspace.openLinkText(linkPath, sourcePath, newLeaf);
 				});
 			} else if (type === 'markdown') {
@@ -539,10 +570,10 @@ export class PropertyRenderer {
 					});
 					linkEl.textContent = linkText;
 					
-					linkEl.addEventListener('click', (e) => {
+					linkEl.addEventListener('click', (e: MouseEvent) => {
 						e.stopPropagation();
 						e.preventDefault();
-						const newLeaf = (e as MouseEvent).metaKey || (e as MouseEvent).ctrlKey;
+						const newLeaf = e.metaKey || e.ctrlKey;
 						void this.app.workspace.openLinkText(linkUrl, sourcePath, newLeaf);
 					});
 				}
@@ -560,4 +591,5 @@ export class PropertyRenderer {
 		}
 	}
 }
+
 

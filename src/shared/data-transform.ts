@@ -168,9 +168,27 @@ export function basesEntryToCardData(
 	// Get title from property or fallback to filename
 	const titleValue = getFirstBasesPropertyValue(entry, settings.titleProperty) as { data?: unknown } | null;
 	const titleData = titleValue?.data;
-	const title = (titleData != null && titleData !== '' && (typeof titleData === 'string' || typeof titleData === 'number'))
-		? String(titleData)
-		: fileName;
+	
+	// Handle arrays (e.g., aliases) by joining them
+	let title: string;
+	if (titleData != null && titleData !== '') {
+		if (Array.isArray(titleData)) {
+			// Join array items into a string
+			const items = titleData.map((item: unknown) => {
+				if (item && typeof item === 'object' && 'data' in item) {
+					return String((item as { data: unknown }).data);
+				}
+				return String(item);
+			}).filter((s: string) => s.trim().length > 0);
+			title = items.length > 0 ? items.join(', ') : fileName;
+		} else if (typeof titleData === 'string' || typeof titleData === 'number') {
+			title = String(titleData);
+		} else {
+			title = fileName;
+		}
+	} else {
+		title = fileName;
+	}
 
 	// Get folder path
 	const path = entry.file.path;

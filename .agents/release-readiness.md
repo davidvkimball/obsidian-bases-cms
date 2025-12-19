@@ -2,7 +2,6 @@
 Source: Based on Obsidian Developer Policies, Plugin Guidelines, and official release checklist
 Last synced: See sync-status.json for authoritative sync dates
 Update frequency: Check Obsidian Developer Policies and Plugin Guidelines for updates
-Applicability: Plugin
 -->
 
 # Release Readiness Checklist
@@ -23,7 +22,9 @@ These checks can be performed automatically by reading files and scanning code:
 
 ### File Requirements
 
-- [ ] **`main.js`** exists in project root (compiled output)
+- [ ] **`main.js`** exists (compiled output)
+  - Check `main.js` in root (created by `npm run build` or `npm run dev`)
+  - **Note**: All builds output to `main.js` in the root directory
 - [ ] **`manifest.json`** exists in project root with valid JSON structure
 - [ ] **`styles.css`** exists (if plugin uses custom styles) - optional but should be included if present
 - [ ] **`LICENSE`** file exists in project root

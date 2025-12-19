@@ -90,3 +90,4 @@ export class IconPickerModal extends FuzzySuggestModal<IconOption> {
 	}
 }
 
+

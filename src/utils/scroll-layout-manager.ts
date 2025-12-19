@@ -4,7 +4,6 @@
  */
 
 import { App } from 'obsidian';
-import { GAP_SIZE } from '../shared/constants';
 import type { CMSSettings } from '../shared/data-transform';
 import { readCMSSettings } from '../shared/settings-schema';
 import type { BasesCMSSettings } from '../types';
@@ -21,17 +20,29 @@ export class ScrollLayoutManager {
 	private isLoading: boolean = false;
 	private displayedCount: number = 50;
 	private totalEntries: number = 0;
+	private config: BasesConfig;
+	private configPollInterval: number | null = null;
+	private lastCardSize: number | null = null;
+	private lastImageAspectRatio: number | null = null;
 
 	constructor(
 		private containerEl: HTMLElement,
 		private app: App,
-		private config: BasesConfig,
+		config: BasesConfig,
 		private pluginSettings: BasesCMSSettings,
 		private onLoadMore: () => void,
 		private registerCleanup: (cleanup: () => void) => void
 	) {
+		this.config = config;
 		const isMobile = (this.app as { isMobile?: boolean }).isMobile ?? false;
 		this.displayedCount = isMobile ? 25 : 50;
+	}
+
+	/**
+	 * Update the config reference (useful when config becomes available after construction)
+	 */
+	updateConfig(config: BasesConfig): void {
+		this.config = config;
 	}
 
 	setDisplayedCount(count: number): void {
@@ -132,10 +143,15 @@ export class ScrollLayoutManager {
 				this.pluginSettings
 			);
 			const cardMinWidth = currentSettings.cardSize;
+			const imageAspectRatio = currentSettings.imageAspectRatio;
 
 			// Set CSS variables on container - CSS Grid auto-fill handles column snapping
 			this.containerEl.style.setProperty('--card-min-width', `${cardMinWidth}px`);
-			this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(currentSettings.imageAspectRatio));
+			this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(imageAspectRatio));
+			
+			// Track last values for polling
+			this.lastCardSize = cardMinWidth;
+			this.lastImageAspectRatio = imageAspectRatio;
 		};
 
 		// Set up ResizeObserver to call updateGrid when container resizes
@@ -144,12 +160,50 @@ export class ScrollLayoutManager {
 		
 		// Call updateGrid immediately to set initial values
 		updateGrid();
+		
+		// Set up polling to detect config changes (for real-time updates when card size changes)
+		// Poll every 100ms to check if cardSize or imageAspectRatio has changed
+		this.configPollInterval = window.setInterval(() => {
+			if (!this.config || typeof this.config.get !== 'function') {
+				return; // Config not ready yet, skip check
+			}
+
+			const currentSettings = readCMSSettings(
+				this.config,
+				this.pluginSettings
+			);
+			const currentCardSize = currentSettings.cardSize;
+			const currentImageAspectRatio = currentSettings.imageAspectRatio;
+
+			// Check if cardSize or imageAspectRatio has changed
+			if (this.lastCardSize !== currentCardSize || this.lastImageAspectRatio !== currentImageAspectRatio) {
+				// Update grid layout immediately when settings change
+				this.containerEl.style.setProperty('--card-min-width', `${currentCardSize}px`);
+				this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(currentImageAspectRatio));
+				
+				// Update tracked values
+				this.lastCardSize = currentCardSize;
+				this.lastImageAspectRatio = currentImageAspectRatio;
+			}
+		}, 100);
+		
+		// Register cleanup for polling interval
+		this.registerCleanup(() => {
+			if (this.configPollInterval !== null) {
+				window.clearInterval(this.configPollInterval);
+				this.configPollInterval = null;
+			}
+		});
 	}
 
 	updateGridLayout(settings: CMSSettings): void {
 		// Just set the card min width - CSS Grid auto-fill handles column snapping automatically
 		this.containerEl.style.setProperty('--card-min-width', `${settings.cardSize}px`);
 		this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(settings.imageAspectRatio));
+		
+		// Update tracked values to prevent unnecessary polling triggers
+		this.lastCardSize = settings.cardSize;
+		this.lastImageAspectRatio = settings.imageAspectRatio;
 	}
 
 	cleanup(): void {
@@ -169,6 +223,11 @@ export class ScrollLayoutManager {
 			window.clearTimeout(this.scrollThrottleTimeout);
 			this.scrollThrottleTimeout = null;
 		}
+		if (this.configPollInterval !== null) {
+			window.clearInterval(this.configPollInterval);
+			this.configPollInterval = null;
+		}
 	}
 }
+
 

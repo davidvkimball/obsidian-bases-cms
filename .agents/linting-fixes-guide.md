@@ -137,6 +137,193 @@ this.addCommand({
 - **No title case**: "Toggle Sidebar" ❌
 - **No all caps**: "TOGGLE SIDEBAR" ❌
 
+### Sentence Case False Positives
+
+The `obsidianmd/ui/sentence-case` rule can sometimes flag legitimate text as errors. These are **false positives** and should be suppressed with ESLint disable comments. Always include a comment explaining why it's a false positive.
+
+#### Common False Positive Scenarios
+
+**1. Proper Nouns (Framework/Product Names)**
+
+When proper nouns like framework or product names appear in the middle of sentences, the linter may incorrectly flag them:
+
+```typescript
+// ❌ Linter error (false positive)
+.setDesc("Choose the default format for copied heading links. Obsidian format respects your Obsidian settings for wikilink vs markdown preference. Astro link uses your link base path from above and converts the heading into kebab-case format as an anchor link")
+
+// ✅ Correct - Suppress with explanation
+// False positive: "Astro" is a proper noun (framework name) and should be capitalized
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+.setDesc("Choose the default format for copied heading links. Obsidian format respects your Obsidian settings for wikilink vs markdown preference. Astro link uses your link base path from above and converts the heading into kebab-case format as an anchor link")
+```
+
+**2. Date/Time Format Codes**
+
+Date format placeholders and format codes (like "YYYY-MM-DD", "MMMM", "yyyy") are technical notation, not UI text:
+
+```typescript
+// ❌ Linter error (false positive)
+.setPlaceholder("YYYY-MM-DD")
+.setDesc("Format for the date in properties (e.g., yyyy-mm-dd, MMMM D, yyyy, yyyy-mm-dd HH:mm)")
+
+// ✅ Correct - Suppress with explanation
+// False positive: "YYYY-MM-DD" is a date format placeholder, not UI text
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+.setPlaceholder("YYYY-MM-DD")
+
+// False positive: Date format codes (MMMM, yyyy, etc.) are technical notation, not UI text
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+.setDesc("Format for the date in properties (e.g., yyyy-mm-dd, MMMM D, yyyy, yyyy-mm-dd HH:mm)")
+```
+
+**3. Technical Notation and Code Examples**
+
+When descriptions contain code examples, file paths, or technical notation:
+
+```typescript
+// ❌ Linter error (false positive)
+.setDesc("Path relative to the Obsidian vault root folder. Use ../.. for two levels up. Leave blank to use the vault folder")
+
+// ✅ Correct - Suppress with explanation
+// False positive: Text is already in sentence case; "Obsidian" is a proper noun and "../.." is a path example
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+.setDesc("Path relative to the Obsidian vault root folder. Use ../.. for two levels up. Leave blank to use the vault folder")
+```
+
+**4. Dropdown Options with Proper Nouns**
+
+Dropdown option labels that include proper nouns:
+
+```typescript
+// ❌ Linter error (false positive)
+.addOption("astro", "Astro link")
+
+// ✅ Correct - Suppress with explanation
+// False positive: "Astro" is a proper noun (framework name) and should be capitalized
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+.addOption("astro", "Astro link")
+```
+
+#### How to Handle False Positives
+
+**IMPORTANT**: Only use ESLint disable comments for **actual false positives**. Do not use them as a shortcut to avoid fixing legitimate errors. Always verify the text is already correct before adding a disable comment.
+
+1. **Verify it's actually a false positive**: 
+   - Check that the text is already in correct sentence case (first word capitalized, rest lowercase except proper nouns)
+   - Verify the text follows proper grammar and formatting rules
+   - Confirm the linter is incorrectly flagging valid text
+
+2. **Format the disable comment correctly**: Use this exact format with two separate comment lines:
+   ```typescript
+   // False positive: [Brief explanation of why it's a false positive]
+   // eslint-disable-next-line obsidianmd/ui/sentence-case
+   ```
+
+3. **Place the disable comment correctly**: 
+   - The `eslint-disable-next-line` comment **must** be on the line immediately before the line with the error
+   - For method chaining, place it right before the method call that contains the flagged text
+   - The explanation comment goes on the line immediately before the disable comment
+
+4. **Common false positive reasons**:
+   - Proper nouns (framework names, product names, company names)
+   - Technical notation (date format codes, file paths, code examples)
+   - Placeholders that are format strings (not user-facing text)
+   - Text that is already correctly formatted but the linter misinterprets
+
+#### Formatting Rules (Critical)
+
+**Rule 1: Two separate comment lines**
+```typescript
+// ✅ Correct - Two separate lines
+// False positive: Already in sentence case
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+.setDesc('Display the button in the CMS toolbar.')
+
+// ❌ Wrong - Combined into one line
+// False positive: Already in sentence case // eslint-disable-next-line obsidianmd/ui/sentence-case
+.setDesc('Display the button in the CMS toolbar.')
+```
+
+**Rule 2: Disable comment must be immediately before the error line**
+```typescript
+// ✅ Correct - Disable comment on line before error
+.setName('Show button')
+// False positive: Already in sentence case
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+.setDesc('Display the button in the CMS toolbar.')
+
+// ❌ Wrong - Disable comment too far from error
+// False positive: Already in sentence case
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+.setName('Show button')
+.setDesc('Display the button in the CMS toolbar.') // Error is here, but disable is too far up
+```
+
+**Rule 3: For method chaining, place before the specific method**
+```typescript
+// ✅ Correct - Disable comment before .setDesc() where error occurs
+new Setting(containerEl)
+  .setName('Date format')
+  // False positive: Date format codes are technical notation, not UI text
+  // eslint-disable-next-line obsidianmd/ui/sentence-case
+  .setDesc('Format for the date in properties (e.g., yyyy-mm-dd, MMMM D, yyyy)')
+
+// ❌ Wrong - Disable comment before wrong method
+new Setting(containerEl)
+  // False positive: Date format codes are technical notation, not UI text
+  // eslint-disable-next-line obsidianmd/ui/sentence-case
+  .setName('Date format') // Error is not here
+  .setDesc('Format for the date in properties (e.g., yyyy-mm-dd, MMMM D, yyyy)') // Error is here
+```
+
+**Rule 4: For callbacks, place before the method call inside the callback**
+```typescript
+// ✅ Correct - Disable comment before .setPlaceholder() inside callback
+.addText(text => {
+  // False positive: "index" is a placeholder, not UI text
+  // eslint-disable-next-line obsidianmd/ui/sentence-case
+  text.setPlaceholder('index');
+  text.setValue(this.plugin.settings.filename);
+})
+
+// ❌ Wrong - Disable comment outside callback
+// False positive: "index" is a placeholder, not UI text
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+.addText(text => {
+  text.setPlaceholder('index'); // Error is here, but disable is outside callback
+})
+```
+
+#### Example: Complete Pattern
+
+```typescript
+new Setting(containerEl)
+  .setName('Date format')
+  // False positive: Date format codes (MMMM, yyyy, etc.) are technical notation, not UI text
+  // eslint-disable-next-line obsidianmd/ui/sentence-case
+  .setDesc('Format for the date in properties (e.g., yyyy-mm-dd, MMMM D, yyyy, yyyy-mm-dd HH:mm)')
+  .addText((text) => {
+    // False positive: "YYYY-MM-DD" is a date format placeholder, not UI text
+    // eslint-disable-next-line obsidianmd/ui/sentence-case
+    text.setPlaceholder('YYYY-MM-DD');
+    text.setValue(settings.dateFormat);
+  });
+```
+
+#### When NOT to Use Disable Comments
+
+**Do NOT use disable comments to:**
+- Skip fixing legitimate errors
+- Avoid refactoring problematic code
+- Work around type safety issues
+- Suppress warnings you don't understand
+
+**Only use disable comments when:**
+- The text is already correct and the linter is wrong
+- You've verified the text follows all formatting rules
+- You can clearly explain why it's a false positive
+- The error cannot be fixed by changing the code
+
 ---
 
 ## Style Element Creation
@@ -334,7 +521,7 @@ new Setting(containerEl)
     })
   );
 
-// ✅ Correct
+// ✅ Correct - Works with direct Setting usage
 new Setting(containerEl)
   .addToggle((toggle) =>
     toggle.onChange(async (value) => {
@@ -342,6 +529,30 @@ new Setting(containerEl)
     })
   );
 ```
+
+**Important**: Option 2 works with direct `Setting` usage, but **does NOT work** with `addSetting` from `createSettingsGroup()`:
+
+```typescript
+// ❌ FAILS with addSetting from createSettingsGroup
+group.addSetting(setting =>
+  setting.addToggle(toggle =>
+    toggle.onChange(async (value) => {
+      await this.plugin.saveData(this.plugin.settings);
+    })
+  )
+);
+
+// ✅ CORRECT - Use block body for addSetting
+group.addSetting(setting => {
+  setting.addToggle(toggle => {
+    toggle.onChange(async (value) => {
+      await this.plugin.saveData(this.plugin.settings);
+    });
+  });
+});
+```
+
+**Why**: `addSetting` expects `(setting: Setting) => void`, but expression body returns the `Setting` object from the chain. You MUST use block body `{ }` with `addSetting`.
 
 ### Common Patterns
 
@@ -371,6 +582,90 @@ new Setting(containerEl)
       })
   );
 ```
+
+---
+
+## Critical: addSetting Callbacks Must Return Void
+
+**Issue**: When using `createSettingsGroup().addSetting()` or `SettingGroup.addSetting()`, the callback MUST return `void`, not a `Setting` object.
+
+**When This Applies**: This issue **only** affects plugins using `SettingGroup` (API 1.11.0+) or the `createSettingsGroup()` compatibility utility. If you're using `new Setting(containerEl)` directly (the most common pattern), you don't have this issue.
+
+**Error Message**: "Promise returned in function argument where a void return was expected" on the `addSetting` line.
+
+**Root Cause**: Expression body arrow functions return the result of the expression. When you chain methods like `setting.setName(...).addToggle(...)`, the expression returns the `Setting` object (for method chaining), but `addSetting` expects a callback that returns `void`.
+
+**❌ Wrong - Expression Body (Returns Setting)**:
+```typescript
+group.addSetting(setting =>
+  setting
+    .setName("Enable feature")
+    .addToggle(toggle => {
+      toggle.setValue(this.plugin.settings.enabled);
+      toggle.onChange(async (value) => {
+        this.plugin.settings.enabled = value;
+        await this.plugin.saveData(this.plugin.settings);
+      });
+    })
+);
+```
+
+**✅ Correct - Block Body (Returns Void)**:
+```typescript
+group.addSetting(setting => {
+  setting
+    .setName("Enable feature")
+    .addToggle(toggle => {
+      toggle.setValue(this.plugin.settings.enabled);
+      toggle.onChange(async (value) => {
+        this.plugin.settings.enabled = value;
+        await this.plugin.saveData(this.plugin.settings);
+      });
+    });
+});
+```
+
+**Key Difference**:
+- **Expression body**: `setting => setting.setName(...)` - Returns the result of the chain (a `Setting` object)
+- **Block body**: `setting => { setting.setName(...); }` - Explicitly returns `void`
+
+**Rule**: Always use block body `{ }` with semicolons when using `addSetting` from `createSettingsGroup()` or `SettingGroup`.
+
+**Note**: This may only fail with strict ESLint rules, but using block body is safer, clearer, and prevents potential type errors.
+
+**Direct Setting Usage (No Issue)**:
+```typescript
+// ✅ This works fine - no addSetting callback
+new Setting(containerEl)
+  .setName("Enable feature")
+  .addToggle((toggle) =>
+    toggle.onChange(async (value) => {
+      await this.plugin.saveData(this.plugin.settings);
+    })
+  );
+```
+
+Most plugins use `new Setting(containerEl)` directly, which doesn't have this restriction. The issue only applies when using `SettingGroup` or the compatibility utility.
+
+---
+
+## Troubleshooting: When Fixes Don't Work
+
+**Problem**: You've tried making `onChange` async, added `void` operators, but still get "Promise returned in function argument" errors.
+
+**Check**: Is the error on the `addSetting` line or the `onChange` line?
+
+- **Error on `addSetting` line**: The callback itself is returning a value (like `Setting`) instead of `void`. Use block body `{ }` instead of expression body.
+- **Error on `onChange` line**: The `onChange` callback is returning a Promise. Make it async and await, or use `void` operator.
+
+**Common Mistake**: Adding eslint-disable comments instead of fixing the root cause. The disable comment should be on the EXACT line with the error, but it's better to fix the actual issue.
+
+**Debugging Steps**:
+1. Check which line the error is on (column number matters)
+2. If it's the `addSetting` callback, ensure it uses block body `{ }`
+3. If it's the `onChange` callback, ensure it's properly async or uses `void`
+4. Run `npm run lint` after each change to verify
+5. Never suppress errors without understanding the root cause
 
 ---
 

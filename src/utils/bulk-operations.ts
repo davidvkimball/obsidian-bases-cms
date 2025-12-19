@@ -65,13 +65,15 @@ export class BulkOperations {
 					}
 					
 					await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-						frontmatter[cleanConfigProperty] = targetValue;
+						const fm = frontmatter as Record<string, unknown>;
+						fm[cleanConfigProperty] = targetValue;
 					});
 				}
 			} else {
 				// Fallback: use default behavior (set draft property)
 				await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-					frontmatter.draft = draft;
+					const fm = frontmatter as Record<string, unknown>;
+					fm.draft = draft;
 				});
 			}
 		});
@@ -107,19 +109,21 @@ export class BulkOperations {
 			const frontmatter = metadata?.frontmatter;
 			
 			if (frontmatter?.tags) {
-				const currentTags = Array.isArray(frontmatter.tags) 
-					? frontmatter.tags 
-					: [frontmatter.tags];
+				const fmTags = frontmatter.tags as string | string[];
+				const currentTags = Array.isArray(fmTags) 
+					? fmTags 
+					: [fmTags];
 				
 				const updatedTags = currentTags.filter((tag: string) => 
 					!tagsToRemove.includes(tag)
 				);
 
 				await this.app.fileManager.processFrontMatter(file, (fm) => {
+					const fmTyped = fm as Record<string, unknown>;
 					if (updatedTags.length > 0) {
-						fm.tags = updatedTags;
+						fmTyped.tags = updatedTags;
 					} else {
-						fm.tags = undefined;
+						fmTyped.tags = undefined;
 					}
 				});
 			}
@@ -191,4 +195,5 @@ export class BulkOperations {
 		}
 	}
 }
+
 

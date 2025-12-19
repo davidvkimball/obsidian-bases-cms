@@ -153,12 +153,26 @@ export async function loadFilePreview(
 	fileName?: string,
 	titleValue?: string
 ): Promise<string> {
-	const hasValidDesc = propertyValue != null &&
-		(typeof propertyValue === 'string' || typeof propertyValue === 'number') &&
-		String(propertyValue).trim().length > 0;
+	// Handle arrays (e.g., aliases, tags) by joining them
+	let result: string | null = null;
+	
+	if (propertyValue != null) {
+		if (Array.isArray(propertyValue)) {
+			// Join array items into a string
+			const items = propertyValue.map((item: unknown) => {
+				if (item && typeof item === 'object' && 'data' in item) {
+					return String((item as { data: unknown }).data);
+				}
+				return String(item);
+			}).filter((s: string) => s.trim().length > 0);
+			result = items.length > 0 ? items.join(', ') : null;
+		} else if (typeof propertyValue === 'string' || typeof propertyValue === 'number') {
+			const str = String(propertyValue).trim();
+			result = str.length > 0 ? str : null;
+		}
+	}
 
-	if (hasValidDesc) {
-		let result = String(propertyValue).trim();
+	if (result) {
 		// Truncate if setting is enabled
 		if (settings.truncatePreviewProperty) {
 			const wasTruncated = result.length > 500;

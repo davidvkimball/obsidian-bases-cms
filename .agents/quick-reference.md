@@ -2,12 +2,11 @@
 Source: Condensed from all reference documentation
 Last synced: See sync-status.json for authoritative sync dates
 Update frequency: Update as workflows evolve
-Applicability: Both
 -->
 
 # Quick Reference
 
-One-page cheat sheet for common Obsidian plugin and theme development tasks.
+One-page cheat sheet for common Obsidian plugin development tasks.
 
 ## Quick Commands
 
@@ -18,7 +17,7 @@ One-page cheat sheet for common Obsidian plugin and theme development tasks.
 | `build` | Run `npm run build` to compile TypeScript |
 | `sync` or `quick sync` | Pull latest changes from all 6 core `.ref` repos |
 | `what's the latest` or `check updates` | Check what's new in reference repos (read-only, then ask to pull) |
-| `release ready?` or `is my plugin ready for release?` | Run comprehensive release readiness checklist |
+| `release ready?` | Run comprehensive release readiness checklist |
 | `summarize` | Generate git commit message from all changed files |
 | `summarize for release` | Generate markdown release notes for GitHub |
 | `bump the version` or `bump version` | Bump version by 0.0.1 (patch) by default, or specify: `patch`, `minor`, `major`, or exact version |
@@ -39,15 +38,9 @@ One-page cheat sheet for common Obsidian plugin and theme development tasks.
 
 ## Build Commands
 
-**Plugins**:
 ```powershell
 npm run build    # Build plugin (compile TypeScript to JavaScript)
 npm run dev      # Development build with watch mode
-```
-
-**Themes**:
-```powershell
-npx grunt build  # Build theme (compile SCSS to CSS)
 ```
 
 **Always run build after making changes** to catch errors early. See [build-workflow.md](build-workflow.md).
@@ -62,14 +55,7 @@ npx grunt build  # Build theme (compile SCSS to CSS)
   └── styles.css       # Plugin styles (if any)
 ```
 
-**Theme location** (in vault):
-```
-<Vault>/.obsidian/themes/<theme-name>/
-  ├── theme.css        # Compiled theme CSS
-  └── manifest.json    # Theme manifest
-```
-
-**Build output**: Must be at top level of plugin/theme folder in vault.
+**Build output**: Must be at top level of plugin folder in vault.
 
 ## Common API Patterns
 
@@ -185,16 +171,45 @@ cd eslint-plugin && git pull && cd ..
 ## Testing
 
 **Manual installation**:
-1. Build plugin/theme
-2. Copy to vault `.obsidian/plugins/` or `.obsidian/themes/`
-3. Enable in Obsidian settings
+1. Build plugin (`npm run build`)
+2. Copy `main.js`, `manifest.json`, and `styles.css` (if any) to vault `.obsidian/plugins/<plugin-id>/`
+3. Enable plugin in Obsidian: **Settings → Community plugins**
 4. Reload Obsidian (Ctrl+R / Cmd+R)
 
 See [testing.md](testing.md) for details.
 
+## Linting: Promise in Void Context
+
+**Quick Fix Guide** - When you see "Promise returned in function argument where a void return was expected":
+
+| Error Location | Cause | Fix |
+|----------------|-------|-----|
+| `addSetting` line (from `SettingGroup`/`createSettingsGroup`) | Callback returns `Setting` instead of `void` | Use block body `{ }` instead of expression body |
+| `onChange` line | Callback returns Promise | Make async + await, or use `void` operator |
+| `addToggle` line | Callback returns Promise | Use block body `{ }` |
+
+**Quick Fix**: If error is on `addSetting`/`addToggle`, change `=>` to `=> { ... }`
+
+**Example**:
+```typescript
+// ❌ Wrong - Expression body (only affects SettingGroup.addSetting)
+group.addSetting(setting => setting.setName("Feature"));
+
+// ✅ Correct - Block body
+group.addSetting(setting => { setting.setName("Feature"); });
+
+// ✅ This works fine - Direct Setting usage (most common pattern)
+new Setting(containerEl)
+  .setName("Feature")
+  .addToggle(toggle => toggle.onChange(async (value) => { ... }));
+```
+
+**Note**: The `addSetting` issue only applies when using `SettingGroup` or `createSettingsGroup()`. Direct `new Setting(containerEl)` usage (the most common pattern) doesn't have this restriction.
+
+See [linting-fixes-guide.md](linting-fixes-guide.md#critical-addsetting-callbacks-must-return-void) for detailed explanation.
+
 ## Common File Structure
 
-**Plugin**:
 ```
 src/
   main.ts
@@ -203,15 +218,6 @@ src/
   ui/
 manifest.json
 package.json
-```
-
-**Theme**:
-```
-src/
-  main.scss
-  variables.scss
-theme.css
-manifest.json
 ```
 
 See [file-conventions.md](file-conventions.md) for details.

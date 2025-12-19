@@ -2,12 +2,11 @@
 Source: Based on Obsidian Sample Plugin
 Last synced: See sync-status.json for authoritative sync dates
 Update frequency: Check Obsidian Sample Plugin repo for updates
-Applicability: Plugin / Theme
 -->
 
 # Common tasks
 
-**Note**: The examples below are for plugin development (TypeScript). Themes use CSS/SCSS and have different common tasks (organizing stylesheets, CSS variables, etc.).
+**Note**: The examples below are for plugin development (TypeScript).
 
 **When to use this vs [code-patterns.md](code-patterns.md)**: 
 - **common-tasks.md**: Quick snippets and basic patterns for common operations

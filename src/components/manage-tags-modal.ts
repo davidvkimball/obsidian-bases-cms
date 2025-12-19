@@ -31,6 +31,8 @@ export class ManageTagsModal extends Modal {
 			.setDesc('Enter tags to add (comma-separated).')
 			.addText(text => {
 				text
+					// False positive: Placeholder text with code examples, not UI text
+					// eslint-disable-next-line obsidianmd/ui/sentence-case
 					.setPlaceholder('tag1, tag2, tag3')
 					.onChange(value => {
 						this.tagsToAdd = value;
@@ -50,8 +52,8 @@ export class ManageTagsModal extends Modal {
 				const frontmatter = metadata?.frontmatter;
 				if (frontmatter?.tags) {
 					const tags = Array.isArray(frontmatter.tags) 
-						? frontmatter.tags 
-						: [frontmatter.tags];
+						? (frontmatter.tags as string[])
+						: [frontmatter.tags as string];
 					tags.forEach(tag => allTags.add(tag));
 				}
 			}
@@ -116,4 +118,5 @@ export class ManageTagsModal extends Modal {
 		contentEl.empty();
 	}
 }
+
 

@@ -6,8 +6,6 @@
 import { App, BasesEntry, TFile } from 'obsidian';
 import { CardData } from '../types';
 import { getAllBasesImagePropertyValues } from '../utils/property';
-import { convertGifToStatic } from '../utils/image';
-import type BasesCMSPlugin from '../main';
 
 export class CardRenderer {
 	constructor(
@@ -25,9 +23,9 @@ export class CardRenderer {
 		
 		// Extract tags
 		const yamlTags: string[] = Array.isArray(frontmatter.tags) 
-			? frontmatter.tags 
+			? (frontmatter.tags as string[])
 			: frontmatter.tags 
-				? [frontmatter.tags] 
+				? [frontmatter.tags as string] 
 				: [];
 		
 		const bodyTags = metadata?.tags?.map(t => t.tag.substring(1)) || [];
@@ -190,9 +188,10 @@ export class CardRenderer {
 
 		// Get property type info to determine if it's a checkbox
 		const metadataCache = this.app.metadataCache as unknown as Record<string, unknown>;
-		const propertyInfos = (typeof metadataCache.getAllPropertyInfos === 'function' 
-			? metadataCache.getAllPropertyInfos() 
-			: {}) || {};
+		const getAllPropertyInfos = metadataCache.getAllPropertyInfos as (() => Record<string, { widget?: string } | undefined>) | undefined;
+		const propertyInfos = (typeof getAllPropertyInfos === 'function' 
+			? getAllPropertyInfos() 
+			: {}) as Record<string, { widget?: string } | undefined> || {};
 
 		for (const [propertyName, propertyValue] of Object.entries(card.properties)) {
 			// Skip special properties that are handled separately
@@ -205,7 +204,7 @@ export class CardRenderer {
 			
 			// Check if this is a checkbox property
 			const propInfo = propertyInfos[propertyName.toLowerCase()];
-			const isCheckbox = propInfo?.widget === 'checkbox' || typeof propertyValue === 'boolean';
+			const isCheckbox = (propInfo && typeof propInfo === 'object' && 'widget' in propInfo && propInfo.widget === 'checkbox') || typeof propertyValue === 'boolean';
 
 			if (isCheckbox) {
 				// Render as native Obsidian checkbox - simple input checkbox
@@ -214,16 +213,17 @@ export class CardRenderer {
 				propEl.createSpan({ text: propertyName });
 				
 				if (onPropertyToggle) {
-					checkbox.addEventListener('change', async (e) => {
+					checkbox.addEventListener('change', (e) => {
 						e.stopPropagation();
 						const checked = checkbox.checked;
-						try {
-							await onPropertyToggle(card.path, propertyName, checked);
-						} catch (error) {
-							console.error('Error toggling property:', error);
-							// Revert checkbox state on error
-							checkbox.checked = !checked;
-						}
+						void (async () => {
+							try {
+								await onPropertyToggle(card.path, propertyName, checked);
+							} catch (error) {
+								console.error('Error toggling property:', error);
+								checkbox.checked = !checked;
+							}
+						})();
 					});
 					checkbox.addEventListener('click', (e) => {
 						e.stopPropagation();

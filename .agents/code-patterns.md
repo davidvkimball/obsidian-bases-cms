@@ -2,7 +2,6 @@
 Source: Complete examples from obsidian-sample-plugin, obsidian-plugin-docs, and obsidian-api (API is authoritative)
 Last synced: See sync-status.json for authoritative sync dates
 Update frequency: Check reference repos for new patterns
-Applicability: Plugin
 -->
 
 # Code Patterns
@@ -150,7 +149,21 @@ Create `src/utils/settings-compat.ts` (or wherever you keep utilities):
  * Compatibility utilities for settings
  * Provides backward compatibility for SettingGroup (requires API 1.11.0+)
  */
-import { Setting, SettingGroup, requireApiVersion } from 'obsidian';
+import { Setting, requireApiVersion } from 'obsidian';
+
+/**
+ * Type definition for SettingGroup constructor
+ * Note: SettingGroup may exist at runtime in 1.11.0+ but may not be in TypeScript definitions
+ * 
+ * IMPORTANT: This type signature is inferred from usage patterns. When .ref/obsidian-api/obsidian.d.ts
+ * is available, verify the actual signature there. The signature shown here matches the expected
+ * behavior based on Obsidian's API design patterns.
+ */
+type SettingGroupConstructor = new (containerEl: HTMLElement) => {
+  setHeading(heading: string): {
+    addSetting(cb: (setting: Setting) => void): void;
+  };
+};
 
 /**
  * Interface that works with both SettingGroup and fallback container
@@ -166,6 +179,10 @@ export interface SettingsContainer {
  * Uses requireApiVersion('1.11.0') to check if SettingGroup is available.
  * This is the official Obsidian API method for version checking.
  * 
+ * IMPORTANT: We use dynamic require() instead of direct import because SettingGroup
+ * may not be in TypeScript type definitions even if it exists at runtime in 1.11.0+.
+ * This avoids compile-time TypeScript errors while still working at runtime.
+ * 
  * @param containerEl - The container element for settings
  * @param heading - The heading text for the settings group
  * @returns A container that can be used to add settings
@@ -177,6 +194,12 @@ export function createSettingsGroup(
   // Check if SettingGroup is available (API 1.11.0+)
   // requireApiVersion is the official Obsidian API method for version checking
   if (requireApiVersion('1.11.0')) {
+    // Use dynamic require() to access SettingGroup at runtime
+    // This avoids TypeScript errors when SettingGroup isn't in type definitions
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const obsidian = require('obsidian');
+    const SettingGroup = obsidian.SettingGroup as SettingGroupConstructor;
+    
     // Use SettingGroup - it's guaranteed to exist if requireApiVersion returns true
     const group = new SettingGroup(containerEl).setHeading(heading);
     return {
@@ -198,6 +221,8 @@ export function createSettingsGroup(
   }
 }
 ```
+
+**Note**: The dynamic `require()` approach is necessary because `SettingGroup` may not be in TypeScript type definitions even if it exists at runtime in Obsidian 1.11.0+. This avoids compile-time TypeScript errors while maintaining runtime compatibility.
 
 ### Step 2: Use in Settings Tab
 
@@ -236,25 +261,25 @@ class MySettingTab extends PluginSettingTab {
     // General Settings Group
     const generalGroup = createSettingsGroup(containerEl, "General Settings");
     
-    generalGroup.addSetting((setting) =>
+    generalGroup.addSetting((setting) => {
       setting
         .setName("Enable feature")
         .setDesc("Enable or disable the main feature")
-        .addToggle((toggle) =>
+        .addToggle((toggle) => {
           toggle
             .setValue(this.plugin.settings.generalEnabled)
             .onChange(async (value) => {
               this.plugin.settings.generalEnabled = value;
               await this.plugin.saveSettings();
-            })
-        )
-    );
+            });
+        });
+    });
 
-    generalGroup.addSetting((setting) =>
+    generalGroup.addSetting((setting) => {
       setting
         .setName("Timeout")
         .setDesc("Timeout in milliseconds")
-        .addSlider((slider) =>
+        .addSlider((slider) => {
           slider
             .setLimits(1000, 10000, 500)
             .setValue(this.plugin.settings.generalTimeout)
@@ -262,32 +287,32 @@ class MySettingTab extends PluginSettingTab {
             .onChange(async (value) => {
               this.plugin.settings.generalTimeout = value;
               await this.plugin.saveSettings();
-            })
-        )
-    );
+            });
+        });
+    });
 
     // Advanced Settings Group
     const advancedGroup = createSettingsGroup(containerEl, "Advanced Settings");
     
-    advancedGroup.addSetting((setting) =>
+    advancedGroup.addSetting((setting) => {
       setting
         .setName("Debug mode")
         .setDesc("Enable debug logging")
-        .addToggle((toggle) =>
+        .addToggle((toggle) => {
           toggle
             .setValue(this.plugin.settings.advancedDebug)
             .onChange(async (value) => {
               this.plugin.settings.advancedDebug = value;
               await this.plugin.saveSettings();
-            })
-        )
-    );
+            });
+        });
+    });
 
-    advancedGroup.addSetting((setting) =>
+    advancedGroup.addSetting((setting) => {
       setting
         .setName("Log level")
         .setDesc("Set the logging level")
-        .addDropdown((dropdown) =>
+        .addDropdown((dropdown) => {
           dropdown
             .addOption("info", "Info")
             .addOption("warn", "Warning")
@@ -296,9 +321,9 @@ class MySettingTab extends PluginSettingTab {
             .onChange(async (value) => {
               this.plugin.settings.advancedLogLevel = value;
               await this.plugin.saveSettings();
-            })
-        )
-    );
+            });
+        });
+    });
   }
 }
 
@@ -311,6 +336,84 @@ this.addSettingTab(new MySettingTab(this.app, this));
 - **On Obsidian 1.11.0+**: Uses `SettingGroup` with proper styling and grouping
 - **On older versions**: Creates a manual heading (`<h3>`) and uses regular `Setting` objects
 - **Same API**: Your code using `addSetting()` works identically in both cases
+
+### Common Pitfalls
+
+#### Pitfall 1: TypeScript Errors with SettingGroup Import
+
+**Problem**: You may see this TypeScript error:
+```
+Module '"obsidian"' has no exported member 'SettingGroup'
+```
+
+**Cause**: `SettingGroup` may exist at runtime in Obsidian 1.11.0+ but may not be in the TypeScript type definitions, causing compile-time errors.
+
+**Solution**: Use dynamic `require()` instead of direct import, as shown in the compatibility utility above. Do not import `SettingGroup` directly:
+
+```ts
+// ❌ WRONG - Causes TypeScript errors
+import { SettingGroup } from 'obsidian';
+
+// ✅ CORRECT - Use dynamic require()
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const obsidian = require('obsidian');
+const SettingGroup = obsidian.SettingGroup as SettingGroupConstructor;
+```
+
+#### Pitfall 2: Missing Closing Parentheses
+
+**Problem**: Arrow functions with method chaining need proper closing parentheses and semicolons.
+
+**Solution**: Always include the closing parenthesis and semicolon:
+
+```ts
+// ❌ WRONG - Missing closing parenthesis
+generalGroup.addSetting((setting) =>
+  setting
+    .setName("Enable feature")
+    .addToggle((toggle) =>
+      toggle.setValue(this.plugin.settings.enabled)
+    )
+// Missing closing parenthesis here!
+
+// ✅ CORRECT - Proper closing
+generalGroup.addSetting((setting) =>
+  setting
+    .setName("Enable feature")
+    .addToggle((toggle) =>
+      toggle.setValue(this.plugin.settings.enabled)
+    )
+); // Closing parenthesis and semicolon required
+```
+
+#### Pitfall 3: Storing Setting References
+
+**Problem**: If you need to reference a `Setting` object later (e.g., for visibility toggling), you must use block syntax `{ }` instead of expression syntax.
+
+**Solution**: Use block syntax when you need to store references:
+
+```ts
+// ❌ WRONG - Can't store reference with expression syntax
+let mySetting: Setting;
+generalGroup.addSetting((setting) =>
+  setting.setName("My Setting")
+  // Can't assign: mySetting = setting; (syntax error)
+);
+
+// ✅ CORRECT - Use block syntax to store reference
+let mySetting: Setting;
+generalGroup.addSetting((setting) => {
+  mySetting = setting; // Now we can store the reference
+  setting
+    .setName("My Setting")
+    .addToggle((toggle) =>
+      toggle.setValue(this.plugin.settings.enabled)
+    );
+});
+
+// Later, you can use mySetting to toggle visibility:
+mySetting.settingEl.style.display = this.plugin.settings.enabled ? "" : "none";
+```
 
 ### Alternative: Force Minimum Version
 
@@ -329,7 +432,9 @@ group.addSetting((setting) => {
 });
 ```
 
-This is simpler but excludes users on older Obsidian versions.
+**Note**: Even with `minAppVersion: "1.11.0"`, you may still encounter TypeScript errors if `SettingGroup` isn't in the type definitions. In that case, you can still use the compatibility utility approach (it will always use `SettingGroup` when `requireApiVersion('1.11.0')` returns true), or use dynamic `require()` as shown in the compatibility utility.
+
+This approach is simpler but excludes users on older Obsidian versions. The compatibility utility still works and is recommended for maximum flexibility.
 
 ## Modal with Form Input
 

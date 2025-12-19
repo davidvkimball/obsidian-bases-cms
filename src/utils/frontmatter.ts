@@ -22,36 +22,37 @@ export async function addProperties(
 	overwrite: boolean
 ): Promise<void> {
 	await app.fileManager.processFrontMatter(file, (frontmatter) => {
+		const fm = frontmatter as Record<string, unknown>;
 		for (const [key, value] of props) {
 			// Tags should always be a List, even if there is just one tag.
 			if (
 				key === 'tags' &&
-				!Object.prototype.hasOwnProperty.call(frontmatter, 'tags') &&
+				!Object.prototype.hasOwnProperty.call(fm, 'tags') &&
 				!Array.isArray(value.data)
 			) {
-				frontmatter[key] = [value.data];
+				fm[key] = [value.data];
 				continue;
 			}
 
-			if (!frontmatter[key] || overwrite) {
-				frontmatter[key] = value.data;
+			if (!fm[key] || overwrite) {
+				fm[key] = value.data;
 				continue;
 			}
 
 			// Compare types to see if they can be appended.
 			const type1 = value.type;
-			const existingValue = frontmatter[key];
+			const existingValue = fm[key];
 			const type2 = Array.isArray(existingValue) ? 'list' : typeof existingValue === 'number' ? 'number' : typeof existingValue === 'boolean' ? 'checkbox' : 'text';
 
 			if (canBeAppended(type1, type2)) {
-				if (frontmatter[key] === value.data) continue; // Leave identical values alone.
+				if (fm[key] === value.data) continue; // Leave identical values alone.
 				if (!value.data) continue; // Do not merge empty values.
 
-				const arr = mergeIntoArrays(frontmatter[key], value.data);
-				frontmatter[key] = arr;
+				const arr = mergeIntoArrays(fm[key] as string | string[], value.data);
+				fm[key] = arr;
 				continue;
 			} else {
-				frontmatter[key] = value.data;
+				fm[key] = value.data;
 				continue;
 			}
 		}
@@ -63,8 +64,9 @@ export async function addProperties(
  */
 export async function removeProperties(app: App, file: TFile, props: string[]): Promise<void> {
 	await app.fileManager.processFrontMatter(file, (frontmatter) => {
+		const fm = frontmatter as Record<string, unknown>;
 		for (const prop of props) {
-			frontmatter[prop] = undefined; // "Hacky" workaround, commented code will work in later version."
+			fm[prop] = undefined; // "Hacky" workaround, commented code will work in later version."
 		}
 	});
 }
@@ -92,4 +94,5 @@ function mergeIntoArrays(...args: (string | string[])[]): string[] {
 
 	return unique;
 }
+
 

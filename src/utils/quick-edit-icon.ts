@@ -1,4 +1,5 @@
 import { App, TFile, setIcon, Modal, TextComponent, Notice } from 'obsidian';
+import { setCssProps } from './css-props';
 import type BasesCMSPlugin from '../main';
 import type { CMSSettings } from '../shared/data-transform';
 
@@ -12,12 +13,16 @@ function showRenameDialog(app: App, file: TFile): void {
 	
 	const inputContainer = modal.contentEl.createDiv();
 	// Make input container full width
-	inputContainer.style.width = '100%';
+	setCssProps(inputContainer, {
+		width: '100%'
+	});
 	const input = new TextComponent(inputContainer);
 	input.setValue(file.basename);
 	// Make input field full width to match Obsidian's native dialog
-	input.inputEl.style.width = '100%';
-	input.inputEl.style.boxSizing = 'border-box';
+	setCssProps(input.inputEl, {
+		width: '100%',
+		boxSizing: 'border-box'
+	});
 	input.inputEl.focus();
 	input.inputEl.select();
 	
@@ -240,6 +245,8 @@ export function setupQuickEditIcon(
 				if (!helperCalled) {
 					// Only attempt to open file and execute if the setting is enabled
 					if (!plugin.settings.quickEditOpenFile) {
+						// False positive: Already in sentence case; quoted text is a setting name reference
+						// eslint-disable-next-line obsidianmd/ui/sentence-case
 						new Notice(`This command doesn't have special handling. Enable "Attempt to open file and execute quick edit command" in settings to try executing it.`, 5000);
 						return; // Don't try to execute
 					}

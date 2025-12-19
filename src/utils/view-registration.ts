@@ -50,7 +50,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
  */
 function getCMSViewOptions(): () => unknown[] {
 	// Dynamic import to avoid circular dependency
-	// eslint-disable-next-line @typescript-eslint/no-require-imports -- Need dynamic import for circular dependency
+	// eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef -- Need dynamic import for circular dependency
 	const { getCMSViewOptions } = require('../shared/settings-schema') as { getCMSViewOptions: () => unknown[] };
 	return getCMSViewOptions;
 }

@@ -4,6 +4,7 @@
  */
 
 import { BasesView, BasesEntry, QueryController, TFile } from 'obsidian';
+import { setCssProps } from '../utils/css-props';
 import type BasesCMSPlugin from '../main';
 import { transformBasesEntries, type CardData, type CMSSettings } from '../shared/data-transform';
 import { readCMSSettings } from '../shared/settings-schema';
@@ -111,9 +112,11 @@ export class BasesCMSView extends BasesView {
 					// Show loading state instead of blank screen
 					if (this.containerEl.children.length === 0) {
 						const loadingEl = this.containerEl.createDiv('bases-cms-loading');
-						loadingEl.setText('Loading...');
-						loadingEl.style.padding = '20px';
-						loadingEl.style.textAlign = 'center';
+					loadingEl.setText('Loading...');
+					setCssProps(loadingEl, {
+							padding: '20px',
+							textAlign: 'center'
+						});
 					}
 					// Retry after a short delay
 					setTimeout(() => {
@@ -219,9 +222,11 @@ export class BasesCMSView extends BasesView {
 					// No data - show empty state instead of blank screen
 					this.containerEl.empty();
 					const emptyEl = this.containerEl.createDiv('bases-cms-empty');
-					emptyEl.setText('No entries found');
-					emptyEl.style.padding = '20px';
-					emptyEl.style.textAlign = 'center';
+				emptyEl.setText('No entries found');
+				setCssProps(emptyEl, {
+						padding: '20px',
+						textAlign: 'center'
+					});
 					this.isLoading = false;
 					return;
 				}
@@ -290,10 +295,12 @@ export class BasesCMSView extends BasesView {
 					console.error('Bases CMS: No cards rendered despite having entries!');
 					this.containerEl.empty();
 					const errorEl = this.containerEl.createDiv('bases-cms-error');
-					errorEl.setText('Error rendering cards. Check console for details.');
-					errorEl.style.padding = '20px';
-					errorEl.style.textAlign = 'center';
-					errorEl.style.color = 'var(--text-error)';
+				errorEl.setText('Error rendering cards. Check console for details.');
+				setCssProps(errorEl, {
+						padding: '20px',
+						textAlign: 'center',
+						color: 'var(--text-error)'
+					});
 					this.isLoading = false;
 					return;
 				}
@@ -349,11 +356,13 @@ export class BasesCMSView extends BasesView {
 					if (isEmpty) {
 						this.containerEl.empty();
 						const errorEl = this.containerEl.createDiv('bases-cms-error');
-						errorEl.setText('Error loading view. Check console for details.');
-						errorEl.style.padding = '20px';
-						errorEl.style.textAlign = 'center';
-						errorEl.style.color = 'var(--text-error)';
-						errorEl.style.margin = '20px';
+					errorEl.setText('Error loading view. Check console for details.');
+					setCssProps(errorEl, {
+							padding: '20px',
+							textAlign: 'center',
+							color: 'var(--text-error)',
+							margin: '20px'
+						});
 					}
 					// If container has content, don't clear it - just log the error
 				}
@@ -622,10 +631,12 @@ export class BasesCMSView extends BasesView {
 			})();
 			
 			// Set initial background image (will be updated if GIF conversion is needed)
-			imageEmbedContainer.style.backgroundImage = `url("${url}")`;
-			imageEmbedContainer.style.backgroundSize = 'cover';
-			imageEmbedContainer.style.backgroundPosition = 'center center';
-			imageEmbedContainer.style.backgroundRepeat = 'no-repeat';
+		imageEmbedContainer.style.backgroundImage = `url("${url}")`;
+		setCssProps(imageEmbedContainer, {
+				backgroundSize: 'cover',
+				backgroundPosition: 'center center',
+				backgroundRepeat: 'no-repeat'
+			});
 		}
 	}
 

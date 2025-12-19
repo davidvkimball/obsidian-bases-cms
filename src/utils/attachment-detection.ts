@@ -33,7 +33,7 @@ export function getAttachmentsInNote(app: App, file: TFile): TFile[] {
 			const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
 			
 			for (const propName of imagePropertyNames) {
-				const propValue = frontmatter[propName];
+				const propValue = (frontmatter as Record<string, unknown>)[propName];
 				if (!propValue) continue;
 				
 				// Handle array of image paths
@@ -185,4 +185,5 @@ export async function findUniqueAttachments(
 	
 	return result;
 }
+
 

@@ -2,7 +2,6 @@
 Source: Based on Obsidian developer docs warnings, community patterns, and API best practices
 Last synced: See sync-status.json for authoritative sync dates
 Update frequency: Update as common issues are identified
-Applicability: Plugin
 -->
 
 # Common Pitfalls
@@ -326,7 +325,8 @@ project-root/
 **Why this matters**:
 - Having `main.ts` in both locations causes ambiguity - build tools don't know which one to use
 - This leads to build errors, confusion about which file is being compiled
-- The compiled `main.js` output goes to the root, but you should have only ONE source `main.ts`
+- The compiled `main.js` always outputs to `main.js` in the root directory
+- You should have only ONE source `main.ts`
 
 **Solution**: 
 - For simple plugins: Keep `main.ts` in root (like the sample plugin template)
@@ -451,6 +451,42 @@ await this.app.fileManager.trashFile(file);
 ```
 
 **ESLint rule**: `prefer-file-manager-trash-file` (from `eslint-plugin-obsidianmd`)
+
+### addSetting Callback Return Type
+
+**Problem**: Using expression body arrow functions with `addSetting` from `createSettingsGroup()` or `SettingGroup` causes "Promise returned in function argument" errors.
+
+**When This Applies**: This only affects plugins using `SettingGroup` (API 1.11.0+) or the `createSettingsGroup()` compatibility utility. If you use `new Setting(containerEl)` directly (the most common pattern), you don't have this issue.
+
+**Wrong**:
+```typescript
+group.addSetting(setting =>
+  setting.setName("Feature").addToggle(toggle => {
+    toggle.onChange(async (value) => {
+      await this.plugin.saveData(this.plugin.settings);
+    });
+  })
+);
+```
+
+**Why It Fails**: The expression body returns the result of the chain (a `Setting` object), but `addSetting` expects a callback that returns `void`. The type signature is `addSetting(cb: (setting: Setting) => void)`, so expression body syntax violates this contract.
+
+**Correct**:
+```typescript
+group.addSetting(setting => {
+  setting.setName("Feature").addToggle(toggle => {
+    toggle.onChange(async (value) => {
+      await this.plugin.saveData(this.plugin.settings);
+    });
+  });
+});
+```
+
+**Rule**: Always use block body `{ }` with `addSetting` when using `createSettingsGroup()`. This ensures the callback returns `void` as expected.
+
+**See also**: [linting-fixes-guide.md](linting-fixes-guide.md#critical-addsetting-callbacks-must-return-void) for detailed explanation and troubleshooting.
+
+**ESLint rule**: `no-floating-promises` / `promise-return-in-void-context` (from `eslint-plugin-obsidianmd`)
 
 ### Disabling TypeScript Rules for `any`
 

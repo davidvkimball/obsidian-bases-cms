@@ -4,13 +4,13 @@
  */
 
 import { BasesView, BasesEntry, QueryController, TFile } from 'obsidian';
+import { setCssProps } from '../utils/css-props';
 import type BasesCMSPlugin from '../main';
 import { transformBasesEntries, type CardData, type CMSSettings } from '../shared/data-transform';
 import { readCMSSettings } from '../shared/settings-schema';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
-import { loadSnippetsForEntries, loadImagesForEntries, loadEmbedImagesForEntries } from '../shared/content-loader';
+import { loadSnippetsForEntries, loadImagesForEntries } from '../shared/content-loader';
 import { SharedCardRenderer } from './shared-renderer';
-import { BATCH_SIZE } from '../shared/constants';
 import { BulkToolbar } from '../components/bulk-toolbar';
 import { setupNewNoteInterceptor } from '../utils/new-note-interceptor';
 import { PropertyToggleHandler } from '../utils/property-toggle-handler';
@@ -36,6 +36,8 @@ export class BasesCMSView extends BasesView {
 	private propertyToggleHandler: PropertyToggleHandler | null = null;
 	private scrollLayoutManager: ScrollLayoutManager;
 	private viewSwitchListener: ViewSwitchListener | null = null;
+	private settingsPollInterval: number | null = null;
+	private lastSettings: Partial<CMSSettings> | null = null;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: BasesCMSPlugin) {
 		super(controller);
@@ -64,22 +66,35 @@ export class BasesCMSView extends BasesView {
 			this.plugin.settings,
 			() => this.onDataUpdated()
 		);
-		} catch (error) {
+		} catch {
 			this.propertyToggleHandler = null;
 		}
 
 		try {
-		this.scrollLayoutManager = new ScrollLayoutManager(
-			this.containerEl,
-			this.app,
-			this.config as { get: (key: string) => unknown },
-			this.plugin.settings,
-			() => this.onDataUpdated(),
-			(cleanup) => this.register(cleanup)
-		);
-		} catch (error) {
-			// Re-throw - this is critical and view won't work without it
-			throw error;
+			// Check if config is available, otherwise use a safe fallback
+			const configToUse = (this.config && typeof (this.config as { get?: (key: string) => unknown }).get === 'function')
+				? (this.config as { get: (key: string) => unknown })
+				: { get: () => undefined };
+			
+			this.scrollLayoutManager = new ScrollLayoutManager(
+				this.containerEl,
+				this.app,
+				configToUse,
+				this.plugin.settings,
+				() => this.onDataUpdated(),
+				(cleanup) => this.register(cleanup)
+			);
+		} catch {
+			// Create a minimal fallback with a dummy config
+			const dummyConfig = { get: () => undefined };
+			this.scrollLayoutManager = new ScrollLayoutManager(
+				this.containerEl,
+				this.app,
+				dummyConfig,
+				this.plugin.settings,
+				() => this.onDataUpdated(),
+				(cleanup) => this.register(cleanup)
+			);
 		}
 
 		try {
@@ -93,7 +108,7 @@ export class BasesCMSView extends BasesView {
 			() => this.updateSelectionUI(),
 			(cleanup) => this.register(cleanup)
 		);
-		} catch (error) {
+		} catch {
 			this.viewSwitchListener = null;
 		}
 
@@ -108,8 +123,33 @@ export class BasesCMSView extends BasesView {
 	onDataUpdated(): void {
 		void (async () => {
 			try {
-				// Guard: return early if data not yet initialized (race condition with MutationObserver)
+				// Guard: wait for data to be ready - NEVER return early and leave blank screen
 				if (!this.data) {
+					// Show loading state instead of blank screen
+					if (this.containerEl.children.length === 0) {
+						const loadingEl = this.containerEl.createDiv('bases-cms-loading');
+						loadingEl.setText('Loading...');
+						setCssProps(loadingEl, {
+							padding: '20px',
+							textAlign: 'center'
+						});
+					}
+					// Retry after a short delay
+					setTimeout(() => {
+						if (this.data) {
+							this.onDataUpdated();
+						}
+					}, 100);
+					return;
+				}
+
+				// Ensure we have valid data structures
+				if (!this.data.groupedData || !this.data.data) {
+					setTimeout(() => {
+						if (this.data && this.data.groupedData && this.data.data) {
+							this.onDataUpdated();
+						}
+					}, 100);
 					return;
 				}
 
@@ -121,6 +161,15 @@ export class BasesCMSView extends BasesView {
 				this.config,
 				this.plugin.settings
 			);
+
+			// Update config reference in scroll layout manager if it's now available
+			if (this.config && typeof (this.config as { get?: (key: string) => unknown }).get === 'function') {
+				try {
+					this.scrollLayoutManager.updateConfig(this.config as { get: (key: string) => unknown });
+				} catch {
+					// Ignore - config update is optional
+				}
+			}
 
 			// Update grid layout using scroll layout manager
 			this.scrollLayoutManager.updateGridLayout(settings);
@@ -168,7 +217,7 @@ export class BasesCMSView extends BasesView {
 						this.plugin.settings,
 						(cleanup) => this.register(cleanup)
 					);
-				} catch (error) {
+				} catch {
 					// Failed to setup interceptor - continue anyway
 					(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup = true;
 				}
@@ -189,6 +238,7 @@ export class BasesCMSView extends BasesView {
 
 			// Render groups with headers
 			let displayedSoFar = 0;
+			
 			let totalCardsRendered = 0;
 			
 			for (const processedGroup of processedGroups) {
@@ -224,11 +274,20 @@ export class BasesCMSView extends BasesView {
 				for (let i = 0; i < cards.length; i++) {
 					const card = cards[i];
 					const entry = groupEntries[i];
-					this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
-					totalCardsRendered++;
+					try {
+						this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
+						totalCardsRendered++;
+					} catch {
+						// Continue rendering other cards even if one fails
+					}
 				}
 
 				displayedSoFar += entriesToDisplay;
+			}
+			
+			// CRITICAL: If no cards were rendered, show error instead of blank screen
+			if (totalCardsRendered === 0 && allEntries.length > 0) {
+				throw new Error('No cards were rendered despite having entries. Check card rendering logic.');
 			}
 			
 			// Images are now set via background-image in renderCard, so no batch loading needed
@@ -242,96 +301,227 @@ export class BasesCMSView extends BasesView {
 			// Setup infinite scroll and resize observer
 			this.scrollLayoutManager.setupInfiniteScroll(allEntries.length);
 			this.scrollLayoutManager.setupResizeObserver();
+			
+			// Setup settings polling to detect changes and refresh view
+			this.setupSettingsPolling(settings);
 
 			// Update selection UI
 			this.updateSelectionUI();
 
 				// Clear loading flag after async work completes
 				this.scrollLayoutManager.setIsLoading(false);
-			} catch (error) {
-				
+			} catch {
 				// Ensure loading flag is cleared even on error
 				try {
 					this.scrollLayoutManager.setIsLoading(false);
-				} catch (e) {
-					// Ignore errors in cleanup
-						}
+				} catch {
+					// Ignore cleanup errors
+				}
 				
 				// If container is empty due to error, show error message
 				if (this.containerEl && this.containerEl.isConnected) {
 					this.containerEl.empty();
 					const errorEl = this.containerEl.createDiv('bases-cms-error');
 					errorEl.setText('Error loading view. Check console for details.');
-					errorEl.style.padding = '20px';
-					errorEl.style.textAlign = 'center';
-					errorEl.style.color = 'var(--text-error)';
-					errorEl.style.margin = '20px';
+					setCssProps(errorEl, {
+						padding: '20px',
+						textAlign: 'center',
+						color: 'var(--text-error)',
+						margin: '20px'
+					});
 				}
 			}
 		})();
+	}
+
+	/**
+	 * Setup polling to detect settings changes and refresh view
+	 */
+	private setupSettingsPolling(initialSettings: CMSSettings): void {
+		// Only set up once
+		if (this.settingsPollInterval !== null) {
+			return;
+		}
+
+		// Store initial settings for comparison
+		this.lastSettings = {
+			descriptionProperty: initialSettings.descriptionProperty,
+			showTextPreview: initialSettings.showTextPreview,
+			fallbackToContent: initialSettings.fallbackToContent,
+			truncatePreviewProperty: initialSettings.truncatePreviewProperty,
+			imageProperty: initialSettings.imageProperty,
+			imageFormat: initialSettings.imageFormat,
+			fallbackToEmbeds: initialSettings.fallbackToEmbeds,
+			propertyDisplay1: initialSettings.propertyDisplay1,
+			propertyDisplay2: initialSettings.propertyDisplay2,
+			propertyDisplay3: initialSettings.propertyDisplay3,
+			propertyDisplay4: initialSettings.propertyDisplay4,
+			propertyDisplay5: initialSettings.propertyDisplay5,
+			propertyDisplay6: initialSettings.propertyDisplay6,
+			propertyDisplay7: initialSettings.propertyDisplay7,
+			propertyDisplay8: initialSettings.propertyDisplay8,
+			propertyDisplay9: initialSettings.propertyDisplay9,
+			propertyDisplay10: initialSettings.propertyDisplay10,
+			propertyDisplay11: initialSettings.propertyDisplay11,
+			propertyDisplay12: initialSettings.propertyDisplay12,
+			propertyDisplay13: initialSettings.propertyDisplay13,
+			propertyDisplay14: initialSettings.propertyDisplay14,
+		};
+
+		// Poll every 100ms to check for settings changes
+		this.settingsPollInterval = window.setInterval(() => {
+			if (!this.config || typeof this.config.get !== 'function') {
+				return; // Config not ready yet
+			}
+
+			const currentSettings = readCMSSettings(
+				this.config,
+				this.plugin.settings
+			);
+
+			// Skip if lastSettings is not initialized yet
+			if (!this.lastSettings) {
+				return;
+			}
+
+			// Check if any relevant settings have changed
+			const settingsChanged = 
+				this.lastSettings.descriptionProperty !== currentSettings.descriptionProperty ||
+				this.lastSettings.showTextPreview !== currentSettings.showTextPreview ||
+				this.lastSettings.fallbackToContent !== currentSettings.fallbackToContent ||
+				this.lastSettings.truncatePreviewProperty !== currentSettings.truncatePreviewProperty ||
+				this.lastSettings.imageProperty !== currentSettings.imageProperty ||
+				this.lastSettings.imageFormat !== currentSettings.imageFormat ||
+				this.lastSettings.fallbackToEmbeds !== currentSettings.fallbackToEmbeds ||
+				this.lastSettings.propertyDisplay1 !== currentSettings.propertyDisplay1 ||
+				this.lastSettings.propertyDisplay2 !== currentSettings.propertyDisplay2 ||
+				this.lastSettings.propertyDisplay3 !== currentSettings.propertyDisplay3 ||
+				this.lastSettings.propertyDisplay4 !== currentSettings.propertyDisplay4 ||
+				this.lastSettings.propertyDisplay5 !== currentSettings.propertyDisplay5 ||
+				this.lastSettings.propertyDisplay6 !== currentSettings.propertyDisplay6 ||
+				this.lastSettings.propertyDisplay7 !== currentSettings.propertyDisplay7 ||
+				this.lastSettings.propertyDisplay8 !== currentSettings.propertyDisplay8 ||
+				this.lastSettings.propertyDisplay9 !== currentSettings.propertyDisplay9 ||
+				this.lastSettings.propertyDisplay10 !== currentSettings.propertyDisplay10 ||
+				this.lastSettings.propertyDisplay11 !== currentSettings.propertyDisplay11 ||
+				this.lastSettings.propertyDisplay12 !== currentSettings.propertyDisplay12 ||
+				this.lastSettings.propertyDisplay13 !== currentSettings.propertyDisplay13 ||
+				this.lastSettings.propertyDisplay14 !== currentSettings.propertyDisplay14;
+
+			if (settingsChanged) {
+				// Clear caches when relevant settings change
+				if (this.lastSettings.descriptionProperty !== currentSettings.descriptionProperty ||
+					this.lastSettings.showTextPreview !== currentSettings.showTextPreview ||
+					this.lastSettings.fallbackToContent !== currentSettings.fallbackToContent ||
+					this.lastSettings.truncatePreviewProperty !== currentSettings.truncatePreviewProperty) {
+					// Clear snippet cache when text preview settings change
+					this.snippets = {};
+				}
+
+				if (this.lastSettings.imageProperty !== currentSettings.imageProperty ||
+					this.lastSettings.imageFormat !== currentSettings.imageFormat ||
+					this.lastSettings.fallbackToEmbeds !== currentSettings.fallbackToEmbeds) {
+					// Clear image cache when image settings change
+					this.images = {};
+					this.hasImageAvailable = {};
+				}
+
+				// Update last settings
+				this.lastSettings = {
+					descriptionProperty: currentSettings.descriptionProperty,
+					showTextPreview: currentSettings.showTextPreview,
+					fallbackToContent: currentSettings.fallbackToContent,
+					truncatePreviewProperty: currentSettings.truncatePreviewProperty,
+					imageProperty: currentSettings.imageProperty,
+					imageFormat: currentSettings.imageFormat,
+					fallbackToEmbeds: currentSettings.fallbackToEmbeds,
+					propertyDisplay1: currentSettings.propertyDisplay1,
+					propertyDisplay2: currentSettings.propertyDisplay2,
+					propertyDisplay3: currentSettings.propertyDisplay3,
+					propertyDisplay4: currentSettings.propertyDisplay4,
+					propertyDisplay5: currentSettings.propertyDisplay5,
+					propertyDisplay6: currentSettings.propertyDisplay6,
+					propertyDisplay7: currentSettings.propertyDisplay7,
+					propertyDisplay8: currentSettings.propertyDisplay8,
+					propertyDisplay9: currentSettings.propertyDisplay9,
+					propertyDisplay10: currentSettings.propertyDisplay10,
+					propertyDisplay11: currentSettings.propertyDisplay11,
+					propertyDisplay12: currentSettings.propertyDisplay12,
+					propertyDisplay13: currentSettings.propertyDisplay13,
+					propertyDisplay14: currentSettings.propertyDisplay14,
+				};
+
+				// Trigger view refresh
+				this.onDataUpdated();
+			}
+		}, 100);
+
+		// Register cleanup
+		this.register(() => {
+			if (this.settingsPollInterval !== null) {
+				window.clearInterval(this.settingsPollInterval);
+				this.settingsPollInterval = null;
+			}
+		});
 	}
 
 	private async loadContentForEntries(
 		entries: BasesEntry[],
 		settings: CMSSettings
 	): Promise<void> {
-		try {
-			// Load snippets for text preview
-			if (settings.showTextPreview) {
-				const snippetEntries = entries
-					.filter(entry => !(entry.file.path in this.snippets))
-					.map(entry => {
-						const file = this.app.vault.getAbstractFileByPath(entry.file.path);
-						if (!(file instanceof TFile)) return null;
-						const descValue = getFirstBasesPropertyValue(entry, settings.descriptionProperty) as { data?: unknown } | null;
-						return {
-							path: entry.file.path,
-							file,
-							descriptionData: descValue?.data
-						};
-					})
-					.filter((e): e is { path: string; file: TFile; descriptionData: unknown } => e !== null);
+		// Load snippets for text preview
+		if (settings.showTextPreview) {
+			const snippetEntries = entries
+				.filter(entry => !(entry.file.path in this.snippets))
+				.map(entry => {
+					const file = this.app.vault.getAbstractFileByPath(entry.file.path);
+					if (!(file instanceof TFile)) return null;
+					const descValue = getFirstBasesPropertyValue(entry, settings.descriptionProperty) as { data?: unknown } | null;
+					return {
+						path: entry.file.path,
+						file,
+						descriptionData: descValue?.data
+					};
+				})
+				.filter((e): e is { path: string; file: TFile; descriptionData: unknown } => e !== null);
 
-				if (snippetEntries.length > 0) {
-					await loadSnippetsForEntries(
-						snippetEntries,
-						settings.fallbackToContent,
-						false,
-						this.app,
-						this.snippets,
-						settings.truncatePreviewProperty
-					);
-				}
+			if (snippetEntries.length > 0) {
+				await loadSnippetsForEntries(
+					snippetEntries,
+					settings.fallbackToContent,
+					false,
+					this.app,
+					this.snippets,
+					settings.truncatePreviewProperty
+				);
 			}
+		}
 
-			// Load images for thumbnails
-			if (settings.imageFormat !== 'none') {
-				const imageEntries = entries
-					.filter(entry => !(entry.file.path in this.images))
-					.map(entry => {
-						const file = this.app.vault.getAbstractFileByPath(entry.file.path);
-						if (!(file instanceof TFile)) return null;
-						const imagePropertyValues = getAllBasesImagePropertyValues(entry, settings.imageProperty);
-						return {
-							path: entry.file.path,
-							file,
-							imagePropertyValues: imagePropertyValues as unknown[]
-						};
-					})
-					.filter((e): e is NonNullable<typeof e> => e !== null);
+		// Load images for thumbnails
+		if (settings.imageFormat !== 'none') {
+			const imageEntries = entries
+				.filter(entry => !(entry.file.path in this.images))
+				.map(entry => {
+					const file = this.app.vault.getAbstractFileByPath(entry.file.path);
+					if (!(file instanceof TFile)) return null;
+					const imagePropertyValues = getAllBasesImagePropertyValues(entry, settings.imageProperty);
+					return {
+						path: entry.file.path,
+						file,
+						imagePropertyValues: imagePropertyValues as unknown[]
+					};
+				})
+				.filter((e): e is NonNullable<typeof e> => e !== null);
 
-				if (imageEntries.length > 0) {
-					await loadImagesForEntries(
-						imageEntries,
-						settings.fallbackToEmbeds,
-						this.app,
-						this.images,
-						this.hasImageAvailable
-					);
-				}
+			if (imageEntries.length > 0) {
+				await loadImagesForEntries(
+					imageEntries,
+					settings.fallbackToEmbeds,
+					this.app,
+					this.images,
+					this.hasImageAvailable
+				);
 			}
-		} catch (error) {
-			throw error; // Re-throw to be caught by outer handler
 		}
 	}
 
@@ -459,10 +649,12 @@ export class BasesCMSView extends BasesView {
 			})();
 			
 			// Set initial background image (will be updated if GIF conversion is needed)
-			imageEmbedContainer.style.backgroundImage = `url("${url}")`;
-			imageEmbedContainer.style.backgroundSize = 'cover';
-			imageEmbedContainer.style.backgroundPosition = 'center center';
-			imageEmbedContainer.style.backgroundRepeat = 'no-repeat';
+		imageEmbedContainer.style.backgroundImage = `url("${url}")`;
+		setCssProps(imageEmbedContainer, {
+				backgroundSize: 'cover',
+				backgroundPosition: 'center center',
+				backgroundRepeat: 'no-repeat'
+			});
 		}
 	}
 
@@ -674,6 +866,10 @@ export class BasesCMSView extends BasesView {
 		if (this.viewSwitchListener) {
 		this.viewSwitchListener.cleanup();
 		}
+		if (this.settingsPollInterval !== null) {
+			window.clearInterval(this.settingsPollInterval);
+			this.settingsPollInterval = null;
+		}
 		this.propertyObservers.forEach(obs => obs.disconnect());
 		this.propertyObservers = [];
 		if (this.bulkToolbar) {
@@ -752,7 +948,7 @@ export class BasesCMSView extends BasesView {
 					await this.app.workspace.openLinkText(newFile.path, '', false);
 					return true;
 				}
-			} catch (error) {
+			} catch {
 				// Error creating new note - silently fail
 			}
 		}

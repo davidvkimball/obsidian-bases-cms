@@ -4,7 +4,6 @@
  */
 
 import { App, TFile } from 'obsidian';
-import type { CMSSettings } from '../shared/data-transform';
 import { readCMSSettings } from '../shared/settings-schema';
 import type { BasesCMSSettings } from '../types';
 
@@ -76,14 +75,16 @@ export class PropertyToggleHandler {
 						: 'draft';
 					
 					await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-						frontmatter[cleanConfigProperty] = value;
+						const fm = frontmatter as Record<string, unknown>;
+						fm[cleanConfigProperty] = value;
 					});
 					shouldRefresh = true;
 				}
 			} else {
 				// Normal property toggle - update frontmatter
 				await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-					frontmatter[cleanProperty] = value;
+					const fm = frontmatter as Record<string, unknown>;
+					fm[cleanProperty] = value;
 				});
 				shouldRefresh = true;
 			}
@@ -106,4 +107,5 @@ export class PropertyToggleHandler {
 		}
 	}
 }
+
 
