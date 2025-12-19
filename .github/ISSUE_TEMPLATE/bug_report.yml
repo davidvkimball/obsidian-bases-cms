@@ -1,0 +1,115 @@
+name: Bug Report
+description: File a bug report to help us improve
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug! Please fill out the information below to help us address the issue effectively.
+        
+        **Before reporting, please:**
+        - Check if the issue has already been reported
+        - Make sure you're using the latest version
+        - Try to reproduce the issue with only this plugin enabled
+
+  - type: dropdown
+    id: isolation-check
+    attributes:
+      label: Is the bug present when only this plugin is enabled?
+      description: This helps isolate the issue from plugin conflicts. Disable all other plugins and test.
+      options:
+        - Yes, confirmed with only this plugin enabled
+        - No, requires other plugins to reproduce
+        - Not tested / Unsure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Plugin Version
+      description: What version of the plugin are you using? (Check manifest.json or Settings → Community Plugins)
+      placeholder: "e.g., 1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: obsidian-version
+    attributes:
+      label: Obsidian Version
+      description: What version of Obsidian are you using?
+      placeholder: "e.g., 1.5.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe the bug in detail...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: A clear description of what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: A clear description of what actually happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: debug-info
+    attributes:
+      label: Debug Information
+      description: |
+        Please provide debug information from the Developer Console:
+        1. Open Settings → Advanced → Developer Tools
+        2. Go to the Console tab
+        3. Copy any error messages or warnings related to this plugin
+        4. Paste them here
+      placeholder: Paste console errors/warnings here...
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or information about the problem here
+      placeholder: Screenshots, logs, or other relevant information...
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues to make sure this bug hasn't been reported before
+          required: true
+        - label: I have tested with the latest version of the plugin
+          required: true
+        - label: I have tested with only this plugin enabled
+          required: false
