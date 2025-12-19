@@ -58,10 +58,9 @@ export async function processImagePaths(
 		if (cleanPath.length === 0) continue;
 
 		if (isExternalUrl(cleanPath)) {
-			// External URL - validate extension if present
-			if (hasValidImageExtension(cleanPath) || !cleanPath.includes('.')) {
-				externalUrlCandidates.push(cleanPath);
-			}
+			// External URL - accept all external URLs and validate by actually loading them
+			// This handles Open Graph URLs and other image URLs that don't have file extensions
+			externalUrlCandidates.push(cleanPath);
 		} else {
 			// Internal path - validate extension
 			if (hasValidImageExtension(cleanPath)) {
