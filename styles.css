@@ -425,7 +425,6 @@ settings:
 
 /**
  * Bases CMS Plugin Styles
- * Based on Dynamic Views card styling
  */
 
 /* ============================================
@@ -457,12 +456,12 @@ settings:
 
 .bases-cms-grid {
 	display: grid;
-	gap: var(--bases-cms-card-spacing, var(--dynamic-views-card-spacing, 8px));
+	gap: var(--bases-cms-card-spacing, 8px);
 	align-items: stretch;
 	width: 100%;
 	max-width: 100%;
 	box-sizing: border-box;
-	padding: var(--bases-cms-card-padding-container, var(--dynamic-views-card-padding-container, var(--size-4-3)));
+	padding: var(--bases-cms-card-padding-container, var(--size-4-3));
 	grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width, 300px), 1fr));
 }
 
@@ -515,14 +514,14 @@ body[style*="--bases-cms-min-grid-columns: '2'"] .bases-cms-grid {
 .bases-cms-grid .card .card-content ~ .card-properties,
 .bases-cms-grid .card .card-title ~ .card-properties {
 	margin-top: auto;
-	padding-top: var(--bases-cms-element-spacing, var(--dynamic-views-element-spacing, 8px));
+	padding-top: var(--bases-cms-element-spacing, 8px);
 }
 
 .bases-cms .card {
-	border: 1px solid var(--bases-cms-card-border-color, var(--dynamic-views-card-border-color, var(--background-modifier-border)));
-	border-radius: var(--bases-cms-card-border-radius, var(--dynamic-views-card-border-radius, 8px));
-	padding: var(--bases-cms-card-padding, var(--dynamic-views-card-padding, 12px)) !important;
-	margin: var(--bases-cms-card-spacing, var(--dynamic-views-card-spacing, 8px)) 0;
+	border: 1px solid var(--bases-cms-card-border-color, var(--background-modifier-border));
+	border-radius: var(--bases-cms-card-border-radius, 8px);
+	padding: var(--bases-cms-card-padding, 12px) !important;
+	margin: var(--bases-cms-card-spacing, 8px) 0;
 	background-color: var(--background-primary-alt);
 	break-inside: avoid;
 	page-break-inside: avoid;
@@ -542,7 +541,7 @@ body.bases-cms-card-background-custom .bases-cms .card {
 
 /* Global spacing between card elements */
 .bases-cms .card > * + * {
-	margin-top: var(--bases-cms-element-spacing, var(--dynamic-views-element-spacing, 8px));
+	margin-top: var(--bases-cms-element-spacing, 8px);
 }
 
 /* Exclude absolutely positioned elements from spacing */
@@ -565,7 +564,7 @@ body.bases-cms-card-background-custom .bases-cms .card {
 
 /* Ensure cover image respects card border-radius when selected */
 .bases-cms .card.selected.image-format-cover .card-cover {
-	border-radius: var(--bases-cms-card-border-radius, var(--dynamic-views-card-border-radius, 8px)) var(--bases-cms-card-border-radius, var(--dynamic-views-card-border-radius, 8px)) 0 0;
+	border-radius: var(--bases-cms-card-border-radius, 8px) var(--bases-cms-card-border-radius, 8px) 0 0;
 }
 
 /* Selection checkbox */
@@ -606,15 +605,15 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 
 .bases-cms .card-title {
 	font-weight: calc(var(--font-weight) + var(--bold-modifier));
-	color: var(--dynamic-views-title-color, var(--color-base-100));
-	font-family: var(--dynamic-views-title-font, inherit);
-	font-size: var(--dynamic-views-title-font-size, var(--font-ui-medium));
+	color: var(--bases-cms-title-color, var(--color-base-100));
+	font-family: var(--bases-cms-title-font, inherit);
+	font-size: var(--bases-cms-title-font-size, var(--font-ui-medium));
 	max-width: 100%;
 	word-break: break-word;
 	text-align: left;
 	margin: 0;
 	display: -webkit-box;
-	-webkit-line-clamp: var(--dynamic-views-title-lines, 2);
+	-webkit-line-clamp: var(--bases-cms-title-lines, 2);
 	-webkit-box-orient: vertical;
 	overflow: hidden;
 	line-height: var(--line-height-tight);
@@ -651,7 +650,7 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 .bases-cms .card-content {
 	display: flex;
 	flex-direction: column;
-	gap: var(--bases-cms-element-spacing, var(--dynamic-views-element-spacing, 8px));
+	gap: var(--bases-cms-element-spacing, 8px);
 }
 
 /* For thumbnail format, use row layout for thumbnail + text side by side */
@@ -681,13 +680,13 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 .bases-cms .card.image-format-thumbnail.thumbnail-top .card-thumbnail,
 .bases-cms .card.image-format-thumbnail.thumbnail-bottom .card-thumbnail {
 	width: 100%;
-	height: calc(100% / var(--dynamic-views-thumbnail-aspect-ratio, 1.00));
+	height: calc(100% / var(--bases-cms-thumbnail-aspect-ratio, 1.00));
 }
 
 .bases-cms .card-text-wrapper {
 	display: flex;
 	flex-direction: column;
-	gap: var(--bases-cms-element-spacing, var(--dynamic-views-element-spacing, 8px));
+	gap: var(--bases-cms-element-spacing, 8px);
 	flex: 1;
 	min-width: 0;
 	min-height: 0;
@@ -699,13 +698,13 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 }
 
 .bases-cms .card-text-preview {
-	color: var(--dynamic-views-text-preview-color, var(--text-muted));
-	font-family: var(--dynamic-views-text-preview-font, inherit);
-	font-size: var(--dynamic-views-text-preview-font-size, var(--bases-table-font-size));
+	color: var(--bases-cms-text-preview-color, var(--text-muted));
+	font-family: var(--bases-cms-text-preview-font, inherit);
+	font-size: var(--bases-cms-text-preview-font-size, var(--bases-table-font-size));
 	flex: 1;
 	min-width: 0;
 	display: -webkit-box;
-	-webkit-line-clamp: var(--dynamic-views-text-preview-lines, 5);
+	-webkit-line-clamp: var(--bases-cms-text-preview-lines, 5);
 	-webkit-box-orient: vertical;
 	overflow: hidden;
 	line-height: 1.4;
@@ -720,18 +719,18 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 
 .bases-cms .card-thumbnail {
 	flex-shrink: 0;
-	width: var(--dynamic-views-thumbnail-size, 80px);
-	height: calc(var(--dynamic-views-thumbnail-size, 80px) / var(--dynamic-views-thumbnail-aspect-ratio, 1.00));
+	width: var(--bases-cms-thumbnail-size, 80px);
+	height: calc(var(--bases-cms-thumbnail-size, 80px) / var(--bases-cms-thumbnail-aspect-ratio, 1.00));
 	overflow: hidden;
-	border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
+	border-radius: var(--bases-cms-thumbnail-border-radius, 4px);
 	pointer-events: none;
 }
 
 .bases-cms .card-thumbnail-placeholder {
 	flex-shrink: 0;
-	width: var(--dynamic-views-thumbnail-size, 80px);
-	height: calc(var(--dynamic-views-thumbnail-size, 80px) / var(--dynamic-views-thumbnail-aspect-ratio, 1.00));
-	border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
+	width: var(--bases-cms-thumbnail-size, 80px);
+	height: calc(var(--bases-cms-thumbnail-size, 80px) / var(--bases-cms-thumbnail-aspect-ratio, 1.00));
+	border-radius: var(--bases-cms-thumbnail-border-radius, 4px);
 	background-color: var(--background-modifier-border);
 }
 
@@ -780,12 +779,12 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 }
 
 .bases-cms .card.image-format-cover:has(.card-cover) .card-title {
-	margin-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
+	margin-top: calc(var(--bases-cms-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
 }
 
 /* When placeholder exists, push title down similar to cover image */
 .bases-cms .card.image-format-cover:has(.card-cover-placeholder) .card-title {
-	margin-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
+	margin-top: calc(var(--bases-cms-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
 }
 
 /* Title is always shown - no special handling needed for missing titles */
@@ -796,8 +795,8 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	left: 0;
 	width: 100% !important;
 	height: 0;
-	padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%) !important;
-	border-radius: var(--dynamic-views-card-border-radius, 8px) var(--dynamic-views-card-border-radius, 8px) 0 0;
+	padding-top: calc(var(--bases-cms-image-aspect-ratio, 0.55) * 100%) !important;
+	border-radius: var(--bases-cms-card-border-radius, 8px) var(--bases-cms-card-border-radius, 8px) 0 0;
 	margin: 0;
 	overflow: visible;
 	/* Account for selected card's box-shadow */
@@ -812,8 +811,8 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	left: 0;
 	width: 100% !important;
 	height: 0;
-	padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%) !important;
-	border-radius: var(--dynamic-views-card-border-radius, 8px) var(--dynamic-views-card-border-radius, 8px) 0 0;
+	padding-top: calc(var(--bases-cms-image-aspect-ratio, 0.55) * 100%) !important;
+	border-radius: var(--bases-cms-card-border-radius, 8px) var(--bases-cms-card-border-radius, 8px) 0 0;
 	background-color: var(--background-modifier-border);
 	margin: 0;
 	overflow: visible;
@@ -1005,26 +1004,26 @@ body.bases-cms-badge-style-custom .bases-cms .card-status-badge.status-published
    ============================================ */
 
 .bases-cms .card-properties {
-	margin-top: var(--bases-cms-element-spacing, var(--dynamic-views-element-spacing, 8px));
+	margin-top: var(--bases-cms-element-spacing, 8px);
 	flex-shrink: 0;
 }
 
 /* Top property groups appear before content */
 .bases-cms .card-properties.properties-top {
 	margin-top: 0;
-	margin-bottom: var(--bases-cms-element-spacing, var(--dynamic-views-element-spacing, 8px));
+	margin-bottom: var(--bases-cms-element-spacing, 8px);
 }
 
 /* Bottom property groups appear after content */
 .bases-cms .card-properties.properties-bottom {
-	margin-top: var(--bases-cms-element-spacing, var(--dynamic-views-element-spacing, 8px));
+	margin-top: var(--bases-cms-element-spacing, 8px);
 	margin-bottom: 0;
 }
 
 .bases-cms .properties-4field {
 	display: flex;
 	flex-direction: column;
-	gap: var(--bases-cms-element-spacing, var(--dynamic-views-element-spacing, 8px));
+	gap: var(--bases-cms-element-spacing, 8px);
 }
 
 .bases-cms .property-row {
@@ -1036,7 +1035,7 @@ body.bases-cms-badge-style-custom .bases-cms .card-status-badge.status-published
 
 .bases-cms .property-row-side-by-side {
 	flex-direction: row;
-	gap: var(--bases-cms-element-spacing, var(--dynamic-views-element-spacing, 8px));
+	gap: var(--bases-cms-element-spacing, 8px);
 }
 
 .bases-cms .property-field {
@@ -1070,8 +1069,8 @@ body.bases-cms-badge-style-custom .bases-cms .card-status-badge.status-published
 
 .bases-cms .property-content {
 	font-family: var(--bases-cms-property-master-font, inherit) !important;
-	font-size: var(--bases-cms-property-master-font-size, var(--dynamic-views-property-master-font-size, 0.9em)) !important;
-	color: var(--dynamic-views-property-master-color, var(--text-muted));
+	font-size: var(--bases-cms-property-master-font-size, 0.9em) !important;
+	color: var(--bases-cms-property-master-color, var(--text-muted));
 	word-break: break-word;
 	overflow-wrap: break-word;
 	overflow: visible;

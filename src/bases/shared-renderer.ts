@@ -1,6 +1,5 @@
 /**
  * Shared Card Renderer for CMS Views
- * Based on Dynamic Views but with CMS-specific features
  */
 
 import { App, BasesEntry, TFile, Menu } from 'obsidian';
@@ -297,15 +296,15 @@ export class SharedCardRenderer {
 				const wrapperRatio = aspectRatio / (aspectRatio + 1);
 				const elementSpacing = 8;
 
-				cardEl.style.setProperty('--dynamic-views-wrapper-ratio', wrapperRatio.toString());
+				cardEl.style.setProperty('--bases-cms-wrapper-ratio', wrapperRatio.toString());
 
 				const updateWrapperDimensions = () => {
 					const cardWidth = cardEl.offsetWidth;
 					const targetWidth = Math.floor(wrapperRatio * cardWidth);
 					const paddingValue = targetWidth + elementSpacing;
 
-					cardEl.style.setProperty('--dynamic-views-side-cover-width', `${targetWidth}px`);
-					cardEl.style.setProperty('--dynamic-views-side-cover-content-padding', `${paddingValue}px`);
+					cardEl.style.setProperty('--bases-cms-side-cover-width', `${targetWidth}px`);
+					cardEl.style.setProperty('--bases-cms-side-cover-content-padding', `${paddingValue}px`);
 
 					return { cardWidth, targetWidth, paddingValue };
 				};
@@ -321,8 +320,8 @@ export class SharedCardRenderer {
 							const newTargetWidth = Math.floor(wrapperRatio * newCardWidth);
 							const newPaddingValue = newTargetWidth + elementSpacing;
 
-							cardEl.style.setProperty('--dynamic-views-side-cover-width', `${newTargetWidth}px`);
-							cardEl.style.setProperty('--dynamic-views-side-cover-content-padding', `${newPaddingValue}px`);
+							cardEl.style.setProperty('--bases-cms-side-cover-width', `${newTargetWidth}px`);
+							cardEl.style.setProperty('--bases-cms-side-cover-content-padding', `${newPaddingValue}px`);
 						}
 					});
 					resizeObserver.observe(cardEl);

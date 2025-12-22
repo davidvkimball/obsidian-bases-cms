@@ -1,6 +1,5 @@
 /**
  * Bases CMS View
- * Based on Dynamic Views grid implementation
  */
 
 import { BasesView, BasesEntry, QueryController, TFile } from 'obsidian';
@@ -197,7 +196,7 @@ export class BasesCMSView extends BasesView {
 				remainingCount -= entriesToTake;
 			}
 
-			// Load snippets and images ONLY for displayed entries (EXACTLY like dynamic-views)
+			// Load snippets and images ONLY for displayed entries
 			await this.loadContentForEntries(visibleEntries, settings);
 
 			// Set up interceptor once config is available (only on first call)
@@ -226,7 +225,7 @@ export class BasesCMSView extends BasesView {
 			// Update card renderer with config (now available)
 			(this.cardRenderer as unknown as { basesConfig?: { get?: (key: string) => unknown } }).basesConfig = this.config;
 
-			// Clear and re-render (EXACTLY like dynamic-views - after content is loaded)
+			// Clear and re-render after content is loaded
 			this.containerEl.empty();
 
 			// Disconnect old property observers before re-rendering

@@ -147,7 +147,7 @@ export class ScrollLayoutManager {
 
 			// Set CSS variables on container - CSS Grid auto-fill handles column snapping
 			this.containerEl.style.setProperty('--card-min-width', `${cardMinWidth}px`);
-			this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(imageAspectRatio));
+			this.containerEl.style.setProperty('--bases-cms-image-aspect-ratio', String(imageAspectRatio));
 			
 			// Track last values for polling
 			this.lastCardSize = cardMinWidth;
@@ -179,7 +179,7 @@ export class ScrollLayoutManager {
 			if (this.lastCardSize !== currentCardSize || this.lastImageAspectRatio !== currentImageAspectRatio) {
 				// Update grid layout immediately when settings change
 				this.containerEl.style.setProperty('--card-min-width', `${currentCardSize}px`);
-				this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(currentImageAspectRatio));
+				this.containerEl.style.setProperty('--bases-cms-image-aspect-ratio', String(currentImageAspectRatio));
 				
 				// Update tracked values
 				this.lastCardSize = currentCardSize;
@@ -199,7 +199,7 @@ export class ScrollLayoutManager {
 	updateGridLayout(settings: CMSSettings): void {
 		// Just set the card min width - CSS Grid auto-fill handles column snapping automatically
 		this.containerEl.style.setProperty('--card-min-width', `${settings.cardSize}px`);
-		this.containerEl.style.setProperty('--dynamic-views-image-aspect-ratio', String(settings.imageAspectRatio));
+		this.containerEl.style.setProperty('--bases-cms-image-aspect-ratio', String(settings.imageAspectRatio));
 		
 		// Update tracked values to prevent unnecessary polling triggers
 		this.lastCardSize = settings.cardSize;

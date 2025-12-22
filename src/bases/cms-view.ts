@@ -160,7 +160,7 @@ export class BasesCMSView extends BasesView {
 				// Set CSS variables for grid layout
 				this.containerEl.style.setProperty("--grid-columns", String(cols));
 				this.containerEl.style.setProperty(
-					"--dynamic-views-image-aspect-ratio",
+					"--bases-cms-image-aspect-ratio",
 					String(settings.imageAspectRatio),
 				);
 
@@ -187,7 +187,7 @@ export class BasesCMSView extends BasesView {
 					remainingCount -= entriesToTake;
 				}
 
-				// Load snippets and images ONLY for displayed entries (EXACTLY like dynamic-views)
+				// Load snippets and images ONLY for displayed entries
 				await this.loadContentForEntries(visibleEntries, settings);
 
 				// Set up interceptor once config is available (only on first call)
@@ -216,7 +216,7 @@ export class BasesCMSView extends BasesView {
 				// Update card renderer with config (now available)
 				(this.cardRenderer as unknown as { basesConfig?: { get?: (key: string) => unknown } }).basesConfig = this.config;
 
-				// Clear and re-render (EXACTLY like dynamic-views - after content is loaded)
+				// Clear and re-render after content is loaded
 				// CRITICAL: Only clear if we have entries to render, otherwise we get blank screen
 				if (allEntries.length === 0 && groupedData.length === 0) {
 					// No data - show empty state instead of blank screen

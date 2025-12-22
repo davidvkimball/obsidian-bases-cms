@@ -1,6 +1,6 @@
 # Bases CMS for Obsidian
 
-A fork of [Dynamic Views](https://github.com/greetclammy/dynamic-views) that provides CMS-like functionality to Obsidian bases (also inspired by the [Multi-Properties](https://github.com/technohiker/obsidian-multi-properties) plugin). Transform your Obsidian bases into a powerful content management system with card-based views, bulk operations, and smart content management features.
+A plugin for [Obsidian](https://obsidian.md) inspired by [Dynamic Views](https://github.com/greetclammy/dynamic-views) and [Multi-Properties](https://github.com/technohiker/obsidian-multi-properties) that provides CMS-like functionality to bases. Transform your Obsidian bases into a powerful content management system with card-based views, bulk operations, and smart content management features.
 
 ![bases-cms-preview](https://github.com/user-attachments/assets/e20f2535-8991-4ccf-bb59-f97694e52c34)
 
