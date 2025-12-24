@@ -366,6 +366,42 @@ async loadSettings() {
 
 **Note**: Install and configure `eslint-plugin-obsidianmd` in your project to catch these issues automatically. See [environment.md](environment.md) for setup instructions.
 
+### ESLint Disable Comment Placement (AI Agents Often Get This Wrong!)
+
+**Problem**: AI coding assistants (Cursor, GitHub Copilot, ChatGPT, etc.) frequently place `eslint-disable` comments in the wrong location, causing the error: "Fixing eslint-disable comment placement. They must be directly before the line with the error:"
+
+**Why it happens**: AI agents often place disable comments several lines above the error, or add blank lines between the comment and the error line. ESLint requires the disable comment to be **directly on the line immediately before** the error line with **no blank lines or other code** in between.
+
+**Wrong** (common AI agent mistakes):
+```ts
+// ❌ Wrong - Comment too far above error
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+.setName('Show button')
+.setDesc('Display the button.') // Error is here, but disable is too far up
+
+// ❌ Wrong - Blank line between comment and error
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+
+.setDesc('Display the button.') // Blank line breaks it
+
+// ❌ Wrong - Comment on same line as error
+.setDesc('Display the button.') // eslint-disable-next-line obsidianmd/ui/sentence-case
+```
+
+**Correct**:
+```ts
+// ✅ Correct - Comment directly before error line (no blank lines!)
+// False positive: Already in sentence case
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+.setDesc('Display the button.') // Error is here, disable is right above
+```
+
+**Rule**: The `eslint-disable-next-line` comment **MUST** be on the line immediately before the error line. There can be NO blank lines or other code between them.
+
+**Solution**: Always verify placement after an AI agent adds a disable comment. If you see the placement error, move the comment to the line directly before the error.
+
+**See also**: [linting-fixes-guide.md](linting-fixes-guide.md) for detailed examples and formatting rules.
+
 ### Setting Styles Directly on DOM Elements
 
 **Problem**: Setting styles via `element.style.*` with static literals prevents proper theming and maintainability.

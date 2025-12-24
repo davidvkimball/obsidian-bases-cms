@@ -3,14 +3,16 @@
 	"version": "0.3.0",
 	"description": "Manage your notes in bases like a content management system.",
 	"main": "main.js",
+	"type": "module",
 	"scripts": {
+		"preinstall": "node scripts/npm-proxy.mjs",
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"lint": "node scripts/lint-wrapper.mjs",
-		"lint:fix": "node scripts/lint-wrapper.mjs --fix"
+		"lint:fix": "node scripts/lint-wrapper.mjs --fix",
+		"upgrade": "node scripts/upgrade.mjs"
 	},
-	"keywords": [],
 	"author": "David V. Kimball",
 	"license": "MIT",
 	"devDependencies": {
@@ -19,13 +21,14 @@
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "^8.33.1",
 		"@typescript-eslint/parser": "^8.33.1",
-		"esbuild": "0.17.3",
+		"esbuild": "0.25.5",
 		"eslint": "^9.39.1",
-		"eslint-plugin-obsidianmd": "^0.1.9",
-		"globals": "^14.0.0",
+		"eslint-plugin-obsidianmd": "0.1.9",
+		"globals": "14.0.0",
 		"obsidian": "latest",
 		"tslib": "2.4.0",
-		"typescript": "^4.8.4",
-		"typescript-eslint": "^8.35.1"
-	}
+		"typescript": "5.8.3",
+		"typescript-eslint": "8.35.1"
+	},
+	"packageManager": "pnpm@10.20.0"
 }

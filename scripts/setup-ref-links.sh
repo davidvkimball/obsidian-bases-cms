@@ -5,7 +5,10 @@
 # Change to project root (parent of scripts folder)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-cd "$PROJECT_ROOT"
+if ! cd "$PROJECT_ROOT"; then
+    echo "ERROR: Failed to change to project root: $PROJECT_ROOT"
+    exit 1
+fi
 
 # Check Node.js version (requires v16+)
 if ! command -v node &> /dev/null; then

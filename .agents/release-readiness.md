@@ -12,8 +12,8 @@ This document provides a comprehensive checklist to verify your plugin is ready 
 
 ## Quick Reference
 
-- **Developer Policies**: https://docs.obsidian.md/Developer+policies
-- **Plugin Guidelines**: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines
+- **Developer Policies**: [https://docs.obsidian.md/Developer+policies](https://docs.obsidian.md/Developer+policies)
+- **Plugin Guidelines**: [https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines)
 - **Release Process**: See [versioning-releases.md](versioning-releases.md)
 
 ## Automated Checks (AI Can Verify)
@@ -23,7 +23,7 @@ These checks can be performed automatically by reading files and scanning code:
 ### File Requirements
 
 - [ ] **`main.js`** exists (compiled output)
-  - Check `main.js` in root (created by `npm run build` or `npm run dev`)
+  - Check `main.js` in root (created by `pnpm build` or `pnpm dev`)
   - **Note**: All builds output to `main.js` in the root directory
 - [ ] **`manifest.json`** exists in project root with valid JSON structure
 - [ ] **`styles.css`** exists (if plugin uses custom styles) - optional but should be included if present

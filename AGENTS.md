@@ -200,12 +200,12 @@ These repositories are cloned to `../.ref/obsidian-dev/plugins/` (central locati
    - If user specifies an exact version (e.g., "1.2.3") → Use that version
    
 2. **Execute version bump**:
-   - Run `npm version <type>` where `<type>` is one of:
+   - Run `pnpm version <type>` where `<type>` is one of:
      - `patch` (default) - bumps patch version: 1.0.0 → 1.0.1
      - `minor` - bumps minor version: 1.0.0 → 1.1.0
      - `major` - bumps major version: 1.0.0 → 2.0.0
      - Or exact version: `1.2.3` (sets to that version)
-   - The `npm version` command automatically:
+   - The `pnpm version` command automatically:
      - Updates `package.json` version
      - Runs the `version` script in `package.json` (which updates `manifest.json` and `versions.json` via `version-bump.mjs`)
      - Stages `manifest.json` and `versions.json` for commit
@@ -213,10 +213,10 @@ These repositories are cloned to `../.ref/obsidian-dev/plugins/` (central locati
 3. **Verify**: Check that both `package.json` and `manifest.json` have the new version
 
 **Examples**:
-- `bump the version` → Runs `npm version patch` (default: 0.0.1 increment)
-- `bump version minor` → Runs `npm version minor`
-- `bump version major` → Runs `npm version major`
-- `bump version 1.2.3` → Runs `npm version 1.2.3`
+- `bump the version` → Runs `pnpm version patch` (default: 0.0.1 increment)
+- `bump version minor` → Runs `pnpm version minor`
+- `bump version major` → Runs `pnpm version major`
+- `bump version 1.2.3` → Runs `pnpm version 1.2.3`
 
 **Key files**: [versioning-releases.md](.agents/versioning-releases.md), `package.json`, `manifest.json`, `version-bump.mjs`
 

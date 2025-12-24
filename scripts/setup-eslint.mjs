@@ -7,7 +7,7 @@
  * - Updates package.json with ESLint 9 devDependencies and scripts
  * - Ensures TypeScript version is >=4.8.4 (required for ESLint compatibility)
  * - Generates eslint.config.mjs (flat config) configuration file
- * - Generates .npmrc configuration file
+ * - Generates .pnpmrc configuration file (if needed)
  * - Copies lint-wrapper.mjs for helpful linting success messages
  * 
  * Usage: node scripts/setup-eslint.mjs
@@ -48,8 +48,10 @@ import process from 'process';
 const args = process.argv.slice(2);
 const hasFix = args.includes('--fix');
 
-// Run ESLint
-const eslint = spawn('npx', ['eslint', '.', ...args], {
+// Run ESLint with --max-warnings 0 to fail on warnings too
+// This ensures we only show success when there are truly no issues
+const eslintArgs = ['eslint', '.', '--max-warnings', '0', ...args];
+const eslint = spawn('npx', eslintArgs, {
 	stdio: 'inherit',
 	shell: true
 });
@@ -93,9 +95,6 @@ function generateEslintConfig(customRules = {}) {
     .map(([key, value]) => {
       if (typeof value === 'string') {
         return `      "${key}": "${value}"`;
-      } else if (Array.isArray(value)) {
-        const valueStr = JSON.stringify(value);
-        return `      "${key}": ${valueStr}`;
       } else {
         const valueStr = JSON.stringify(value);
         return `      "${key}": ${valueStr}`;
@@ -111,7 +110,7 @@ import globals from "globals";
 
 export default defineConfig([
   {
-    ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "scripts/**"]
+    ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "scripts/**", ".ref/**"]
   },
   ...obsidianmd.configs.recommended,
   {
@@ -164,7 +163,9 @@ ${rulesString}
 `;
 }
 
-const NPMRC_CONTENT = "legacy-peer-deps=true\n";
+// Note: pnpm handles peer dependencies differently than npm
+// The legacy-peer-deps flag is npm-specific and not needed for pnpm
+const PNPMRC_CONTENT = "# pnpm configuration\n";
 
 function parseVersion(versionString) {
   // Remove ^, ~, >=, etc. and extract major.minor.patch
@@ -260,10 +261,15 @@ function fixBuiltinModules(esbuildConfigPath, projectRoot) {
                                            /const\s+hasRootMain\s*=/.test(content) &&
                                            /const\s+entryPoint\s*=\s*hasSrcMain/.test(content);
     
+    // Check if there's a simple pattern that should be upgraded to advanced
+    const hasSimplePattern = /const\s+entryPoint\s*=\s*existsSync\(["']src\/main\.ts["']\)\s*\?/.test(content) &&
+                             !hasAdvancedEntryPointDetection;
+    
     // Always remove ALL entryPoint declarations first (we'll add it back in the correct place)
     // This ensures we don't have duplicates or incorrectly placed ones
     // BUT: Skip removal if the advanced detection pattern exists (it's already correct)
-    if (hasEntryPointVar && !hasAdvancedEntryPointDetection) {
+    // ALSO skip removal if we have a simple pattern (we'll upgrade it instead)
+    if (hasEntryPointVar && !hasAdvancedEntryPointDetection && !hasSimplePattern) {
       // Remove comment lines that mention entry point detection
       content = content.replace(/\s*\/\/\s*.*[Dd]etect\s+entry\s+point.*?\n/gi, '');
       content = content.replace(/\s*\/\/\s*.*entry\s+point.*?\n/gi, '');
@@ -290,6 +296,40 @@ function fixBuiltinModules(esbuildConfigPath, projectRoot) {
         updated = true;
         console.log('✓ Updated esbuild.config.mjs: fixed entryPoints to use entryPoint variable');
       }
+    } else if (hasSimplePattern) {
+      // Upgrade simple pattern to advanced pattern with warnings
+      // Find the simple pattern (with or without comment) and replace it with the advanced one
+      // Match: optional comment, then const entryPoint = existsSync("src/main.ts") ? "src/main.ts" : "main.ts";
+      const simplePatternRegex = /(\/\/\s*Detect\s+entry\s+point[^\n]*\n\s*)?const\s+entryPoint\s*=\s*existsSync\(["']src\/main\.ts["']\)\s*\?[^;]+;/;
+      if (simplePatternRegex.test(content)) {
+        // Find where to insert (before esbuild.context)
+        const esbuildContextMatch = content.match(/(\s*)(const\s+\w+\s*=\s*(?:await\s+)?esbuild\.context\s*\()/);
+        if (esbuildContextMatch) {
+          const indent = esbuildContextMatch[1];
+          const advancedPattern = `${indent}// Detect entry point: prefer src/main.ts, fallback to main.ts
+${indent}const hasSrcMain = existsSync("src/main.ts");
+${indent}const hasRootMain = existsSync("main.ts");
+${indent}
+${indent}if (hasSrcMain && hasRootMain) {
+${indent}  console.warn("WARNING: Both src/main.ts and main.ts exist. Using src/main.ts as entry point.");
+${indent}  console.warn("Consider removing one to avoid confusion.");
+${indent}}
+${indent}if (!hasSrcMain && !hasRootMain) {
+${indent}  console.error("ERROR: Neither src/main.ts nor main.ts found!");
+${indent}  process.exit(1);
+${indent}}
+${indent}
+${indent}// Set entry point based on what exists
+${indent}const entryPoint = hasSrcMain ? "src/main.ts" : "main.ts";
+`;
+          // Remove the simple pattern
+          content = content.replace(simplePatternRegex, '');
+          // Insert advanced pattern before esbuild.context
+          content = content.replace(/(\s*)(const\s+\w+\s*=\s*(?:await\s+)?esbuild\.context\s*\()/, advancedPattern + '$1$2');
+          updated = true;
+          console.log('✓ Upgraded esbuild.config.mjs: enhanced entry point detection with warnings and error handling');
+        }
+      }
     } else if (hasHardcodedEntryPoint || (hasEntryPointVar && !hasCorrectEntryPoint)) {
       // Add existsSync import if needed
       if (needsExistsSync) {
@@ -301,7 +341,7 @@ function fixBuiltinModules(esbuildConfigPath, projectRoot) {
           );
         } else if (content.includes("import { builtinModules } from 'module'")) {
           content = content.replace(
-            /import\s+{\s*builtinModules\s*}\s+from\s+['']module['']/,
+            /import\s+{\s*builtinModules\s*}\s+from\s+['"]module['"]/,
             "import { builtinModules } from 'module';\nimport { existsSync } from 'fs';"
           );
         } else {
@@ -345,8 +385,8 @@ function fixBuiltinModules(esbuildConfigPath, projectRoot) {
           // Find the "const prod" line - it's almost always present and right before esbuild.context
           const prodMatch = content.match(/(const\s+prod\s*=.*?;)\s*\n/);
           if (prodMatch) {
-            // Insert entryPoint declaration right after const prod line
-            const entryPointCode = `\n// Detect entry point: prefer src/main.ts, fallback to main.ts\nconst entryPoint = existsSync("src/main.ts") ? "src/main.ts" : "main.ts";\n`;
+            // Insert advanced entry point detection right after const prod line
+            const entryPointCode = `\n// Detect entry point: prefer src/main.ts, fallback to main.ts\nconst hasSrcMain = existsSync("src/main.ts");\nconst hasRootMain = existsSync("main.ts");\n\nif (hasSrcMain && hasRootMain) {\n  console.warn("WARNING: Both src/main.ts and main.ts exist. Using src/main.ts as entry point.");\n  console.warn("Consider removing one to avoid confusion.");\n}\nif (!hasSrcMain && !hasRootMain) {\n  console.error("ERROR: Neither src/main.ts nor main.ts found!");\n  process.exit(1);\n}\n\n// Set entry point based on what exists\nconst entryPoint = hasSrcMain ? "src/main.ts" : "main.ts";\n`;
             content = content.replace(
               /(const\s+prod\s*=.*?;)\s*\n/,
               "$1" + entryPointCode
@@ -358,7 +398,7 @@ function fixBuiltinModules(esbuildConfigPath, projectRoot) {
             for (let i = 0; i < lines.length; i++) {
               if (/^\s*const\s+\w+\s*=\s*(?:await\s+)?esbuild\.context\s*\(/.test(lines[i])) {
                 const indent = lines[i].match(/^(\s*)/)[1];
-                const entryPointCode = `${indent}// Detect entry point: prefer src/main.ts, fallback to main.ts\n${indent}const entryPoint = existsSync("src/main.ts") ? "src/main.ts" : "main.ts";\n`;
+                const entryPointCode = `${indent}// Detect entry point: prefer src/main.ts, fallback to main.ts\n${indent}const hasSrcMain = existsSync("src/main.ts");\n${indent}const hasRootMain = existsSync("main.ts");\n${indent}\n${indent}if (hasSrcMain && hasRootMain) {\n${indent}  console.warn("WARNING: Both src/main.ts and main.ts exist. Using src/main.ts as entry point.");\n${indent}  console.warn("Consider removing one to avoid confusion.");\n${indent}}\n${indent}if (!hasSrcMain && !hasRootMain) {\n${indent}  console.error("ERROR: Neither src/main.ts nor main.ts found!");\n${indent}  process.exit(1);\n${indent}}\n${indent}\n${indent}// Set entry point based on what exists\n${indent}const entryPoint = hasSrcMain ? "src/main.ts" : "main.ts";\n`;
                 lines.splice(i, 0, entryPointCode);
                 content = lines.join('\n');
                 break;
@@ -497,7 +537,7 @@ function fixBuiltinModules(esbuildConfigPath, projectRoot) {
       if (watchModeMatch) {
         const beforeWatch = content.substring(0, watchModeMatch.index);
         const afterWatch = content.substring(watchModeMatch.index);
-        const buildModeCheck = `\n// Check if this is a one-time build or watch mode\n// Check for "build" or "production" argument - supports both patterns\nconst args = process.argv.slice(2);\nconst isOneTimeBuild = args.includes("build") || args.includes("production");\n\nif (isOneTimeBuild) {\n\t// Production build: build once and exit\n\tawait context.rebuild();\n\tconsole.log("\\n✓ Build complete!");\n\tconsole.log("📦 Release files:");\n\tconsole.log("   - main.js");\n\tif (existsSync("manifest.json")) {\n\t\tconsole.log("   - manifest.json");\n\t}\n\tif (existsSync("styles.css")) {\n\t\tconsole.log("   - styles.css");\n\t}\n\tconsole.log("\\n💡 Upload these files to GitHub releases\\n");\n\tawait context.dispose();\n\tprocess.exit(0);\n} else {\n\t// Development mode: watch for changes\n\tconsole.log("\\n✓ Development build running in watch mode");\n\tconsole.log("📝 Building to main.js in root");\n\tconsole.log("💡 For production builds, run: npm run build\\n");\n\t`;
+        const buildModeCheck = `\n// Check if this is a one-time build or watch mode\n// Check for "build" or "production" argument - supports both patterns\nconst args = process.argv.slice(2);\nconst isOneTimeBuild = args.includes("build") || args.includes("production");\n\nif (isOneTimeBuild) {\n\t// Production build: build once and exit\n\tawait context.rebuild();\n\tconsole.log("\\n✓ Build complete!");\n\tconsole.log("📦 Release files:");\n\tconsole.log("   - main.js");\n\tif (existsSync("manifest.json")) {\n\t\tconsole.log("   - manifest.json");\n\t}\n\tif (existsSync("styles.css")) {\n\t\tconsole.log("   - styles.css");\n\t}\n\tconsole.log("\\n💡 Upload these files to GitHub releases\\n");\n\tawait context.dispose();\n\tprocess.exit(0);\n} else {\n\t// Development mode: watch for changes\n\tconsole.log("\\n✓ Development build running in watch mode");\n\tconsole.log("📝 Building to main.js in root");\n\tconsole.log("💡 For production builds, run: pnpm build\\n");\n\t`;
         content = beforeWatch + buildModeCheck + afterWatch;
         updated = true;
         console.log('✓ Updated esbuild.config.mjs: added build mode detection (supports both "build" and "production")');
@@ -535,7 +575,8 @@ function setupESLint() {
   const esbuildConfigPath = join(projectRoot, 'esbuild.config.mjs');
   const eslintrcPath = join(projectRoot, '.eslintrc');
   const eslintrcJsonPath = join(projectRoot, '.eslintrc.json');
-  const npmrcPath = join(projectRoot, '.npmrc');
+  // Note: pnpm doesn't need .npmrc with legacy-peer-deps
+  // pnpm handles peer dependencies more strictly by default
   
   try {
     // Read package.json
@@ -687,20 +728,10 @@ function setupESLint() {
       }
     }
     
-    // Generate .npmrc file
+    // Note: pnpm doesn't require .npmrc with legacy-peer-deps
+    // pnpm handles peer dependencies more strictly by default, which is better
+    // If users need pnpm-specific config, they can create .pnpmrc manually
     let npmrcUpdated = false;
-    if (!existsSync(npmrcPath)) {
-      writeFileSync(npmrcPath, NPMRC_CONTENT, 'utf8');
-      console.log('✓ Created .npmrc configuration file');
-      npmrcUpdated = true;
-    } else {
-      const existingContent = readFileSync(npmrcPath, 'utf8');
-      if (existingContent !== NPMRC_CONTENT) {
-        writeFileSync(npmrcPath, NPMRC_CONTENT, 'utf8');
-        console.log('✓ Updated .npmrc configuration file');
-        npmrcUpdated = true;
-      }
-    }
     
     if (updated) {
       // Write back to package.json with proper formatting
@@ -715,11 +746,11 @@ function setupESLint() {
         console.log('✓ Successfully migrated from ESLint 8 to ESLint 9');
       }
       console.log('\nNext steps:');
-      console.log('  1. Run: npm install');
-      console.log('  2. Run: npm run lint');
+      console.log('  1. Run: pnpm install');
+      console.log('  2. Run: pnpm lint');
     } else {
       console.log('✓ Everything is already set up correctly!');
-      console.log('  Run: npm run lint');
+      console.log('  Run: pnpm lint');
     }
     
   } catch (error) {

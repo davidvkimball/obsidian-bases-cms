@@ -6,7 +6,7 @@ import globals from "globals";
 
 export default defineConfig([
   {
-    ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "scripts/**"]
+    ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "scripts/**", ".ref/**"]
   },
   ...obsidianmd.configs.recommended,
   {
@@ -43,7 +43,13 @@ export default defineConfig([
       "@typescript-eslint/ban-ts-comment": "off",
       "@typescript-eslint/no-empty-function": "off",
       "no-prototype-builtins": "off",
-      "@typescript-eslint/no-misused-promises": ["error",{"checksVoidReturn":{"attributes":false,"properties":false,"returns":false,"variables":false}}]
+      "@typescript-eslint/no-misused-promises": ["error",{"checksVoidReturn":{"attributes":false,"properties":false,"returns":false,"variables":false}}],
+      // Disable sample code rules for template repository
+      // These are intentional placeholder names and sample code that users should customize
+      "obsidianmd/sample-names": "off",
+      "obsidianmd/no-sample-code": "off",
+      // Allow console.log in sample code (the registerInterval example)
+      "no-console": "off",
     },
   },
   {

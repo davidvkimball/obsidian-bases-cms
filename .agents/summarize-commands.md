@@ -11,23 +11,51 @@ When the user requests "Summarize" or "Summarize for release", use these workflo
 
 ## "Summarize" Command
 
-**Purpose**: Generate a succinct git commit message based on all changed files.
+**Purpose**: Generate a succinct git commit message based on all changes since the last tag (or all uncommitted changes if no tags exist).
 
 **Workflow**:
 
-1. **Get all changed files**:
+1. **Find the last tag** (if any exist):
    ```bash
+   git describe --tags --abbrev=0 2>/dev/null || echo ""  # Get last tag, or empty if none
+   ```
+   - If a tag exists, use it as the baseline
+   - If no tags exist, fall back to analyzing uncommitted changes only
+
+2. **Get all commits since last tag** (or recent commits if no tag):
+   ```bash
+   # If tag exists:
+   git log --oneline <last-tag>..HEAD  # All commits since last tag
+   git log --oneline <last-tag>..HEAD --format="%H %s"  # With full hashes
+   
+   # If no tag exists, get recent commits:
+   git log --oneline -10  # Last 10 commits as fallback
+   ```
+
+3. **Get all file changes since last tag** (or uncommitted if no tag):
+   ```bash
+   # If tag exists:
+   git diff <last-tag>..HEAD --name-status  # All changed files since tag
+   git diff <last-tag>..HEAD  # Full diff of all changes
+   
+   # Also check for uncommitted changes:
    git status
+   git diff --cached  # For staged changes
+   git diff           # For unstaged changes
+   
+   # If no tag exists, use uncommitted changes:
    git diff --cached  # For staged changes
    git diff           # For unstaged changes
    ```
 
-2. **Read and analyze all changed files**:
-   - Look at the actual file contents, not just the chat history
-   - Understand what changed across all files
-   - Get the overall picture of the changes
+4. **Read and analyze all changed files**:
+   - Look at the actual file contents and diffs, not just the chat history
+   - Review commit messages to understand the intent of each change
+   - Understand what changed across all files since the last tag
+   - Get the overall picture of all changes (committed + uncommitted)
+   - Prioritize feature changes over version bumps or minor updates
 
-3. **Generate commit message** in this format:
+5. **Generate commit message** in this format:
    ```
    [Summary of changes]
    - [more detailed item 1]
@@ -35,7 +63,7 @@ When the user requests "Summarize" or "Summarize for release", use these workflo
    - [more detailed item 3]
    ```
 
-4. **Present as a code block** so the user can easily copy it:
+6. **Present as a code block** so the user can easily copy it:
    ````
    ```
    [Summary of changes]
@@ -45,11 +73,14 @@ When the user requests "Summarize" or "Summarize for release", use these workflo
    ````
 
 **Important**:
-- Look at actual file changes, not just chat context
+- **Always check for tags first** - this ensures you capture all important commits, not just what's in the working directory
+- Look at actual file changes and commit history, not just chat context
+- Include all significant changes since the last tag, even if they're already committed
 - Be succinct but descriptive
 - Focus on what changed, not how it was changed
 - Use present tense (e.g., "Add feature" not "Added feature")
 - Group related changes together
+- Prioritize feature additions and important fixes over version bumps
 
 **Example**:
 ```

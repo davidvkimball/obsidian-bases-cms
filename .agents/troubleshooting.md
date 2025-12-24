@@ -11,9 +11,9 @@ Update frequency: Update as common issues are identified
 ### Build and Loading Issues
 
 - **Plugin doesn't load after build**: Ensure `main.js` and `manifest.json` are at the top level of the plugin folder under `<Vault>/.obsidian/plugins/<plugin-id>/`.
-- **Build issues**: If `main.js` is missing, run `npm run build` or `npm run dev` to compile your TypeScript source code.
+- **Build issues**: If `main.js` is missing, run `pnpm build` or `pnpm dev` to compile your TypeScript source code.
 - **TypeScript compilation errors**: Check `tsconfig.json` settings, ensure `"strict": true` is handled properly, verify all imports are correct.
-- **Module not found errors**: Ensure all dependencies are in `package.json` and run `npm install`. Check that imports use correct paths.
+- **Module not found errors**: Ensure all dependencies are in `package.json` and run `pnpm install`. Check that imports use correct paths.
 
 ### Command Issues
 
@@ -208,7 +208,7 @@ const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MY_VIEW);
 **Cause**: Build didn't run or failed.
 
 **Solution**: 
-1. Run `npm run build`
+1. Run `pnpm build`
 2. Check for TypeScript errors
 3. Verify `esbuild.config.mjs` or build config is correct
 

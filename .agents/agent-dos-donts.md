@@ -6,7 +6,7 @@ Update frequency: Review periodically for AI agent-specific guidance
 
 # Agent do/don't
 
-**Do**
+## Do
 - **.ref folder setup**: When user asks to add a reference, check if it already exists first. For external repos:
   - **Clone directly** into the target folder: `../.ref/obsidian-dev/plugins/<name>/` (for plugins), `../.ref/obsidian-dev/themes/<name>/` (for themes), or `../.ref/obsidian-dev/<name>/` (for other projects)
   - **DO NOT** create a `.ref` subfolder inside the plugins/themes folder - clone the repo directly there
@@ -17,11 +17,11 @@ Update frequency: Review periodically for AI agent-specific guidance
 - Provide defaults and validation in settings.
 - Write idempotent code paths so reload/unload doesn't leak listeners or intervals.
 - Use `this.register*` helpers for everything that needs cleanup.
-- **Always run `npm run build` after making changes** to catch build errors early. Only check for npm installation if the build fails. See [build-workflow.md](build-workflow.md) for details.
+- **Always run `pnpm build` after making changes** to catch build errors early. Only check for pnpm installation if the build fails. See [build-workflow.md](build-workflow.md) for details.
 - **Summarize commands**: When user requests "Summarize" or "Summarize for release", follow the workflow in [summarize-commands.md](summarize-commands.md). Always read actual file changes, not just chat history.
 - **Release preparation**: When user asks "is my plugin ready for release?" or similar, use [release-readiness.md](release-readiness.md) checklist. Run automated checks where possible, ask user interactively for items requiring their input (like platform testing).
 
-**Don't**
+## Don't
 - Introduce network calls without an obvious user-facing reason and documentation.
 - Ship features that require cloud services without clear disclosure and explicit opt-in.
 - Store or transmit vault contents unless essential and consented.
@@ -36,8 +36,8 @@ Update frequency: Review periodically for AI agent-specific guidance
 - Understand what the error is actually complaining about
 - Check the [linting-fixes-guide.md](linting-fixes-guide.md) for the specific error type
 - Fix the root cause, not the symptom
-- Test with `npm run lint` after each fix
-- Verify `npm run build` still works
+- Test with `pnpm lint` after each fix
+- Verify `pnpm build` still works
 
 **DON'T**:
 - Add eslint-disable comments without understanding why

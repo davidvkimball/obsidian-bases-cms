@@ -208,6 +208,18 @@ Dropdown option labels that include proper nouns:
 
 **IMPORTANT**: Only use ESLint disable comments for **actual false positives**. Do not use them as a shortcut to avoid fixing legitimate errors. Always verify the text is already correct before adding a disable comment.
 
+**⚠️ CRITICAL: AI Agents Often Place Disable Comments Incorrectly**
+
+**Common Problem**: AI coding assistants (like Cursor, GitHub Copilot, ChatGPT, etc.) frequently place `eslint-disable` comments in the wrong location. They may place them:
+- Too far above the error line
+- On the same line as the error
+- After the error line
+- Before the wrong method in a chain
+
+**The Rule**: The `eslint-disable-next-line` comment **MUST be directly on the line immediately before** the line that contains the error. There can be NO blank lines or other code between the disable comment and the error line.
+
+**Always verify placement**: After an AI agent adds a disable comment, check that it's on the line immediately before the error. If you see the error "Fixing eslint-disable comment placement. They must be directly before the line with the error:", the comment is in the wrong location and needs to be moved.
+
 1. **Verify it's actually a false positive**: 
    - Check that the text is already in correct sentence case (first word capitalized, rest lowercase except proper nouns)
    - Verify the text follows proper grammar and formatting rules
@@ -219,10 +231,13 @@ Dropdown option labels that include proper nouns:
    // eslint-disable-next-line obsidianmd/ui/sentence-case
    ```
 
-3. **Place the disable comment correctly**: 
-   - The `eslint-disable-next-line` comment **must** be on the line immediately before the line with the error
+3. **Place the disable comment correctly** (AI agents often get this wrong!): 
+   - **CRITICAL**: The `eslint-disable-next-line` comment **must** be on the line immediately before the line with the error
+   - **No blank lines** between the disable comment and the error line
+   - **No other code** between the disable comment and the error line
    - For method chaining, place it right before the method call that contains the flagged text
    - The explanation comment goes on the line immediately before the disable comment
+   - **Always double-check placement** - AI agents frequently place these comments incorrectly
 
 4. **Common false positive reasons**:
    - Proper nouns (framework names, product names, company names)
@@ -245,18 +260,30 @@ Dropdown option labels that include proper nouns:
 ```
 
 **Rule 2: Disable comment must be immediately before the error line**
+
+⚠️ **AI agents (Cursor, Copilot, etc.) often get this wrong!** They may place the disable comment several lines above the error, or on the wrong line entirely. Always verify the comment is directly before the error line.
+
 ```typescript
-// ✅ Correct - Disable comment on line before error
+// ✅ Correct - Disable comment on line immediately before error
 .setName('Show button')
 // False positive: Already in sentence case
 // eslint-disable-next-line obsidianmd/ui/sentence-case
 .setDesc('Display the button in the CMS toolbar.')
 
-// ❌ Wrong - Disable comment too far from error
+// ❌ Wrong - Disable comment too far from error (common AI agent mistake)
 // False positive: Already in sentence case
 // eslint-disable-next-line obsidianmd/ui/sentence-case
 .setName('Show button')
 .setDesc('Display the button in the CMS toolbar.') // Error is here, but disable is too far up
+
+// ❌ Wrong - Blank line between disable and error (AI agents sometimes do this)
+// False positive: Already in sentence case
+// eslint-disable-next-line obsidianmd/ui/sentence-case
+
+.setDesc('Display the button in the CMS toolbar.') // Error is here, but blank line breaks it
+
+// ❌ Wrong - Disable comment on same line as error (AI agents sometimes do this)
+.setDesc('Display the button in the CMS toolbar.') // eslint-disable-next-line obsidianmd/ui/sentence-case
 ```
 
 **Rule 3: For method chaining, place before the specific method**
@@ -664,7 +691,7 @@ Most plugins use `new Setting(containerEl)` directly, which doesn't have this re
 1. Check which line the error is on (column number matters)
 2. If it's the `addSetting` callback, ensure it uses block body `{ }`
 3. If it's the `onChange` callback, ensure it's properly async or uses `void`
-4. Run `npm run lint` after each change to verify
+4. Run `pnpm lint` after each change to verify
 5. Never suppress errors without understanding the root cause
 
 ---
@@ -797,7 +824,7 @@ Most IDEs and ESLint can auto-remove unused imports:
 
 ```bash
 # Run ESLint with --fix flag
-npm run lint:fix
+pnpm lint:fix
 ```
 
 Or configure your IDE to remove unused imports on save.
@@ -827,7 +854,7 @@ Or configure your IDE to remove unused imports on save.
 ### Installation
 
 ```bash
-npm install -D eslint eslint-plugin-obsidianmd
+pnpm add -D eslint eslint-plugin-obsidianmd
 ```
 
 ### Configuration
@@ -869,10 +896,10 @@ After setting up ESLint (see [environment.md](environment.md)), run:
 
 ```bash
 # Check for issues
-npm run lint
+pnpm lint
 
 # Auto-fix issues where possible
-npm run lint:fix
+pnpm lint:fix
 
 # Check specific file
 npx eslint src/main.ts
