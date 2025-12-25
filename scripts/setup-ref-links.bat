@@ -13,6 +13,16 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+REM Verify Node.js version is v16 or higher
+for /f "tokens=1" %%i in ('node --version') do set NODE_VERSION=%%i
+set NODE_VERSION=%NODE_VERSION:v=%
+for /f "tokens=1 delims=." %%a in ("%NODE_VERSION%") do set NODE_MAJOR=%%a
+if %NODE_MAJOR% lss 16 (
+    echo ERROR: Node.js v16+ is required (found v%NODE_VERSION%)
+    echo Please upgrade Node.js from https://nodejs.org/
+    exit /b 1
+)
+
 echo Setting up symlinks to core Obsidian projects...
 
 REM Central .ref location (one level up from project)
@@ -171,26 +181,50 @@ REM Create symlinks for each core project
 echo Creating symlink: obsidian-api
 if exist ".ref\obsidian-api" rmdir ".ref\obsidian-api"
 mklink /J ".ref\obsidian-api" "%CENTRAL_REF%\obsidian-api"
+if errorlevel 1 (
+    echo ERROR: Failed to create symlink for obsidian-api
+    exit /b 1
+)
 
 echo Creating symlink: obsidian-sample-plugin
 if exist ".ref\obsidian-sample-plugin" rmdir ".ref\obsidian-sample-plugin"
 mklink /J ".ref\obsidian-sample-plugin" "%CENTRAL_REF%\obsidian-sample-plugin"
+if errorlevel 1 (
+    echo ERROR: Failed to create symlink for obsidian-sample-plugin
+    exit /b 1
+)
 
 echo Creating symlink: obsidian-developer-docs
 if exist ".ref\obsidian-developer-docs" rmdir ".ref\obsidian-developer-docs"
 mklink /J ".ref\obsidian-developer-docs" "%CENTRAL_REF%\obsidian-developer-docs"
+if errorlevel 1 (
+    echo ERROR: Failed to create symlink for obsidian-developer-docs
+    exit /b 1
+)
 
 echo Creating symlink: obsidian-plugin-docs
 if exist ".ref\obsidian-plugin-docs" rmdir ".ref\obsidian-plugin-docs"
 mklink /J ".ref\obsidian-plugin-docs" "%CENTRAL_REF%\obsidian-plugin-docs"
+if errorlevel 1 (
+    echo ERROR: Failed to create symlink for obsidian-plugin-docs
+    exit /b 1
+)
 
 echo Creating symlink: obsidian-sample-theme
 if exist ".ref\obsidian-sample-theme" rmdir ".ref\obsidian-sample-theme"
 mklink /J ".ref\obsidian-sample-theme" "%CENTRAL_REF%\obsidian-sample-theme"
+if errorlevel 1 (
+    echo ERROR: Failed to create symlink for obsidian-sample-theme
+    exit /b 1
+)
 
 echo Creating symlink: eslint-plugin
 if exist ".ref\eslint-plugin" rmdir ".ref\eslint-plugin"
 mklink /J ".ref\eslint-plugin" "%CENTRAL_REF%\eslint-plugin"
+if errorlevel 1 (
+    echo ERROR: Failed to create symlink for eslint-plugin
+    exit /b 1
+)
 
 echo.
 echo Setup complete!

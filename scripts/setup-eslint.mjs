@@ -16,6 +16,7 @@
 import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const ESLINT_DEPS = {
   "@eslint/js": "^9.30.1",
@@ -42,16 +43,29 @@ function generateLintWrapper() {
  * ESLint wrapper that adds helpful success messages
  */
 
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import process from 'process';
 
 const args = process.argv.slice(2);
 const hasFix = args.includes('--fix');
 
+// Detect which package manager to use
+// Check if pnpm is available, otherwise fall back to npx
+let usePnpm = false;
+try {
+	execSync('pnpm --version', { stdio: 'ignore', shell: true });
+	usePnpm = true;
+} catch (error) {
+	usePnpm = false;
+}
+
 // Run ESLint with --max-warnings 0 to fail on warnings too
 // This ensures we only show success when there are truly no issues
 const eslintArgs = ['eslint', '.', '--max-warnings', '0', ...args];
-const eslint = spawn('npx', eslintArgs, {
+const command = usePnpm ? 'pnpm' : 'npx';
+const commandArgs = usePnpm ? ['exec', ...eslintArgs] : eslintArgs;
+
+const eslint = spawn(command, commandArgs, {
 	stdio: 'inherit',
 	shell: true
 });

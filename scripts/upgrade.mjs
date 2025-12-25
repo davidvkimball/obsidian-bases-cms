@@ -233,11 +233,14 @@ function upgradeProject(projectDir) {
 		}
 		
 		// Ensure packageManager field exists and is correct
+		const hadPackageManager = !!packageJson.packageManager;
 		if (!packageJson.packageManager || packageJson.packageManager !== packageManagerVersion) {
 			packageJson.packageManager = packageManagerVersion;
 			updated = true;
-			if (!packageJson.packageManager) {
+			if (!hadPackageManager) {
 				changes.push('✓ Added packageManager field');
+			} else {
+				changes.push('✓ Updated packageManager field');
 			}
 		}
 		
