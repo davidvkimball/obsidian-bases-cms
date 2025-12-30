@@ -89,7 +89,7 @@ export class SharedCardRenderer {
 
 		// Draft status badge for non-cover formats (positioned absolutely, aligned with checkbox)
 		if (settings.showDraftStatus && settings.imageFormat !== 'cover') {
-			renderDraftStatusBadge(cardEl, entry, card.path, settings, onPropertyToggle);
+			renderDraftStatusBadge(cardEl, entry, card.path, settings, onPropertyToggle, this.app);
 		}
 
 		// Handle card click to open file (but not when clicking checkbox or property checkboxes)
@@ -227,58 +227,116 @@ export class SharedCardRenderer {
 		// Date (below title)
 		if (settings.showDate && settings.dateProperty) {
 			// Try synchronous Bases API first (works for .md files)
-			let dateValue = entry.getValue(settings.dateProperty as `note.${string}` | `formula.${string}` | `file.${string}`) as { date?: Date; data?: unknown } | null;
+			let dateValue = entry.getValue(settings.dateProperty as `note.${string}` | `formula.${string}` | `file.${string}`) as { date?: Date; data?: unknown; icon?: string } | null;
 			
-			// For MDX files, fallback to manual frontmatter parsing
-			if (!dateValue) {
+			// Check if we actually have a valid date value
+			// For MDX files, Bases API might return {icon: 'lucide-file-question'} which is truthy but has no date
+			const hasValidDate = dateValue && (
+				('date' in dateValue && dateValue.date instanceof Date) ||
+				('data' in dateValue && dateValue.data != null)
+			);
+			
+			// For MDX files, fallback to manual frontmatter parsing if no valid date
+			if (!hasValidDate) {
 				const file = this.app.vault.getAbstractFileByPath(entry.file.path);
+				
 				if (file instanceof TFile && file.extension === 'mdx') {
 					// Load date asynchronously for MDX files
 					void (async () => {
 						const frontmatter = await getFileFrontmatter(this.app, file);
+						
 						if (frontmatter) {
 							// Strip "note." prefix if present
 							const cleanProp = settings.dateProperty.startsWith('note.') 
 								? settings.dateProperty.substring(5) 
 								: settings.dateProperty;
+							
 							const frontmatterValue = frontmatter[cleanProp];
 							
 							if (frontmatterValue != null) {
 								// Parse date from frontmatter value
 								let date: Date | null = null;
+								
+								// Handle Date objects (including those from YAML parsing)
 								if (frontmatterValue instanceof Date) {
 									date = frontmatterValue;
-								} else if (typeof frontmatterValue === 'string' || typeof frontmatterValue === 'number') {
+								} 
+								// Handle date-like objects (YAML parsers sometimes return custom Date objects)
+								else if (frontmatterValue && typeof frontmatterValue === 'object' && 'getTime' in frontmatterValue) {
+									const dateLike = frontmatterValue as { getTime: () => number };
+									try {
+										const timestamp = dateLike.getTime();
+										if (typeof timestamp === 'number' && !isNaN(timestamp)) {
+											date = new Date(timestamp);
+										}
+									} catch {
+										// Fall through to string/number handling
+									}
+								}
+								// Handle strings - especially ISO date strings like "2025-12-29"
+								if (!date && typeof frontmatterValue === 'string') {
+									const dateStr = frontmatterValue.trim();
+									// Try parsing as ISO date (YYYY-MM-DD) - this is what Obsidian uses
+									// Add time component to avoid timezone issues: "2025-12-29" -> "2025-12-29T00:00:00"
+									const isoDateStr = dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`;
+									const parsedDate = new Date(isoDateStr);
+									if (!isNaN(parsedDate.getTime())) {
+										date = parsedDate;
+									} else {
+										// Fallback to direct Date constructor
+										const fallbackDate = new Date(dateStr);
+										if (!isNaN(fallbackDate.getTime())) {
+											date = fallbackDate;
+										}
+									}
+								}
+								// Handle numbers (timestamps)
+								if (!date && typeof frontmatterValue === 'number') {
 									const parsedDate = new Date(frontmatterValue);
 									if (!isNaN(parsedDate.getTime())) {
 										date = parsedDate;
 									}
 								}
 								
-								if (date && cardEl.isConnected) {
-									// Format date based on settings
-									let dateString: string;
-									if (settings.dateIncludeTime) {
-										// Format date and time separately, then combine (respects user's system locale)
-										// Use options to exclude seconds and match user's expected format
-										const datePart = date.toLocaleDateString();
-										const timePart = date.toLocaleTimeString(undefined, { 
-											hour: 'numeric', 
-											minute: '2-digit', 
-											hour12: true 
-										});
-										dateString = `${datePart}, ${timePart}`;
-									} else {
-										// When time is not included, use date-only format (respects user's system locale)
-										dateString = date.toLocaleDateString();
-									}
-									
-									// Find or create date element
-									let dateEl = cardEl.querySelector('.card-date');
-									if (!dateEl) {
-										dateEl = cardEl.createDiv('card-date');
-									}
-									dateEl.setText(dateString);
+								// Always try to render the date, even if cardEl might not be connected yet
+								// The date element will be created/updated when the card is rendered
+								if (date) {
+									// Use requestAnimationFrame to ensure DOM is ready
+									requestAnimationFrame(() => {
+										if (cardEl.isConnected) {
+											// Format date based on settings
+											let dateString: string;
+											if (settings.dateIncludeTime) {
+												// Format date and time separately, then combine (respects user's system locale)
+												// Use options to exclude seconds and match user's expected format
+												const datePart = date.toLocaleDateString();
+												const timePart = date.toLocaleTimeString(undefined, { 
+													hour: 'numeric', 
+													minute: '2-digit', 
+													hour12: true 
+												});
+												dateString = `${datePart}, ${timePart}`;
+											} else {
+												// When time is not included, use date-only format (respects user's system locale)
+												dateString = date.toLocaleDateString();
+											}
+											
+											// Find or create date element
+											let dateEl = cardEl.querySelector('.card-date');
+											if (!dateEl) {
+												// Find the title element to insert date after it
+												const titleEl = cardEl.querySelector('.card-title');
+												if (titleEl && titleEl.parentElement) {
+													dateEl = titleEl.parentElement.createDiv('card-date');
+													// Insert after title
+													titleEl.parentElement.insertBefore(dateEl, titleEl.nextSibling);
+												} else {
+													dateEl = cardEl.createDiv('card-date');
+												}
+											}
+											dateEl.setText(dateString);
+										}
+									});
 								}
 							}
 						}
@@ -286,7 +344,7 @@ export class SharedCardRenderer {
 				}
 			}
 			
-			if (dateValue) {
+			if (hasValidDate && dateValue) {
 				const dateObj = dateValue as { date?: Date; data?: unknown } | null;
 				let date: Date | null = null;
 				
@@ -468,7 +526,7 @@ export class SharedCardRenderer {
 				
 				// Draft status badge (top-left, clickable to toggle)
 						if (settings.showDraftStatus) {
-						renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle);
+						renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle, this.app);
 					}
 					
 					// Bottom properties - MUST be called before returning (for images)
@@ -483,11 +541,11 @@ export class SharedCardRenderer {
 				if (card.hasImageAvailable && !card.imageUrl) {
 					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
 				// Draft status badge on placeholder (top-left, clickable to toggle)
-				renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle);
+				renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle, this.app);
 				} else if (!card.imageUrl) {
 					// No image and not expected - create placeholder anyway for cover format
 					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
-					renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle);
+					renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle, this.app);
 				}
 			}
 		}
