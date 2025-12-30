@@ -4,36 +4,37 @@
  */
 
 import { App, TFile, TFolder } from 'obsidian';
+import { getFileFrontmatter } from './frontmatter-helper';
 
 /**
  * Find all attachments in a note
  * Includes both embedded images in markdown and images referenced in frontmatter properties
  */
-export function getAttachmentsInNote(app: App, file: TFile): TFile[] {
+export async function getAttachmentsInNote(app: App, file: TFile): Promise<TFile[]> {
 	const attachments: TFile[] = [];
 	const content = app.vault.getAbstractFileByPath(file.path);
 	
 	if (content instanceof TFile) {
-		const metadata = app.metadataCache.getFileCache(content);
-		
-		// Get embedded images from markdown body
-		const embeds = metadata?.embeds || [];
-		for (const embed of embeds) {
-			const embedFile = app.metadataCache.getFirstLinkpathDest(embed.link, file.path);
-			if (embedFile instanceof TFile) {
-				attachments.push(embedFile);
+		// Get embedded images from markdown body (only works for .md files)
+		if (file.extension === 'md') {
+			const metadata = app.metadataCache.getFileCache(content);
+			const embeds = metadata?.embeds || [];
+			for (const embed of embeds) {
+				const embedFile = app.metadataCache.getFirstLinkpathDest(embed.link, file.path);
+				if (embedFile instanceof TFile) {
+					attachments.push(embedFile);
+				}
 			}
 		}
 		
-		// Get images from frontmatter properties
-		// Check common image property names: image, imageOG, cover, thumbnail
-		const frontmatter = metadata?.frontmatter;
+		// Get images from frontmatter properties (works for both .md and .mdx)
+		const frontmatter = await getFileFrontmatter(app, file);
 		if (frontmatter) {
 			const imagePropertyNames = ['image', 'imageOG', 'cover', 'thumbnail'];
 			const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
 			
 			for (const propName of imagePropertyNames) {
-				const propValue = (frontmatter as Record<string, unknown>)[propName];
+				const propValue = frontmatter[propName];
 				if (!propValue) continue;
 				
 				// Handle array of image paths
@@ -89,14 +90,14 @@ export function getAttachmentsInNote(app: App, file: TFile): TFile[] {
 /**
  * Find all attachments in a folder
  */
-export function getAttachmentsInFolder(app: App, folder: TFolder): TFile[] {
+export async function getAttachmentsInFolder(app: App, folder: TFolder): Promise<TFile[]> {
 	const attachments: TFile[] = [];
 	
 	for (const child of folder.children) {
-		if (child instanceof TFile && child.extension === 'md') {
-			attachments.push(...getAttachmentsInNote(app, child));
+		if (child instanceof TFile && (child.extension === 'md' || child.extension === 'mdx')) {
+			attachments.push(...await getAttachmentsInNote(app, child));
 		} else if (child instanceof TFolder) {
-			attachments.push(...getAttachmentsInFolder(app, child));
+			attachments.push(...await getAttachmentsInFolder(app, child));
 		}
 	}
 	
@@ -156,10 +157,10 @@ export async function findUniqueAttachments(
 	// Get all attachments in deleted note/folder
 	const attachments: TFile[] = [];
 	
-	attachments.push(...getAttachmentsInNote(app, deletedNote));
+	attachments.push(...await getAttachmentsInNote(app, deletedNote));
 	
 	if (deletedFolder) {
-		attachments.push(...getAttachmentsInFolder(app, deletedFolder));
+		attachments.push(...await getAttachmentsInFolder(app, deletedFolder));
 	}
 	
 	// Remove duplicates

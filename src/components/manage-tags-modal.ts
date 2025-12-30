@@ -5,6 +5,7 @@
 
 import { Modal, App, Setting, TFile } from 'obsidian';
 import { BulkOperations } from '../utils/bulk-operations';
+import { getFileFrontmatter } from '../utils/frontmatter-helper';
 
 export class ManageTagsModal extends Modal {
 	private files: string[];
@@ -48,13 +49,35 @@ export class ManageTagsModal extends Modal {
 		for (const filePath of this.files) {
 			const file = this.app.vault.getAbstractFileByPath(filePath);
 			if (file instanceof TFile) {
-				const metadata = this.app.metadataCache.getFileCache(file);
-				const frontmatter = metadata?.frontmatter;
-				if (frontmatter?.tags) {
-					const tags = Array.isArray(frontmatter.tags) 
-						? (frontmatter.tags as string[])
-						: [frontmatter.tags as string];
-					tags.forEach(tag => allTags.add(tag));
+				// For MDX files, we'll load tags asynchronously
+				if (file.extension === 'mdx') {
+					void (async () => {
+						const frontmatter = await getFileFrontmatter(this.app, file);
+						if (frontmatter?.tags) {
+							const tags = Array.isArray(frontmatter.tags) 
+								? (frontmatter.tags as string[])
+								: [frontmatter.tags as string];
+							tags.forEach(tag => {
+								if (!allTags.has(tag)) {
+									allTags.add(tag);
+									// Add checkbox for this tag if modal is still open
+									if (this.contentEl && this.contentEl.isConnected && removeContainer.isConnected) {
+										this.addTagCheckbox(removeContainer, tag);
+									}
+								}
+							});
+						}
+					})();
+				} else {
+					// For .md files, use metadata cache (synchronous)
+					const metadata = this.app.metadataCache.getFileCache(file);
+					const frontmatter = metadata?.frontmatter;
+					if (frontmatter?.tags) {
+						const tags = Array.isArray(frontmatter.tags) 
+							? (frontmatter.tags as string[])
+							: [frontmatter.tags as string];
+						tags.forEach(tag => allTags.add(tag));
+					}
 				}
 			}
 		}
@@ -93,6 +116,22 @@ export class ManageTagsModal extends Modal {
 				this.close();
 			})();
 		});
+	}
+
+	private addTagCheckbox(container: HTMLElement, tag: string): void {
+		new Setting(container)
+			.setName(tag)
+			.addToggle(toggle => {
+				toggle
+					.setValue(this.tagsToRemove.has(tag))
+					.onChange(value => {
+						if (value) {
+							this.tagsToRemove.add(tag);
+						} else {
+							this.tagsToRemove.delete(tag);
+						}
+					});
+			});
 	}
 
 	private async applyChanges(): Promise<void> {

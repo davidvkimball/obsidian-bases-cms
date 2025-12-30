@@ -34,6 +34,15 @@ The following community plugins are referenced in `.ref/plugins/` for this proje
 
 These repositories are cloned to `../.ref/obsidian-dev/plugins/` (central location) and symlinked in this project's `.ref/plugins/` folder.
 
+The following local projects are referenced in `.ref/plugins/` for MDX frontmatter parsing reference:
+
+- **obsidian-seo** - `C:\Users\david\Development\obsidian-seo` (local symlink)
+- **obsidian-astro-composer** - `C:\Users\david\Development\obsidian-astro-composer` (local symlink)
+- **obsidian-alias-filename-history** - `C:\Users\david\Development\obsidian-alias-filename-history` (local symlink)
+- **obsidian-property-over-file-name** - `C:\Users\david\Development\obsidian-property-over-file-name` (local symlink)
+
+These are local project references (symlinked directly, not cloned to central location) used for reference on MDX file frontmatter parsing implementations.
+
 ### Overrides (Optional)
 
 ### Key Files and Their Purposes

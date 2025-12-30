@@ -1,11 +1,14 @@
 /**
  * Data transformation utilities
  * Converts Bases entries into normalized CardData format
+ * Updated to support MDX files via manual frontmatter parsing
  */
 
-import type { BasesEntry } from 'obsidian';
+import type { App, BasesEntry } from 'obsidian';
+import { TFile } from 'obsidian';
 import { getFirstBasesPropertyValue } from '../utils/property';
 import { getListSeparator } from '../utils/style-settings';
+import { getFileFrontmatter } from '../utils/frontmatter-helper';
 
 /**
  * Remove duplication from a string (e.g., "valuevalue" -> "value")
@@ -153,20 +156,22 @@ export interface CMSSettings {
 
 /**
  * Transform Bases entry into CardData
+ * Supports MDX files via manual frontmatter parsing
  */
-export function basesEntryToCardData(
+export async function basesEntryToCardData(
 	entry: BasesEntry,
 	settings: CMSSettings,
 	sortMethod: string,
 	isShuffled: boolean,
 	snippet?: string,
 	imageUrl?: string | string[],
-	hasImageAvailable?: boolean
-): CardData {
+	hasImageAvailable?: boolean,
+	app?: App
+): Promise<CardData> {
 	const fileName = entry.file.basename || entry.file.name;
 
 	// Get title from property or fallback to filename
-	const titleValue = getFirstBasesPropertyValue(entry, settings.titleProperty) as { data?: unknown } | null;
+	const titleValue = await getFirstBasesPropertyValue(entry, settings.titleProperty, app) as { data?: unknown } | null;
 	const titleData = titleValue?.data;
 	
 	// Handle arrays (e.g., aliases) by joining them
@@ -195,8 +200,39 @@ export function basesEntryToCardData(
 	const folderPath = path.split('/').slice(0, -1).join('/');
 
 	// Get YAML tags only
-	const yamlTagsValue = entry.getValue('note.tags') as { data?: unknown } | null;
+	let yamlTagsValue = entry.getValue('note.tags') as { data?: unknown } | null;
 	let yamlTags: string[] = [];
+
+	// For MDX files, fallback to manual frontmatter parsing if Bases API returns null
+	if (!yamlTagsValue && app) {
+		const file = app.vault.getAbstractFileByPath(entry.file.path);
+		if (file instanceof TFile && file.extension === 'mdx') {
+			const frontmatter = await getFileFrontmatter(app, file);
+			if (frontmatter?.tags) {
+				const tagData = frontmatter.tags;
+				const rawTags = Array.isArray(tagData)
+					? tagData.map((t: unknown) => {
+						if (t && typeof t === 'object' && t !== null) {
+							return JSON.stringify(t);
+						}
+						if (typeof t === 'string' || typeof t === 'number') {
+							return String(t);
+						}
+						return t ? JSON.stringify(t) : '';
+					})
+					: (() => {
+						if (tagData && typeof tagData === 'object' && tagData !== null) {
+							return [JSON.stringify(tagData)];
+						}
+						if (typeof tagData === 'string' || typeof tagData === 'number') {
+							return [String(tagData)];
+						}
+						return tagData ? [JSON.stringify(tagData)] : [''];
+					})();
+				yamlTags = rawTags.map(tag => tag.replace(/^#/, ''));
+			}
+		}
+	}
 
 	if (yamlTagsValue && yamlTagsValue.data != null) {
 		const tagData = yamlTagsValue.data;
@@ -212,21 +248,40 @@ export function basesEntryToCardData(
 	}
 
 	// Get tags in YAML + note body
-	const allTagsValue = entry.getValue('file.tags') as { data?: unknown } | null;
+	let allTagsValue = entry.getValue('file.tags') as { data?: unknown } | null;
 	let tags: string[] = [];
 
-	if (allTagsValue && allTagsValue.data != null) {
-		const tagData = allTagsValue.data;
-		const rawTags = Array.isArray(tagData)
-			? tagData.map((t: unknown) => {
-				if (t && typeof t === 'object' && t !== null && 'data' in t) {
-					return String((t as { data: unknown }).data);
-				}
-				return (typeof t === 'string' || typeof t === 'number') ? String(t) : '';
-			}).filter((t): t is string => typeof t === 'string' && t.length > 0)
-			: (typeof tagData === 'string' || typeof tagData === 'number') ? [String(tagData)] : [];
-		tags = rawTags.map(tag => tag.replace(/^#/, ''));
-	}
+		if (allTagsValue && allTagsValue.data != null) {
+			const tagData = allTagsValue.data;
+			const rawTags = Array.isArray(tagData)
+				? tagData.map((t: unknown) => {
+					if (t && typeof t === 'object' && t !== null && 'data' in t) {
+						const itemData = (t as { data: unknown }).data;
+						if (itemData && typeof itemData === 'object' && itemData !== null) {
+							return JSON.stringify(itemData);
+						}
+						return String(itemData);
+					}
+					if (t && typeof t === 'object' && t !== null) {
+						return JSON.stringify(t);
+					}
+					return (typeof t === 'string' || typeof t === 'number') ? String(t) : '';
+				}).filter((t): t is string => typeof t === 'string' && t.length > 0)
+				: (() => {
+					if (tagData && typeof tagData === 'object' && tagData !== null) {
+						return [JSON.stringify(tagData)];
+					}
+					return (typeof tagData === 'string' || typeof tagData === 'number') ? [String(tagData)] : [];
+				})();
+			tags = rawTags.map(tag => tag.replace(/^#/, ''));
+		} else if (!allTagsValue && app) {
+			// For MDX files, use YAML tags (no body tags since metadata cache doesn't work)
+			const file = app.vault.getAbstractFileByPath(entry.file.path);
+			if (file instanceof TFile && file.extension === 'mdx') {
+				// For MDX, file.tags is same as note.tags (no body parsing)
+				tags = [...yamlTags];
+			}
+		}
 
 	// Get timestamps
 	const ctime = entry.file.stat.ctime;
@@ -235,7 +290,7 @@ export function basesEntryToCardData(
 	// Get tags from specified property if enabled
 	let displayTags: string[] = [];
 	if (settings.showTags && settings.tagsProperty) {
-		const tagsValue = getFirstBasesPropertyValue(entry, settings.tagsProperty) as { data?: unknown } | null;
+		const tagsValue = await getFirstBasesPropertyValue(entry, settings.tagsProperty, app) as { data?: unknown } | null;
 		if (tagsValue && tagsValue.data != null) {
 			const tagData = tagsValue.data;
 			if (Array.isArray(tagData)) {
@@ -311,56 +366,61 @@ export function basesEntryToCardData(
 	cardData.propertyName14 = effectiveProps[13] || undefined;
 
 	// Resolve property values
-	cardData.property1 = effectiveProps[0] ? resolveBasesProperty(effectiveProps[0], entry, cardData, settings) : null;
-	cardData.property2 = effectiveProps[1] ? resolveBasesProperty(effectiveProps[1], entry, cardData, settings) : null;
-	cardData.property3 = effectiveProps[2] ? resolveBasesProperty(effectiveProps[2], entry, cardData, settings) : null;
-	cardData.property4 = effectiveProps[3] ? resolveBasesProperty(effectiveProps[3], entry, cardData, settings) : null;
-	cardData.property5 = effectiveProps[4] ? resolveBasesProperty(effectiveProps[4], entry, cardData, settings) : null;
-	cardData.property6 = effectiveProps[5] ? resolveBasesProperty(effectiveProps[5], entry, cardData, settings) : null;
-	cardData.property7 = effectiveProps[6] ? resolveBasesProperty(effectiveProps[6], entry, cardData, settings) : null;
-	cardData.property8 = effectiveProps[7] ? resolveBasesProperty(effectiveProps[7], entry, cardData, settings) : null;
-	cardData.property9 = effectiveProps[8] ? resolveBasesProperty(effectiveProps[8], entry, cardData, settings) : null;
-	cardData.property10 = effectiveProps[9] ? resolveBasesProperty(effectiveProps[9], entry, cardData, settings) : null;
-	cardData.property11 = effectiveProps[10] ? resolveBasesProperty(effectiveProps[10], entry, cardData, settings) : null;
-	cardData.property12 = effectiveProps[11] ? resolveBasesProperty(effectiveProps[11], entry, cardData, settings) : null;
-	cardData.property13 = effectiveProps[12] ? resolveBasesProperty(effectiveProps[12], entry, cardData, settings) : null;
-	cardData.property14 = effectiveProps[13] ? resolveBasesProperty(effectiveProps[13], entry, cardData, settings) : null;
+	// Resolve property values (async for MDX support)
+	cardData.property1 = effectiveProps[0] ? await resolveBasesPropertyAsync(effectiveProps[0], entry, cardData, settings, app) : null;
+	cardData.property2 = effectiveProps[1] ? await resolveBasesPropertyAsync(effectiveProps[1], entry, cardData, settings, app) : null;
+	cardData.property3 = effectiveProps[2] ? await resolveBasesPropertyAsync(effectiveProps[2], entry, cardData, settings, app) : null;
+	cardData.property4 = effectiveProps[3] ? await resolveBasesPropertyAsync(effectiveProps[3], entry, cardData, settings, app) : null;
+	cardData.property5 = effectiveProps[4] ? await resolveBasesPropertyAsync(effectiveProps[4], entry, cardData, settings, app) : null;
+	cardData.property6 = effectiveProps[5] ? await resolveBasesPropertyAsync(effectiveProps[5], entry, cardData, settings, app) : null;
+	cardData.property7 = effectiveProps[6] ? await resolveBasesPropertyAsync(effectiveProps[6], entry, cardData, settings, app) : null;
+	cardData.property8 = effectiveProps[7] ? await resolveBasesPropertyAsync(effectiveProps[7], entry, cardData, settings, app) : null;
+	cardData.property9 = effectiveProps[8] ? await resolveBasesPropertyAsync(effectiveProps[8], entry, cardData, settings, app) : null;
+	cardData.property10 = effectiveProps[9] ? await resolveBasesPropertyAsync(effectiveProps[9], entry, cardData, settings, app) : null;
+	cardData.property11 = effectiveProps[10] ? await resolveBasesPropertyAsync(effectiveProps[10], entry, cardData, settings, app) : null;
+	cardData.property12 = effectiveProps[11] ? await resolveBasesPropertyAsync(effectiveProps[11], entry, cardData, settings, app) : null;
+	cardData.property13 = effectiveProps[12] ? await resolveBasesPropertyAsync(effectiveProps[12], entry, cardData, settings, app) : null;
+	cardData.property14 = effectiveProps[13] ? await resolveBasesPropertyAsync(effectiveProps[13], entry, cardData, settings, app) : null;
 
 	return cardData;
 }
 
 /**
  * Batch transform Bases entries to CardData array
+ * Supports MDX files via manual frontmatter parsing
  */
-export function transformBasesEntries(
+export async function transformBasesEntries(
 	entries: BasesEntry[],
 	settings: CMSSettings,
 	sortMethod: string,
 	isShuffled: boolean,
 	snippets: Record<string, string>,
 	images: Record<string, string | string[]>,
-	hasImageAvailable: Record<string, boolean>
-): CardData[] {
-	return entries.map(entry => basesEntryToCardData(
+	hasImageAvailable: Record<string, boolean>,
+	app?: App
+): Promise<CardData[]> {
+	return Promise.all(entries.map(entry => basesEntryToCardData(
 		entry,
 		settings,
 		sortMethod,
 		isShuffled,
 		snippets[entry.file.path],
 		images[entry.file.path],
-		hasImageAvailable[entry.file.path]
-	));
+		hasImageAvailable[entry.file.path],
+		app
+	)));
 }
 
 /**
- * Resolve property value for Bases entry
+ * Resolve property value for Bases entry (async version with MDX support)
  */
-export function resolveBasesProperty(
+export async function resolveBasesPropertyAsync(
 	propertyName: string,
 	entry: BasesEntry,
 	cardData: CardData,
-	settings: CMSSettings
-): string | null {
+	settings: CMSSettings,
+	app?: App
+): Promise<string | null> {
 	if (!propertyName || propertyName === '') {
 		return null;
 	}
@@ -387,7 +447,7 @@ export function resolveBasesProperty(
 	}
 
 	// Generic property: read from frontmatter
-	const value = getFirstBasesPropertyValue(entry, propertyName);
+	const value = await getFirstBasesPropertyValue(entry, propertyName, app);
 	if (!value) return null;
 
 	// Type guard for value

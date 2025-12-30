@@ -5,7 +5,6 @@
 
 import { App, BasesEntry, TFile } from 'obsidian';
 import type { CardData, CMSSettings } from '../shared/data-transform';
-import { resolveBasesProperty } from '../shared/data-transform';
 import { getPropertyLabel } from './property';
 import { 
 	shouldHideMissingProperties, 
@@ -61,9 +60,48 @@ export class PropertyRenderer {
 		});
 
 		// Resolve property values
-		const values = effectiveProps.map(prop =>
-			prop ? resolveBasesProperty(prop, entry, card, settings) : null
-		);
+		// Use cardData properties that were already resolved during transformation
+		// For MDX files, properties are resolved async during transformBasesEntries
+		const values = effectiveProps.map((prop, index) => {
+			if (!prop) return null;
+			// Use pre-resolved properties from cardData (property1, property2, etc.)
+			const cardProperty = `property${index + 1}` as keyof CardData;
+			const cardValue = card[cardProperty];
+			if (cardValue !== undefined && cardValue !== null) {
+				return cardValue as string | null;
+			}
+			// Fallback: For .md files, try synchronous resolution via Bases API
+			// For MDX files, properties should already be in cardData from async transformation
+			try {
+				const value = entry.getValue(prop as `note.${string}` | `formula.${string}` | `file.${string}`) as { data?: unknown; date?: Date } | null;
+				if (!value) return null;
+				if ('date' in value && value.date instanceof Date) {
+					return value.date.toLocaleDateString();
+				}
+				if ('data' in value && value.data != null) {
+					const data = value.data;
+					if (Array.isArray(data)) {
+						return data.map(item => {
+							if (item && typeof item === 'object' && item !== null && !Array.isArray(item)) {
+								return JSON.stringify(item);
+							}
+							return String(item);
+						}).join(', ');
+					}
+					if (data && typeof data === 'object' && data !== null && !Array.isArray(data)) {
+						return JSON.stringify(data);
+					}
+					if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') {
+						return String(data);
+					}
+					// Fallback for other types
+					return data ? JSON.stringify(data) : '';
+				}
+			} catch {
+				// Ignore errors - property doesn't exist or can't be resolved
+			}
+			return null;
+		});
 
 		// Define property groups
 		const propertyGroups = [
@@ -142,14 +180,21 @@ export class PropertyRenderer {
 				if (filePath && this.app?.vault && this.app?.metadataCache) {
 					const file = this.app.vault.getAbstractFileByPath(filePath);
 					if (file instanceof TFile) {
-						const metadata = this.app.metadataCache.getFileCache(file);
-						if (metadata && metadata.frontmatter) {
-							const propertyNames = propName.split(',').map(p => p.trim()).filter(p => p);
-							for (const prop of propertyNames) {
-								const propKey = prop.replace(/^(note|formula|file)\./, '');
-								if (propKey in metadata.frontmatter) {
-									propertyExists = true;
-									break;
+						// For MDX files, metadata cache won't work, so skip this check
+						// The Bases API should handle property existence for MDX files
+						if (file.extension === 'mdx') {
+							// For MDX, assume property exists if Bases API returned a value
+							propertyExists = !isEmptyValue;
+						} else {
+							const metadata = this.app.metadataCache.getFileCache(file);
+							if (metadata && metadata.frontmatter) {
+								const propertyNames = propName.split(',').map(p => p.trim()).filter(p => p);
+								for (const prop of propertyNames) {
+									const propKey = prop.replace(/^(note|formula|file)\./, '');
+									if (propKey in metadata.frontmatter) {
+										propertyExists = true;
+										break;
+									}
 								}
 							}
 						}

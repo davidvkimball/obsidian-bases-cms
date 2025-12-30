@@ -8,12 +8,12 @@ import { setCssProps } from '../utils/css-props';
 import type BasesCMSPlugin from '../main';
 import type { CardData } from '../shared/data-transform';
 import type { CMSSettings } from '../shared/data-transform';
-import { getFirstBasesPropertyValue } from '../utils/property';
 import { renderDraftStatusBadge } from '../utils/draft-status-badge';
 import { setupQuickEditIcon } from '../utils/quick-edit-icon';
 import { PropertyRenderer } from '../utils/property-renderer';
 import { convertGifToStatic } from '../utils/image';
 import { getTagStyle, showTagHashPrefix } from '../utils/style-settings';
+import { getFileFrontmatter } from '../utils/frontmatter-helper';
 
 export class SharedCardRenderer {
 	protected basesConfig?: { get?: (key: string) => unknown };
@@ -226,7 +226,66 @@ export class SharedCardRenderer {
 
 		// Date (below title)
 		if (settings.showDate && settings.dateProperty) {
-			const dateValue = getFirstBasesPropertyValue(entry, settings.dateProperty);
+			// Try synchronous Bases API first (works for .md files)
+			let dateValue = entry.getValue(settings.dateProperty as `note.${string}` | `formula.${string}` | `file.${string}`) as { date?: Date; data?: unknown } | null;
+			
+			// For MDX files, fallback to manual frontmatter parsing
+			if (!dateValue) {
+				const file = this.app.vault.getAbstractFileByPath(entry.file.path);
+				if (file instanceof TFile && file.extension === 'mdx') {
+					// Load date asynchronously for MDX files
+					void (async () => {
+						const frontmatter = await getFileFrontmatter(this.app, file);
+						if (frontmatter) {
+							// Strip "note." prefix if present
+							const cleanProp = settings.dateProperty.startsWith('note.') 
+								? settings.dateProperty.substring(5) 
+								: settings.dateProperty;
+							const frontmatterValue = frontmatter[cleanProp];
+							
+							if (frontmatterValue != null) {
+								// Parse date from frontmatter value
+								let date: Date | null = null;
+								if (frontmatterValue instanceof Date) {
+									date = frontmatterValue;
+								} else if (typeof frontmatterValue === 'string' || typeof frontmatterValue === 'number') {
+									const parsedDate = new Date(frontmatterValue);
+									if (!isNaN(parsedDate.getTime())) {
+										date = parsedDate;
+									}
+								}
+								
+								if (date && cardEl.isConnected) {
+									// Format date based on settings
+									let dateString: string;
+									if (settings.dateIncludeTime) {
+										// Format date and time separately, then combine (respects user's system locale)
+										// Use options to exclude seconds and match user's expected format
+										const datePart = date.toLocaleDateString();
+										const timePart = date.toLocaleTimeString(undefined, { 
+											hour: 'numeric', 
+											minute: '2-digit', 
+											hour12: true 
+										});
+										dateString = `${datePart}, ${timePart}`;
+									} else {
+										// When time is not included, use date-only format (respects user's system locale)
+										dateString = date.toLocaleDateString();
+									}
+									
+									// Find or create date element
+									let dateEl = cardEl.querySelector('.card-date');
+									if (!dateEl) {
+										dateEl = cardEl.createDiv('card-date');
+									}
+									dateEl.setText(dateString);
+								}
+							}
+						}
+					})();
+				}
+			}
+			
 			if (dateValue) {
 				const dateObj = dateValue as { date?: Date; data?: unknown } | null;
 				let date: Date | null = null;

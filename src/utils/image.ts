@@ -160,7 +160,8 @@ export async function extractEmbedImages(
 
 	// Second pass: parse file content for external images (markdown and HTML)
 	// This catches external images that might not be in metadata.embeds
-	if (file.extension === 'md') {
+	// Note: For MDX files, metadata cache won't work, so we skip embed extraction
+	if (file.extension === 'md' || file.extension === 'mdx') {
 		try {
 			const content = await app.vault.cachedRead(file);
 			

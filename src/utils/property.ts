@@ -1,14 +1,22 @@
 /**
  * Property utility functions
  * Ported from Dynamic Views
+ * Updated to support MDX files via manual frontmatter parsing
  */
 
 import type { App, BasesEntry } from 'obsidian';
+import { TFile } from 'obsidian';
+import { getFileFrontmatter } from './frontmatter-helper';
 
 /**
  * Get first non-empty property value from comma-separated list (Bases)
+ * Supports MDX files via manual frontmatter parsing when Bases API fails
  */
-export function getFirstBasesPropertyValue(entry: BasesEntry, propertyString: string): unknown {
+export async function getFirstBasesPropertyValue(
+	entry: BasesEntry, 
+	propertyString: string,
+	app?: App
+): Promise<unknown> {
 	if (!propertyString || !propertyString.trim()) return null;
 
 	const properties = propertyString.split(',').map(p => p.trim()).filter(p => p);
@@ -20,11 +28,29 @@ export function getFirstBasesPropertyValue(entry: BasesEntry, propertyString: st
 		const valueObj = value as { date?: Date; data?: unknown } | null;
 		const propertyExists = valueObj && (
 			('date' in valueObj && valueObj.date instanceof Date) ||
-			('data' in valueObj)
+			('data' in valueObj && valueObj.data != null)
 		);
 
 		if (propertyExists) {
 			return value;
+		}
+
+		// For MDX files, fallback to manual frontmatter parsing if Bases API returned null
+		if (!propertyExists && app) {
+			const file = app.vault.getAbstractFileByPath(entry.file.path);
+			if (file instanceof TFile && file.extension === 'mdx') {
+				const frontmatter = await getFileFrontmatter(app, file);
+				if (frontmatter) {
+					// Strip "note." prefix if present
+					const cleanProp = prop.startsWith('note.') ? prop.substring(5) : prop;
+					const frontmatterValue = frontmatter[cleanProp];
+					
+					if (frontmatterValue != null) {
+						// Return in Bases API format: { data: value }
+						return { data: frontmatterValue };
+					}
+				}
+			}
 		}
 	}
 
@@ -35,8 +61,13 @@ export function getFirstBasesPropertyValue(entry: BasesEntry, propertyString: st
  * Get first image value from property (Bases)
  * Only accepts text and list property types containing image paths/URLs
  * Returns first image path/URL found, or empty array if none
+ * Supports MDX files via manual frontmatter parsing when Bases API fails
  */
-export function getAllBasesImagePropertyValues(entry: BasesEntry, propertyString: string): string[] {
+export async function getAllBasesImagePropertyValues(
+	entry: BasesEntry, 
+	propertyString: string,
+	app?: App
+): Promise<string[]> {
 	if (!propertyString || !propertyString.trim()) return [];
 
 	// Use first property only (not comma-separated)
@@ -45,25 +76,40 @@ export function getAllBasesImagePropertyValues(entry: BasesEntry, propertyString
 
 	const value = entry.getValue(prop as `note.${string}` | `formula.${string}` | `file.${string}`) as { data?: unknown; date?: Date } | null;
 
-	// Skip if property doesn't exist or is not text/list type
-	if (!value || !('data' in value)) return [];
+	let data: unknown = null;
 
-	// Handle the value
-	const data = value.data;
+	// If Bases API returned a value, use it
+	if (value && 'data' in value) {
+		data = value.data;
+	} else if (app) {
+		// For MDX files, fallback to manual frontmatter parsing
+		const file = app.vault.getAbstractFileByPath(entry.file.path);
+		if (file instanceof TFile && file.extension === 'mdx') {
+			const frontmatter = await getFileFrontmatter(app, file);
+			if (frontmatter) {
+				// Strip "note." prefix if present
+				const cleanProp = prop.startsWith('note.') ? prop.substring(5) : prop;
+				data = frontmatter[cleanProp];
+			}
+		}
+	}
+
+	// Skip if property doesn't exist
+	if (data == null) return [];
+
 	const images: string[] = [];
 
 	if (Array.isArray(data)) {
-		// List property - get first value
+		// List property - get all values
 		for (const item of data) {
 			if (typeof item === 'string' || typeof item === 'number') {
 				const str = String(item);
 				if (str && str.trim()) {
 					images.push(str);
-					break; // Only take first one
 				}
 			}
 		}
-	} else if (data != null && data !== '') {
+	} else if (data !== '') {
 		// Text property - single value
 		if (typeof data === 'string' || typeof data === 'number') {
 			const str = String(data);

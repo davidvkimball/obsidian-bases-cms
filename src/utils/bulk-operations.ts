@@ -1,11 +1,13 @@
 /**
  * Bulk operation handlers
+ * Updated to support MDX files via unified frontmatter helper
  */
 
 import { App, TFile, Notice } from 'obsidian';
 import { addProperties, removeProperties } from './frontmatter';
 import { NewPropData } from './frontmatter';
 import type { CMSSettings } from '../shared/data-transform';
+import { getFileFrontmatter, processFileFrontMatter } from './frontmatter-helper';
 
 export class BulkOperations {
 	constructor(private app: App) {}
@@ -64,16 +66,14 @@ export class BulkOperations {
 						targetValue = !draft;
 					}
 					
-					await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-						const fm = frontmatter as Record<string, unknown>;
-						fm[cleanConfigProperty] = targetValue;
+					await processFileFrontMatter(this.app, file, (frontmatter) => {
+						frontmatter[cleanConfigProperty] = targetValue;
 					});
 				}
 			} else {
 				// Fallback: use default behavior (set draft property)
-				await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-					const fm = frontmatter as Record<string, unknown>;
-					fm.draft = draft;
+				await processFileFrontMatter(this.app, file, (frontmatter) => {
+					frontmatter.draft = draft;
 				});
 			}
 		});
@@ -105,8 +105,7 @@ export class BulkOperations {
 	 */
 	async removeTags(files: string[], tagsToRemove: string[]): Promise<void> {
 		await this.batchProcessFiles(files, async (file) => {
-			const metadata = this.app.metadataCache.getFileCache(file);
-			const frontmatter = metadata?.frontmatter;
+			const frontmatter = await getFileFrontmatter(this.app, file);
 			
 			if (frontmatter?.tags) {
 				const fmTags = frontmatter.tags as string | string[];
@@ -118,12 +117,11 @@ export class BulkOperations {
 					!tagsToRemove.includes(tag)
 				);
 
-				await this.app.fileManager.processFrontMatter(file, (fm) => {
-					const fmTyped = fm as Record<string, unknown>;
+				await processFileFrontMatter(this.app, file, (fm) => {
 					if (updatedTags.length > 0) {
-						fmTyped.tags = updatedTags;
+						fm.tags = updatedTags;
 					} else {
-						fmTyped.tags = undefined;
+						fm.tags = undefined;
 					}
 				});
 			}

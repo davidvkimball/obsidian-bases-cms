@@ -223,7 +223,7 @@ export async function loadSnippetsForEntries(
 			}
 
 			try {
-				if (entry.file.extension === 'md') {
+				if (entry.file.extension === 'md' || entry.file.extension === 'mdx') {
 					snippetCache[entry.path] = await loadFilePreview(
 						entry.file,
 						app,

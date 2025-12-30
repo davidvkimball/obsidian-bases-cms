@@ -6,6 +6,7 @@
 import { App, TFile } from 'obsidian';
 import { readCMSSettings } from '../shared/settings-schema';
 import type { BasesCMSSettings } from '../types';
+import { processFileFrontMatter } from './frontmatter-helper';
 
 interface BasesConfig {
 	get(key: string): unknown;
@@ -74,17 +75,15 @@ export class PropertyToggleHandler {
 							: settings.draftStatusProperty)
 						: 'draft';
 					
-					await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-						const fm = frontmatter as Record<string, unknown>;
-						fm[cleanConfigProperty] = value;
+					await processFileFrontMatter(this.app, file, (frontmatter) => {
+						frontmatter[cleanConfigProperty] = value;
 					});
 					shouldRefresh = true;
 				}
 			} else {
 				// Normal property toggle - update frontmatter
-				await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-					const fm = frontmatter as Record<string, unknown>;
-					fm[cleanProperty] = value;
+				await processFileFrontMatter(this.app, file, (frontmatter) => {
+					frontmatter[cleanProperty] = value;
 				});
 				shouldRefresh = true;
 			}

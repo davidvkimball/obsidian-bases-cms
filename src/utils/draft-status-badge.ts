@@ -1,6 +1,5 @@
 import { BasesEntry } from 'obsidian';
 import type { CMSSettings } from '../shared/data-transform';
-import { getFirstBasesPropertyValue } from './property';
 
 /**
  * Calculate draft status from entry and settings
@@ -20,13 +19,12 @@ export function calculateDraftStatus(
 		isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
 	} else if (settings.draftStatusProperty) {
 		// Use property-based detection
-		const draftValue = getFirstBasesPropertyValue(entry, settings.draftStatusProperty);
-		if (draftValue) {
-			const draftObj = draftValue as { data?: unknown } | null;
-			if (draftObj && 'data' in draftObj && typeof draftObj.data === 'boolean') {
-				booleanValue = draftObj.data;
-				isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
-			}
+		// Note: getFirstBasesPropertyValue is async, but for draft status badge we use synchronous Bases API
+		// This works for .md files; for MDX files, draft status should be resolved during card transformation
+		const draftValue = entry.getValue(settings.draftStatusProperty as `note.${string}` | `formula.${string}` | `file.${string}`) as { data?: unknown } | null;
+		if (draftValue && 'data' in draftValue && typeof draftValue.data === 'boolean') {
+			booleanValue = draftValue.data;
+			isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
 		}
 	}
 	

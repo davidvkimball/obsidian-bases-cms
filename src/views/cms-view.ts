@@ -260,14 +260,15 @@ export class BasesCMSView extends BasesView {
 				}
 
 				// Render cards in this group
-				const cards = transformBasesEntries(
+				const cards = await transformBasesEntries(
 					groupEntries,
 					settings,
 					sortMethod,
 					false,
 					this.snippets,
 					this.images,
-					this.hasImageAvailable
+					this.hasImageAvailable,
+					this.app
 				);
 
 				for (let i = 0; i < cards.length; i++) {
@@ -470,18 +471,19 @@ export class BasesCMSView extends BasesView {
 	): Promise<void> {
 		// Load snippets for text preview
 		if (settings.showTextPreview) {
-			const snippetEntries = entries
+			const snippetEntriesPromises = entries
 				.filter(entry => !(entry.file.path in this.snippets))
-				.map(entry => {
+				.map(async entry => {
 					const file = this.app.vault.getAbstractFileByPath(entry.file.path);
 					if (!(file instanceof TFile)) return null;
-					const descValue = getFirstBasesPropertyValue(entry, settings.descriptionProperty) as { data?: unknown } | null;
+					const descValue = await getFirstBasesPropertyValue(entry, settings.descriptionProperty, this.app) as { data?: unknown } | null;
 					return {
 						path: entry.file.path,
 						file,
 						descriptionData: descValue?.data
 					};
-				})
+				});
+			const snippetEntries = (await Promise.all(snippetEntriesPromises))
 				.filter((e): e is { path: string; file: TFile; descriptionData: unknown } => e !== null);
 
 			if (snippetEntries.length > 0) {
@@ -498,18 +500,19 @@ export class BasesCMSView extends BasesView {
 
 		// Load images for thumbnails
 		if (settings.imageFormat !== 'none') {
-			const imageEntries = entries
+			const imageEntriesPromises = entries
 				.filter(entry => !(entry.file.path in this.images))
-				.map(entry => {
+				.map(async entry => {
 					const file = this.app.vault.getAbstractFileByPath(entry.file.path);
 					if (!(file instanceof TFile)) return null;
-					const imagePropertyValues = getAllBasesImagePropertyValues(entry, settings.imageProperty);
+					const imagePropertyValues = await getAllBasesImagePropertyValues(entry, settings.imageProperty, this.app);
 					return {
 						path: entry.file.path,
 						file,
 						imagePropertyValues: imagePropertyValues as unknown[]
 					};
-				})
+				});
+			const imageEntries = (await Promise.all(imageEntriesPromises))
 				.filter((e): e is NonNullable<typeof e> => e !== null);
 
 			if (imageEntries.length > 0) {

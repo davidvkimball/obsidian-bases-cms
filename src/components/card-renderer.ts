@@ -5,7 +5,9 @@
 
 import { App, BasesEntry, TFile } from 'obsidian';
 import { CardData } from '../types';
-import { getAllBasesImagePropertyValues } from '../utils/property';
+
+// Note: CardRenderer is legacy and not used - SharedCardRenderer is used instead
+// This class is kept for reference but doesn't fully support MDX files
 
 export class CardRenderer {
 	constructor(
@@ -48,8 +50,11 @@ export class CardRenderer {
 		const stat = entryFile instanceof TFile ? entryFile.stat : null;
 
 		// Get image property values from configured property
-		const imagePropertyValues = getAllBasesImagePropertyValues(entry, imageProperty);
-		const imageUrl = imagePropertyValues.length > 0 ? (imagePropertyValues.length === 1 ? imagePropertyValues[0] : imagePropertyValues) : undefined;
+		// Note: This is a legacy synchronous method - CardRenderer is not used
+		// For MDX support, use transformBasesEntries which handles async properly
+		// For now, return empty for MDX (this class shouldn't be used anyway)
+		const imagePropertyValues: string[] = [];
+		const imageUrl = undefined;
 
 		return {
 			path: entry.file.path,
