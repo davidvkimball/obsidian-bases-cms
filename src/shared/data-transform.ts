@@ -166,12 +166,33 @@ export async function basesEntryToCardData(
 	snippet?: string,
 	imageUrl?: string | string[],
 	hasImageAvailable?: boolean,
-	app?: App
+	app?: App,
+	mdxFrontmatterCache?: Record<string, Record<string, unknown> | null>
 ): Promise<CardData> {
 	const fileName = entry.file.basename || entry.file.name;
 
 	// Get title from property or fallback to filename
-	const titleValue = await getFirstBasesPropertyValue(entry, settings.titleProperty, app) as { data?: unknown } | null;
+	// For MDX files, check cache first to avoid async loading
+	let titleValue: { data?: unknown } | null = null;
+	if (app) {
+		const file = app.vault.getAbstractFileByPath(entry.file.path);
+		if (file instanceof TFile && file.extension === 'mdx' && mdxFrontmatterCache) {
+			const frontmatter = mdxFrontmatterCache[entry.file.path];
+			if (frontmatter) {
+				// Strip "note." prefix if present
+				const cleanProp = settings.titleProperty.startsWith('note.') ? settings.titleProperty.substring(5) : settings.titleProperty;
+				const frontmatterValue = frontmatter[cleanProp];
+				if (frontmatterValue != null) {
+					titleValue = { data: frontmatterValue };
+				}
+			}
+		}
+	}
+	
+	// If cache didn't have it, use the async method
+	if (!titleValue) {
+		titleValue = await getFirstBasesPropertyValue(entry, settings.titleProperty, app) as { data?: unknown } | null;
+	}
 	const titleData = titleValue?.data;
 	
 	// Handle arrays (e.g., aliases) by joining them
@@ -207,7 +228,11 @@ export async function basesEntryToCardData(
 	if (!yamlTagsValue && app) {
 		const file = app.vault.getAbstractFileByPath(entry.file.path);
 		if (file instanceof TFile && file.extension === 'mdx') {
-			const frontmatter = await getFileFrontmatter(app, file);
+			// Check cache first, then fallback to async loading
+			let frontmatter = mdxFrontmatterCache?.[entry.file.path] ?? null;
+			if (frontmatter === undefined) {
+				frontmatter = await getFileFrontmatter(app, file);
+			}
 			if (frontmatter?.tags) {
 				const tagData = frontmatter.tags;
 				const rawTags = Array.isArray(tagData)
@@ -279,6 +304,7 @@ export async function basesEntryToCardData(
 			const file = app.vault.getAbstractFileByPath(entry.file.path);
 			if (file instanceof TFile && file.extension === 'mdx') {
 				// For MDX, file.tags is same as note.tags (no body parsing)
+				// Frontmatter already loaded above if needed
 				tags = [...yamlTags];
 			}
 		}
@@ -366,21 +392,21 @@ export async function basesEntryToCardData(
 	cardData.propertyName14 = effectiveProps[13] || undefined;
 
 	// Resolve property values
-	// Resolve property values (async for MDX support)
-	cardData.property1 = effectiveProps[0] ? await resolveBasesPropertyAsync(effectiveProps[0], entry, cardData, settings, app) : null;
-	cardData.property2 = effectiveProps[1] ? await resolveBasesPropertyAsync(effectiveProps[1], entry, cardData, settings, app) : null;
-	cardData.property3 = effectiveProps[2] ? await resolveBasesPropertyAsync(effectiveProps[2], entry, cardData, settings, app) : null;
-	cardData.property4 = effectiveProps[3] ? await resolveBasesPropertyAsync(effectiveProps[3], entry, cardData, settings, app) : null;
-	cardData.property5 = effectiveProps[4] ? await resolveBasesPropertyAsync(effectiveProps[4], entry, cardData, settings, app) : null;
-	cardData.property6 = effectiveProps[5] ? await resolveBasesPropertyAsync(effectiveProps[5], entry, cardData, settings, app) : null;
-	cardData.property7 = effectiveProps[6] ? await resolveBasesPropertyAsync(effectiveProps[6], entry, cardData, settings, app) : null;
-	cardData.property8 = effectiveProps[7] ? await resolveBasesPropertyAsync(effectiveProps[7], entry, cardData, settings, app) : null;
-	cardData.property9 = effectiveProps[8] ? await resolveBasesPropertyAsync(effectiveProps[8], entry, cardData, settings, app) : null;
-	cardData.property10 = effectiveProps[9] ? await resolveBasesPropertyAsync(effectiveProps[9], entry, cardData, settings, app) : null;
-	cardData.property11 = effectiveProps[10] ? await resolveBasesPropertyAsync(effectiveProps[10], entry, cardData, settings, app) : null;
-	cardData.property12 = effectiveProps[11] ? await resolveBasesPropertyAsync(effectiveProps[11], entry, cardData, settings, app) : null;
-	cardData.property13 = effectiveProps[12] ? await resolveBasesPropertyAsync(effectiveProps[12], entry, cardData, settings, app) : null;
-	cardData.property14 = effectiveProps[13] ? await resolveBasesPropertyAsync(effectiveProps[13], entry, cardData, settings, app) : null;
+	// Resolve property values (async for MDX support, but uses cache when available)
+	cardData.property1 = effectiveProps[0] ? await resolveBasesPropertyAsync(effectiveProps[0], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property2 = effectiveProps[1] ? await resolveBasesPropertyAsync(effectiveProps[1], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property3 = effectiveProps[2] ? await resolveBasesPropertyAsync(effectiveProps[2], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property4 = effectiveProps[3] ? await resolveBasesPropertyAsync(effectiveProps[3], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property5 = effectiveProps[4] ? await resolveBasesPropertyAsync(effectiveProps[4], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property6 = effectiveProps[5] ? await resolveBasesPropertyAsync(effectiveProps[5], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property7 = effectiveProps[6] ? await resolveBasesPropertyAsync(effectiveProps[6], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property8 = effectiveProps[7] ? await resolveBasesPropertyAsync(effectiveProps[7], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property9 = effectiveProps[8] ? await resolveBasesPropertyAsync(effectiveProps[8], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property10 = effectiveProps[9] ? await resolveBasesPropertyAsync(effectiveProps[9], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property11 = effectiveProps[10] ? await resolveBasesPropertyAsync(effectiveProps[10], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property12 = effectiveProps[11] ? await resolveBasesPropertyAsync(effectiveProps[11], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property13 = effectiveProps[12] ? await resolveBasesPropertyAsync(effectiveProps[12], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+	cardData.property14 = effectiveProps[13] ? await resolveBasesPropertyAsync(effectiveProps[13], entry, cardData, settings, app, mdxFrontmatterCache) : null;
 
 	return cardData;
 }
@@ -397,7 +423,8 @@ export async function transformBasesEntries(
 	snippets: Record<string, string>,
 	images: Record<string, string | string[]>,
 	hasImageAvailable: Record<string, boolean>,
-	app?: App
+	app?: App,
+	mdxFrontmatterCache?: Record<string, Record<string, unknown> | null>
 ): Promise<CardData[]> {
 	return Promise.all(entries.map(entry => basesEntryToCardData(
 		entry,
@@ -407,7 +434,8 @@ export async function transformBasesEntries(
 		snippets[entry.file.path],
 		images[entry.file.path],
 		hasImageAvailable[entry.file.path],
-		app
+		app,
+		mdxFrontmatterCache
 	)));
 }
 
@@ -419,7 +447,8 @@ export async function resolveBasesPropertyAsync(
 	entry: BasesEntry,
 	cardData: CardData,
 	settings: CMSSettings,
-	app?: App
+	app?: App,
+	mdxFrontmatterCache?: Record<string, Record<string, unknown> | null>
 ): Promise<string | null> {
 	if (!propertyName || propertyName === '') {
 		return null;
@@ -447,7 +476,28 @@ export async function resolveBasesPropertyAsync(
 	}
 
 	// Generic property: read from frontmatter
-	const value = await getFirstBasesPropertyValue(entry, propertyName, app);
+	// For MDX files, check cache first to avoid async loading
+	let value: unknown = null;
+	if (app) {
+		const file = app.vault.getAbstractFileByPath(entry.file.path);
+		if (file instanceof TFile && file.extension === 'mdx' && mdxFrontmatterCache) {
+			const frontmatter = mdxFrontmatterCache[entry.file.path];
+			if (frontmatter) {
+				// Strip "note." prefix if present
+				const cleanProp = propertyName.startsWith('note.') ? propertyName.substring(5) : propertyName;
+				const frontmatterValue = frontmatter[cleanProp];
+				if (frontmatterValue != null) {
+					// Return in Bases API format: { data: value }
+					value = { data: frontmatterValue };
+				}
+			}
+		}
+	}
+	
+	// If cache didn't have it, use the async method
+	if (!value) {
+		value = await getFirstBasesPropertyValue(entry, propertyName, app);
+	}
 	if (!value) return null;
 
 	// Type guard for value

@@ -19,6 +19,7 @@ export class SharedCardRenderer {
 	protected basesConfig?: { get?: (key: string) => unknown };
 	protected basesController?: { getPropertyDisplayName?: (name: string) => string };
 	private propertyRenderer: PropertyRenderer;
+	protected mdxFrontmatterCache?: Record<string, Record<string, unknown> | null>;
 	
 	constructor(
 		protected app: App,
@@ -35,6 +36,13 @@ export class SharedCardRenderer {
 			() => this.basesConfig, // Pass a getter function so it always gets the latest config
 			() => this.basesController // Pass a getter function so it always gets the latest controller
 		);
+	}
+
+	/**
+	 * Set MDX frontmatter cache for synchronous access during rendering
+	 */
+	setMdxFrontmatterCache(cache: Record<string, Record<string, unknown> | null>): void {
+		this.mdxFrontmatterCache = cache;
 	}
 
 	/**
@@ -89,7 +97,7 @@ export class SharedCardRenderer {
 
 		// Draft status badge for non-cover formats (positioned absolutely, aligned with checkbox)
 		if (settings.showDraftStatus && settings.imageFormat !== 'cover') {
-			renderDraftStatusBadge(cardEl, entry, card.path, settings, onPropertyToggle, this.app);
+			renderDraftStatusBadge(cardEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
 		}
 
 		// Handle card click to open file (but not when clicking checkbox or property checkboxes)
@@ -526,7 +534,7 @@ export class SharedCardRenderer {
 				
 				// Draft status badge (top-left, clickable to toggle)
 						if (settings.showDraftStatus) {
-						renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle, this.app);
+						renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
 					}
 					
 					// Bottom properties - MUST be called before returning (for images)
@@ -541,11 +549,11 @@ export class SharedCardRenderer {
 				if (card.hasImageAvailable && !card.imageUrl) {
 					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
 				// Draft status badge on placeholder (top-left, clickable to toggle)
-				renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle, this.app);
+				renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
 				} else if (!card.imageUrl) {
 					// No image and not expected - create placeholder anyway for cover format
 					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
-					renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle, this.app);
+					renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
 				}
 			}
 		}

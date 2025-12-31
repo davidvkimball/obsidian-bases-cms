@@ -12,13 +12,13 @@ import { setupQuickEditIcon } from '../utils/quick-edit-icon';
 import { PropertyRenderer } from '../utils/property-renderer';
 import { convertGifToStatic } from '../utils/image';
 import { getTagStyle, showTagHashPrefix } from '../utils/style-settings';
-import { getFileFrontmatter } from '../utils/frontmatter-helper';
 // import { setupImageLoadHandler } from '../shared/image-loader'; // Removed - not used
 
 export class SharedCardRenderer {
 	protected basesConfig?: { get?: (key: string) => unknown };
 	protected basesController?: { getPropertyDisplayName?: (name: string) => string };
 	private propertyRenderer: PropertyRenderer;
+	protected mdxFrontmatterCache?: Record<string, Record<string, unknown> | null>;
 	
 	constructor(
 		protected app: App,
@@ -35,6 +35,13 @@ export class SharedCardRenderer {
 			() => this.basesConfig, // Pass a getter function so it always gets the latest config
 			() => this.basesController // Pass a getter function so it always gets the latest controller
 		);
+	}
+
+	/**
+	 * Set MDX frontmatter cache for synchronous access during rendering
+	 */
+	setMdxFrontmatterCache(cache: Record<string, Record<string, unknown> | null>): void {
+		this.mdxFrontmatterCache = cache;
 	}
 
 	/**
@@ -216,107 +223,86 @@ export class SharedCardRenderer {
 				('data' in dateValue && dateValue.data != null)
 			);
 			
-			// For MDX files, fallback to manual frontmatter parsing if no valid date
+			// For MDX files, use cached frontmatter synchronously if available
 			if (!hasValidDate) {
 				const file = this.app.vault.getAbstractFileByPath(entry.file.path);
 				
-				if (file instanceof TFile && file.extension === 'mdx') {
-					// Load date asynchronously for MDX files
-					void (async () => {
-						const frontmatter = await getFileFrontmatter(this.app, file);
+				if (file instanceof TFile && file.extension === 'mdx' && this.mdxFrontmatterCache) {
+					const frontmatter = this.mdxFrontmatterCache[entry.file.path];
+					
+					if (frontmatter) {
+						// Strip "note." prefix if present
+						const cleanProp = settings.dateProperty.startsWith('note.') 
+							? settings.dateProperty.substring(5) 
+							: settings.dateProperty;
 						
-						if (frontmatter) {
-							// Strip "note." prefix if present
-							const cleanProp = settings.dateProperty.startsWith('note.') 
-								? settings.dateProperty.substring(5) 
-								: settings.dateProperty;
+						const frontmatterValue = frontmatter[cleanProp];
+						
+						if (frontmatterValue != null) {
+							// Parse date from frontmatter value synchronously
+							let date: Date | null = null;
 							
-							const frontmatterValue = frontmatter[cleanProp];
-							
-							if (frontmatterValue != null) {
-								// Parse date from frontmatter value
-								let date: Date | null = null;
-								
-								// Handle Date objects (including those from YAML parsing)
-								if (frontmatterValue instanceof Date) {
-									date = frontmatterValue;
-								} 
-								// Handle date-like objects (YAML parsers sometimes return custom Date objects)
-								else if (frontmatterValue && typeof frontmatterValue === 'object' && 'getTime' in frontmatterValue) {
-									const dateLike = frontmatterValue as { getTime: () => number };
-									try {
-										const timestamp = dateLike.getTime();
-										if (typeof timestamp === 'number' && !isNaN(timestamp)) {
-											date = new Date(timestamp);
-										}
-									} catch {
-										// Fall through to string/number handling
+							// Handle Date objects (including those from YAML parsing)
+							if (frontmatterValue instanceof Date) {
+								date = frontmatterValue;
+							} 
+							// Handle date-like objects (YAML parsers sometimes return custom Date objects)
+							else if (frontmatterValue && typeof frontmatterValue === 'object' && 'getTime' in frontmatterValue) {
+								const dateLike = frontmatterValue as { getTime: () => number };
+								try {
+									const timestamp = dateLike.getTime();
+									if (typeof timestamp === 'number' && !isNaN(timestamp)) {
+										date = new Date(timestamp);
 									}
-								}
-								// Handle strings - especially ISO date strings like "2025-12-29"
-								if (!date && typeof frontmatterValue === 'string') {
-									const dateStr = frontmatterValue.trim();
-									// Try parsing as ISO date (YYYY-MM-DD) - this is what Obsidian uses
-									// Add time component to avoid timezone issues: "2025-12-29" -> "2025-12-29T00:00:00"
-									const isoDateStr = dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`;
-									const parsedDate = new Date(isoDateStr);
-									if (!isNaN(parsedDate.getTime())) {
-										date = parsedDate;
-									} else {
-										// Fallback to direct Date constructor
-										const fallbackDate = new Date(dateStr);
-										if (!isNaN(fallbackDate.getTime())) {
-											date = fallbackDate;
-										}
-									}
-								}
-								// Handle numbers (timestamps)
-								if (!date && typeof frontmatterValue === 'number') {
-									const parsedDate = new Date(frontmatterValue);
-									if (!isNaN(parsedDate.getTime())) {
-										date = parsedDate;
-									}
-								}
-								
-								// Always try to render the date, even if cardEl might not be connected yet
-								// The date element will be created/updated when the card is rendered
-								if (date) {
-									// Use requestAnimationFrame to ensure DOM is ready
-									requestAnimationFrame(() => {
-										if (cardEl.isConnected) {
-											let dateString: string;
-											if (settings.dateIncludeTime) {
-												const datePart = date.toLocaleDateString();
-												const timePart = date.toLocaleTimeString(undefined, { 
-													hour: 'numeric', 
-													minute: '2-digit', 
-													hour12: true 
-												});
-												dateString = `${datePart}, ${timePart}`;
-											} else {
-												dateString = date.toLocaleDateString();
-											}
-											
-											// Find or create date element
-											let dateEl = cardEl.querySelector('.card-date');
-											if (!dateEl) {
-												// Find the title element to insert date after it
-												const titleEl = cardEl.querySelector('.card-title');
-												if (titleEl && titleEl.parentElement) {
-													dateEl = titleEl.parentElement.createDiv('card-date');
-													// Insert after title
-													titleEl.parentElement.insertBefore(dateEl, titleEl.nextSibling);
-												} else {
-													dateEl = cardEl.createDiv('card-date');
-												}
-											}
-											dateEl.setText(dateString);
-										}
-									});
+								} catch {
+									// Fall through to string/number handling
 								}
 							}
+							// Handle strings - especially ISO date strings like "2025-12-29"
+							if (!date && typeof frontmatterValue === 'string') {
+								const dateStr = frontmatterValue.trim();
+								// Try parsing as ISO date (YYYY-MM-DD) - this is what Obsidian uses
+								// Add time component to avoid timezone issues: "2025-12-29" -> "2025-12-29T00:00:00"
+								const isoDateStr = dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`;
+								const parsedDate = new Date(isoDateStr);
+								if (!isNaN(parsedDate.getTime())) {
+									date = parsedDate;
+								} else {
+									// Fallback to direct Date constructor
+									const fallbackDate = new Date(dateStr);
+									if (!isNaN(fallbackDate.getTime())) {
+										date = fallbackDate;
+									}
+								}
+							}
+							// Handle numbers (timestamps)
+							if (!date && typeof frontmatterValue === 'number') {
+								const parsedDate = new Date(frontmatterValue);
+								if (!isNaN(parsedDate.getTime())) {
+									date = parsedDate;
+								}
+							}
+							
+							// Render date synchronously (no async/requestAnimationFrame needed)
+							if (date) {
+								let dateString: string;
+								if (settings.dateIncludeTime) {
+									const datePart = date.toLocaleDateString();
+									const timePart = date.toLocaleTimeString(undefined, { 
+										hour: 'numeric', 
+										minute: '2-digit', 
+										hour12: true 
+									});
+									dateString = `${datePart}, ${timePart}`;
+								} else {
+									dateString = date.toLocaleDateString();
+								}
+								
+								const dateEl = cardEl.createDiv('card-date');
+								dateEl.appendText(dateString);
+							}
 						}
-					})();
+					}
 				}
 			}
 			
@@ -391,13 +377,13 @@ export class SharedCardRenderer {
 				
 				// Draft status badge (top-left, clickable to toggle)
 				if (settings.showDraftStatus) {
-					renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle, this.app);
+					renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
 				}
 			} else {
 				coverWrapper.createDiv('card-cover-placeholder');
 				// Draft status badge on placeholder
 				if (settings.showDraftStatus) {
-					renderDraftStatusBadge(coverWrapper, entry, card.path, settings, onPropertyToggle, this.app);
+					renderDraftStatusBadge(coverWrapper, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
 				}
 			}
 

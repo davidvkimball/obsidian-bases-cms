@@ -5,11 +5,13 @@ import { getFileFrontmatter } from './frontmatter-helper';
 /**
  * Calculate draft status from entry and settings
  * Supports both .md files (via Bases API) and .mdx files (via manual frontmatter parsing)
+ * Uses cached frontmatter when available to avoid async loading
  */
 export async function calculateDraftStatusAsync(
 	entry: BasesEntry,
 	settings: CMSSettings,
-	app: App
+	app: App,
+	mdxFrontmatterCache?: Record<string, Record<string, unknown> | null>
 ): Promise<{ booleanValue: boolean | null; isDraft: boolean }> {
 	let booleanValue: boolean | null = null;
 	let isDraft = false;
@@ -27,10 +29,20 @@ export async function calculateDraftStatusAsync(
 			booleanValue = draftValue.data;
 			isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
 		} else {
-			// For MDX files, fallback to manual frontmatter parsing
+			// For MDX files, use cached frontmatter if available, otherwise fallback to async loading
 			const file = app.vault.getAbstractFileByPath(entry.file.path);
 			if (file instanceof TFile && file.extension === 'mdx') {
-				const frontmatter = await getFileFrontmatter(app, file);
+				// Check cache first
+				let frontmatter: Record<string, unknown> | null = null;
+				if (mdxFrontmatterCache) {
+					frontmatter = mdxFrontmatterCache[entry.file.path] ?? null;
+				}
+				
+				// If not in cache, load asynchronously
+				if (frontmatter === undefined) {
+					frontmatter = await getFileFrontmatter(app, file);
+				}
+				
 				if (frontmatter) {
 					// Strip "note." prefix if present
 					const cleanProp = settings.draftStatusProperty.startsWith('note.') 
@@ -82,7 +94,7 @@ export function calculateDraftStatus(
 
 /**
  * Render draft status badge on a container element
- * Supports both .md files (synchronous) and .mdx files (async)
+ * Supports both .md files (synchronous) and .mdx files (uses cache when available)
  */
 export function renderDraftStatusBadge(
 	container: HTMLElement,
@@ -90,7 +102,8 @@ export function renderDraftStatusBadge(
 	cardPath: string,
 	settings: CMSSettings,
 	onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>,
-	app?: App
+	app?: App,
+	mdxFrontmatterCache?: Record<string, Record<string, unknown> | null>
 ): void {
 	if (!settings.showDraftStatus) {
 		return;
@@ -103,9 +116,30 @@ export function renderDraftStatusBadge(
 		// Synchronous result available (from Bases API or filename prefix)
 		renderBadge(container, syncValue, syncIsDraft, onPropertyToggle, cardPath);
 	} else if (app) {
-		// No synchronous result - try async for MDX files
+		// For MDX files, check cache first to render synchronously
+		const file = app.vault.getAbstractFileByPath(entry.file.path);
+		if (file instanceof TFile && file.extension === 'mdx' && mdxFrontmatterCache) {
+			const frontmatter = mdxFrontmatterCache[entry.file.path];
+			if (frontmatter && settings.draftStatusProperty) {
+				// Strip "note." prefix if present
+				const cleanProp = settings.draftStatusProperty.startsWith('note.') 
+					? settings.draftStatusProperty.substring(5) 
+					: settings.draftStatusProperty;
+				const frontmatterValue = frontmatter[cleanProp];
+				
+				// Handle boolean values synchronously
+				if (typeof frontmatterValue === 'boolean') {
+					const booleanValue = frontmatterValue;
+					const isDraft = settings.draftStatusReverse ? !booleanValue : booleanValue;
+					renderBadge(container, booleanValue, isDraft, onPropertyToggle, cardPath);
+					return;
+				}
+			}
+		}
+		
+		// No synchronous result - try async for MDX files (fallback if cache miss)
 		void (async () => {
-			const { booleanValue, isDraft } = await calculateDraftStatusAsync(entry, settings, app);
+			const { booleanValue, isDraft } = await calculateDraftStatusAsync(entry, settings, app, mdxFrontmatterCache);
 			if (booleanValue !== null && container.isConnected) {
 				renderBadge(container, booleanValue, isDraft, onPropertyToggle, cardPath);
 			}

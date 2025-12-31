@@ -16,6 +16,7 @@ import { PropertyToggleHandler } from '../utils/property-toggle-handler';
 import { ScrollLayoutManager } from '../utils/scroll-layout-manager';
 import { ViewSwitchListener } from '../utils/view-switch-listener';
 import { convertGifToStatic } from '../utils/image';
+import { getFileFrontmatter } from '../utils/frontmatter-helper';
 
 export const CMS_VIEW_TYPE = 'bases-cms';
 
@@ -27,6 +28,7 @@ export class BasesCMSView extends BasesView {
 	private snippets: Record<string, string> = {};
 	private images: Record<string, string | string[]> = {};
 	private hasImageAvailable: Record<string, boolean> = {};
+	private mdxFrontmatterCache: Record<string, Record<string, unknown> | null> = {};
 	private updateLayoutRef: { current: (() => void) | null } = { current: null };
 	private propertyObservers: ResizeObserver[] = [];
 	private cardRenderer: SharedCardRenderer;
@@ -224,9 +226,17 @@ export class BasesCMSView extends BasesView {
 
 			// Update card renderer with config (now available)
 			(this.cardRenderer as unknown as { basesConfig?: { get?: (key: string) => unknown } }).basesConfig = this.config;
+			
+			// Update card renderer with MDX frontmatter cache for synchronous rendering
+			if (this.cardRenderer && typeof (this.cardRenderer as { setMdxFrontmatterCache?: (cache: Record<string, Record<string, unknown> | null>) => void }).setMdxFrontmatterCache === 'function') {
+				(this.cardRenderer as { setMdxFrontmatterCache: (cache: Record<string, Record<string, unknown> | null>) => void }).setMdxFrontmatterCache(this.mdxFrontmatterCache);
+			}
 
 			// Clear and re-render after content is loaded
 			this.containerEl.empty();
+
+			// Clear MDX frontmatter cache when re-rendering
+			this.mdxFrontmatterCache = {};
 
 			// Disconnect old property observers before re-rendering
 			this.propertyObservers.forEach(obs => obs.disconnect());
@@ -268,7 +278,8 @@ export class BasesCMSView extends BasesView {
 					this.snippets,
 					this.images,
 					this.hasImageAvailable,
-					this.app
+					this.app,
+					this.mdxFrontmatterCache
 				);
 
 				for (let i = 0; i < cards.length; i++) {
@@ -463,6 +474,38 @@ export class BasesCMSView extends BasesView {
 				this.settingsPollInterval = null;
 			}
 		});
+	}
+
+	/**
+	 * Preload MDX frontmatter for all visible entries to prevent flashing
+	 * This ensures all MDX data is available synchronously during card transformation
+	 */
+	private async preloadMdxFrontmatter(entries: BasesEntry[]): Promise<void> {
+		// Filter to only MDX files that aren't already cached
+		const mdxEntries = entries.filter(entry => {
+			const file = this.app.vault.getAbstractFileByPath(entry.file.path);
+			return file instanceof TFile && file.extension === 'mdx' && !(entry.file.path in this.mdxFrontmatterCache);
+		});
+
+		if (mdxEntries.length === 0) {
+			return;
+		}
+
+		// Load all MDX frontmatter in parallel
+		await Promise.all(
+			mdxEntries.map(async (entry) => {
+				const file = this.app.vault.getAbstractFileByPath(entry.file.path);
+				if (file instanceof TFile) {
+					try {
+						const frontmatter = await getFileFrontmatter(this.app, file);
+						this.mdxFrontmatterCache[entry.file.path] = frontmatter;
+					} catch (error) {
+						console.error(`Bases CMS: Error preloading frontmatter for ${entry.file.path}:`, error);
+						this.mdxFrontmatterCache[entry.file.path] = null;
+					}
+				}
+			})
+		);
 	}
 
 	private async loadContentForEntries(
