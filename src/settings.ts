@@ -42,7 +42,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				}));
 
 		// Toolbar button visibility settings
-		const toolbarButtonsGroup = createSettingsGroup(containerEl, 'Toolbar buttons');
+		const toolbarButtonsGroup = createSettingsGroup(containerEl, 'Toolbar buttons', 'bases-cms');
 
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
@@ -173,7 +173,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		});
 
 		// Deletion settings
-		const deletionsGroup = createSettingsGroup(containerEl, 'Deletions');
+		const deletionsGroup = createSettingsGroup(containerEl, 'Deletions', 'bases-cms');
 
 		deletionsGroup.addSetting(setting => {
 			setting
@@ -232,7 +232,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		});
 
 		// Icon settings
-		const appearanceGroup = createSettingsGroup(containerEl, 'Appearance');
+		const appearanceGroup = createSettingsGroup(containerEl, 'Appearance', 'bases-cms');
 
 		appearanceGroup.addSetting(setting => {
 			setting
@@ -279,7 +279,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		// Properties info modal setting
 		// Quick edit settings
-		const quickEditGroup = createSettingsGroup(containerEl, 'Quick edit');
+		const quickEditGroup = createSettingsGroup(containerEl, 'Quick edit', 'bases-cms');
 
 		// Define quick edit settings first (needed for visibility toggling)
 		let quickEditCommandSetting: Setting;

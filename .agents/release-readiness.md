@@ -42,8 +42,10 @@ These checks can be performed automatically by reading files and scanning code:
 ### Version Consistency
 
 - [ ] **GitHub release tag**: Matches `manifest.json` version exactly (no "v" prefix)
+  - **Correct**: If `manifest.json` has `"version": "0.1.0"`, tag must be `0.1.0` (not `v0.1.0`)
+  - **Wrong**: `v0.1.0` (with "v" prefix) - this will NOT match and can cause issues
   - If checking before release: Verify version format is ready
-  - If checking after release: Verify tag matches manifest version
+  - If checking after release: Verify tag matches manifest version exactly
 
 ### Code Quality Checks
 
@@ -86,7 +88,10 @@ These checks require user input or confirmation:
 
 - [ ] **Release created**: GitHub release exists for the version
 - [ ] **Required files attached**: `main.js`, `manifest.json`, `styles.css` (if present) attached as **individual binary assets** (not just in source.zip)
-- [ ] **Release name matches version**: Release name/tag exactly matches `manifest.json` version (no "v" prefix)
+- [ ] **Release tag format**: The release tag must exactly match `manifest.json`'s `version` field **WITHOUT** a leading "v" prefix
+  - **Correct**: If `manifest.json` has `"version": "0.1.0"`, tag must be `0.1.0` (not `v0.1.0`)
+  - **Wrong**: `v0.1.0` (with "v" prefix) - this will NOT match and can cause issues
+  - The release name can be descriptive, but the tag itself must be the version number without "v" prefix
 
 ### Community Plugin Registration
 

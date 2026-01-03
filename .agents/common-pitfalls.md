@@ -37,6 +37,26 @@ async saveSettings() {
 }
 ```
 
+## GitHub Release Tag Format
+
+**Problem**: Using "v" prefix in GitHub release tags (e.g., "v0.1.0") instead of the version number without prefix (e.g., "0.1.0"). The tag must match `manifest.json`'s `version` field exactly.
+
+**Wrong**:
+- Tag: `v0.1.0`
+- Release name: `v0.1.0`
+- Manifest version: `0.1.0` (mismatch!)
+
+**Correct**:
+- Tag: `0.1.0` (matches manifest.json version exactly)
+- Release name: `0.1.0` (or any descriptive name, but tag must be version number)
+- Manifest version: `0.1.0` (matches tag exactly)
+
+**Why it matters**: The Obsidian community plugin system expects the GitHub release tag to exactly match the version in `manifest.json`. Using a "v" prefix breaks this matching and can cause issues with plugin updates and version detection.
+
+**Rule**: GitHub release tags must be the version number WITHOUT the "v" prefix. The tag must match `manifest.json`'s `version` field exactly.
+
+**See also**: [versioning-releases.md](versioning-releases.md), [release-readiness.md](release-readiness.md)
+
 ## Settings Object.assign Gotcha
 
 **Source**: Warning from `.ref/obsidian-developer-docs/en/Plugins/User interface/Settings.md`

@@ -27,11 +27,13 @@ export interface SettingsContainer {
  * 
  * @param containerEl - The container element for settings
  * @param heading - The heading text for the settings group
+ * @param manifestId - The plugin's manifest ID for CSS scoping (required for fallback mode)
  * @returns A container that can be used to add settings
  */
 export function createSettingsGroup(
 	containerEl: HTMLElement,
-	heading: string
+	heading: string,
+	manifestId?: string
 ): SettingsContainer {
 	// Check if SettingGroup is available (API 1.11.0+)
 	// requireApiVersion is the official Obsidian API method for version checking
@@ -51,6 +53,12 @@ export function createSettingsGroup(
 			};
 		}
 		// Fallback if SettingGroup is not found (shouldn't happen if requireApiVersion is correct)
+	}
+	
+	// Fallback path (either API < 1.11.0 or SettingGroup not found)
+	// Add scoping class to containerEl to scope CSS to only this plugin's settings
+	if (manifestId) {
+		containerEl.addClass(`${manifestId}-settings-compat`);
 	}
 	
 	// Fallback: Create a heading manually and use container directly

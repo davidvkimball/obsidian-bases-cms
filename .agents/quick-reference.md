@@ -143,6 +143,9 @@ this.addRibbonIcon("icon-name", "Tooltip", () => { /* ... */ });
 - Run release readiness check: See [release-readiness.md](release-readiness.md)
 - Verify all checklist items (platform testing, files, policies, etc.)
 - Ensure LICENSE file exists and third-party code is properly attributed
+- **GitHub release tag format**: Tag must match `manifest.json` version exactly **WITHOUT** "v" prefix
+  - Correct: `0.1.0` (matches `manifest.json` version)
+  - Wrong: `v0.1.0` (with "v" prefix will NOT match)
 
 See [versioning-releases.md](versioning-releases.md) for release process.
 
