@@ -6,7 +6,13 @@ Update frequency: Update as common issues are identified
 
 # Common Pitfalls
 
-This document covers common mistakes and gotchas when developing Obsidian plugins. Always verify API details in `.ref/obsidian-api/obsidian.d.ts` as it's the authoritative source.
+**Purpose**: This document covers common mistakes and gotchas when developing Obsidian plugins. It focuses on general development pitfalls with examples and solutions.
+
+**For bot-specific requirements**: See [obsidian-bot-requirements.md](obsidian-bot-requirements.md) (authoritative source for bot review requirements).
+
+**For fix procedures**: See [linting-fixes-guide.md](linting-fixes-guide.md) (step-by-step fixes for linting errors).
+
+Always verify API details in `.ref/obsidian-api/obsidian.d.ts` as it's the authoritative source.
 
 ## Async/Await Issues
 
@@ -565,12 +571,27 @@ function process(data: unknown) {
 
 ### Async Functions Without Await
 
-**Problem**: Marking functions as `async` but never using `await` is unnecessary and can cause confusion.
+**Problem**: Marking functions as `async` but never using `await` is unnecessary and can cause confusion. The Obsidian review bot flags this as an error.
+
+**Why it matters**: The Obsidian review bot enforces this rule. Your local ESLint should be configured to catch this before submission.
+
+**When to use `async`**:
+- ✅ When you use `await` inside the function
+- ✅ When you return a Promise that callers need to await
+- ❌ **NOT** when you only call synchronous functions
+- ❌ **NOT** when you use synchronous Node.js APIs (fs.existsSync, dialog.showOpenDialogSync)
+- ❌ **NOT** for callbacks that don't need to be async
 
 **Wrong**:
 ```ts
 async handleClick() {
   this.doSomething(); // No await needed
+}
+
+// Using synchronous APIs
+async selectFolder() {
+  const result = dialog.showOpenDialogSync({ ... }); // Synchronous API!
+  return result;
 }
 ```
 
@@ -580,10 +601,27 @@ handleClick() {
   this.doSomething();
 }
 
+// Synchronous APIs don't need async
+selectFolder() {
+  const result = dialog.showOpenDialogSync({ ... });
+  return result;
+}
+
 // Or if you need async:
 async handleClick() {
   await this.doSomethingAsync();
 }
+```
+
+**Common patterns that don't need async**:
+- Callbacks that just call synchronous functions
+- Functions using `fs.existsSync()`, `fs.statSync()`, `dialog.showOpenDialogSync()`
+- Render methods that don't use await
+- Wrapper functions that call synchronous methods
+
+**ESLint Configuration**: Ensure your `eslint.config.mjs` includes:
+```javascript
+"@typescript-eslint/require-await": "error"
 ```
 
 ### Awaiting Non-Promise Values
@@ -604,6 +642,8 @@ const value = this.getSetting(); // No await needed
 
 **Problem**: Using `console.log()` in production code. Only `console.warn()`, `console.error()`, and `console.debug()` are allowed.
 
+**Why it matters**: The Obsidian review bot enforces this restriction. Your local ESLint should be configured to catch this before submission.
+
 **Wrong**:
 ```ts
 console.log("Debug info");
@@ -614,6 +654,11 @@ console.log("Debug info");
 console.debug("Debug info"); // For development debugging
 console.warn("Warning message");
 console.error("Error message");
+```
+
+**ESLint Configuration**: Ensure your `eslint.config.mjs` includes:
+```javascript
+"no-console": ["error", { "allow": ["warn", "error", "debug"] }]
 ```
 
 ### Using Deprecated APIs
@@ -818,4 +863,21 @@ if (match) {
 ```
 
 **ESLint rule**: `regex-lookbehind` (from `eslint-plugin-obsidianmd`)
+
+## Obsidian Bot Review Requirements
+
+The Obsidian review bot has stricter requirements than local linting. This section covers general pitfalls related to bot review. For comprehensive bot requirements and detailed guidance, see the authoritative sources below.
+
+**Key Bot Requirements** (see [obsidian-bot-requirements.md](obsidian-bot-requirements.md) for complete details):
+- Console statements: Only `console.debug()`, `console.warn()`, `console.error()` allowed
+- Async functions: Must use `await` or remove `async` keyword
+- ESLint disable comments: Must include descriptions, cannot disable certain rules
+- Sentence-case: Cannot be disabled in code (use `/skip` in bot review for false positives)
+
+**For detailed information, see**:
+- **[obsidian-bot-requirements.md](obsidian-bot-requirements.md)** - Complete bot requirements (authoritative source)
+- **[linting-fixes-guide.md](linting-fixes-guide.md)** - Step-by-step fix procedures for linting issues
+- **[release-readiness.md](release-readiness.md)** - Pre-submission checklist
+
+**Note**: The sections above in this document cover general development pitfalls. For bot-specific requirements and detailed fix procedures, refer to the authoritative sources listed above.
 

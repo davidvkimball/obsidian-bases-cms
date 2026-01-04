@@ -6,9 +6,14 @@ Update frequency: Check Obsidian Developer Policies and Plugin Guidelines for up
 
 # Release Readiness Checklist
 
-This document provides a comprehensive checklist to verify your plugin is ready for release to the Obsidian community. Use this when preparing a release or when asked "is my plugin ready for release?"
+**Purpose**: This document provides a comprehensive checklist to verify your plugin is ready for release to the Obsidian community. Use this when preparing a release or when asked "is my plugin ready for release?"
 
 **For AI Agents**: When a user asks about release readiness, run through this checklist systematically. Perform automated checks where possible, and ask the user interactively for items that require their input.
+
+**Related documentation**:
+- [obsidian-bot-requirements.md](obsidian-bot-requirements.md) - Bot requirements (authoritative source)
+- [versioning-releases.md](versioning-releases.md) - Versioning and release process
+- [common-pitfalls.md](common-pitfalls.md) - Common development pitfalls
 
 ## Quick Reference
 
@@ -56,6 +61,12 @@ These checks can be performed automatically by reading files and scanning code:
 - [ ] **No self-updating mechanisms**: No automatic code updates outside normal releases
 - [ ] **Console logging**: Only `console.warn()`, `console.error()`, or `console.debug()` - no `console.log()` in production code
 - [ ] **Listener cleanup**: All event listeners registered using `registerEvent()`, `registerDomEvent()`, `registerInterval()`
+- [ ] **ESLint configuration matches Obsidian bot**:
+  - [ ] `no-console` rule configured to only allow warn/error/debug
+  - [ ] `@typescript-eslint/require-await` enabled
+  - [ ] No disallowed rule disables present (no-static-styles-assignment, no-explicit-any, ui/sentence-case)
+  - [ ] All disable comments have descriptions
+  - [ ] No unused eslint-disable directives
 
 ### README.md Content
 

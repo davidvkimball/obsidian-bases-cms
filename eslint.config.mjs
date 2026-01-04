@@ -48,8 +48,10 @@ export default defineConfig([
       // These are intentional placeholder names and sample code that users should customize
       "obsidianmd/sample-names": "off",
       "obsidianmd/no-sample-code": "off",
-      // Allow console.log in sample code (the registerInterval example)
-      "no-console": "off",
+      // Console rules: Match Obsidian bot requirements (only warn/error/debug allowed)
+      "no-console": ["error", { "allow": ["warn", "error", "debug"] }],
+      // Require await in async functions (matches Obsidian bot)
+      "@typescript-eslint/require-await": "error",
     },
   },
   {

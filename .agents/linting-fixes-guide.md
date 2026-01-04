@@ -7,7 +7,12 @@ Applicability: Plugin
 
 # Linting Fixes Guide
 
-This guide provides specific fixes for common linting issues detected by `eslint-plugin-obsidianmd`. Use this when fixing issues in your plugin code.
+**Purpose**: This guide provides **step-by-step fix procedures** for common linting issues detected by `eslint-plugin-obsidianmd`. Use this when you need to fix specific linting errors in your plugin code.
+
+**Related documentation**:
+- [obsidian-bot-requirements.md](obsidian-bot-requirements.md) - Bot requirements (authoritative source)
+- [common-pitfalls.md](common-pitfalls.md) - General development pitfalls
+- [release-readiness.md](release-readiness.md) - Pre-submission checklist
 
 ## Table of Contents
 
@@ -137,43 +142,61 @@ this.addCommand({
 - **No title case**: "Toggle Sidebar" ❌
 - **No all caps**: "TOGGLE SIDEBAR" ❌
 
-### Sentence Case False Positives
+### Sentence Case - Cannot Be Disabled in Code
 
-The `obsidianmd/ui/sentence-case` rule can sometimes flag legitimate text as errors. These are **false positives** and should be suppressed with ESLint disable comments. Always include a comment explaining why it's a false positive.
+**CRITICAL**: The `obsidianmd/ui/sentence-case` rule **cannot be disabled with eslint-disable comments**. The Obsidian bot will reject any attempt to disable this rule in code.
 
-#### Common False Positive Scenarios
+**However**, the Obsidian bot does allow you to use `/skip` in bot review comments to handle legitimate false positives. This is the only way to handle cases where the bot incorrectly flags text that is already correct.
+
+**When to fix text vs. use `/skip`**:
+
+1. **Fix the text** if:
+   - The text is actually not in proper sentence case
+   - You can rephrase to avoid the false positive
+   - The issue is a simple capitalization error
+
+2. **Use `/skip` in bot review** if:
+   - The text is already correct but the bot flags it as incorrect
+   - The text contains proper nouns (framework names, product names) that must be capitalized
+   - The text contains technical notation (date format codes, file paths) that cannot be changed
+   - Rephrasing would make the text less clear or accurate
+   - The bot is incorrectly interpreting context
+
+**If the linter flags text that appears to be correct**, you have two options:
+1. Try to rephrase the text to avoid the false positive (preferred)
+2. Use `/skip` in the bot review comment with an explanation (acceptable for legitimate false positives)
+
+#### Common Scenarios Requiring Text Fixes
 
 **1. Proper Nouns (Framework/Product Names)**
 
-When proper nouns like framework or product names appear in the middle of sentences, the linter may incorrectly flag them:
+When proper nouns like framework or product names appear in the middle of sentences, ensure they are capitalized correctly:
 
 ```typescript
-// ❌ Linter error (false positive)
+// ❌ Wrong - Cannot disable, must fix text
+// eslint-disable-next-line obsidianmd/ui/sentence-case  // ❌ Bot will reject this!
 .setDesc("Choose the default format for copied heading links. Obsidian format respects your Obsidian settings for wikilink vs markdown preference. Astro link uses your link base path from above and converts the heading into kebab-case format as an anchor link")
 
-// ✅ Correct - Suppress with explanation
-// False positive: "Astro" is a proper noun (framework name) and should be capitalized
-// eslint-disable-next-line obsidianmd/ui/sentence-case
+// ✅ Correct - Fix text to proper sentence case with capitalized proper nouns
 .setDesc("Choose the default format for copied heading links. Obsidian format respects your Obsidian settings for wikilink vs markdown preference. Astro link uses your link base path from above and converts the heading into kebab-case format as an anchor link")
+// Note: "Astro" is a proper noun and should remain capitalized
 ```
 
 **2. Date/Time Format Codes**
 
-Date format placeholders and format codes (like "YYYY-MM-DD", "MMMM", "yyyy") are technical notation, not UI text:
+Date format placeholders and format codes (like "YYYY-MM-DD", "MMMM", "yyyy") are technical notation. The linter may flag these, but you cannot disable the rule. Ensure the surrounding text is in proper sentence case:
 
 ```typescript
-// ❌ Linter error (false positive)
+// ❌ Wrong - Cannot disable, must ensure text is correct
+// eslint-disable-next-line obsidianmd/ui/sentence-case  // ❌ Bot will reject this!
 .setPlaceholder("YYYY-MM-DD")
 .setDesc("Format for the date in properties (e.g., yyyy-mm-dd, MMMM D, yyyy, yyyy-mm-dd HH:mm)")
 
-// ✅ Correct - Suppress with explanation
-// False positive: "YYYY-MM-DD" is a date format placeholder, not UI text
-// eslint-disable-next-line obsidianmd/ui/sentence-case
+// ✅ Correct - Text is already in proper sentence case
+// Format codes like "YYYY-MM-DD" and "MMMM" are technical notation and acceptable
 .setPlaceholder("YYYY-MM-DD")
-
-// False positive: Date format codes (MMMM, yyyy, etc.) are technical notation, not UI text
-// eslint-disable-next-line obsidianmd/ui/sentence-case
 .setDesc("Format for the date in properties (e.g., yyyy-mm-dd, MMMM D, yyyy, yyyy-mm-dd HH:mm)")
+// Note: If the linter still flags this, you may need to rephrase the description
 ```
 
 **3. Technical Notation and Code Examples**
@@ -204,137 +227,67 @@ Dropdown option labels that include proper nouns:
 .addOption("astro", "Astro link")
 ```
 
-#### How to Handle False Positives
+#### How to Handle Sentence Case Issues
 
-**IMPORTANT**: Only use ESLint disable comments for **actual false positives**. Do not use them as a shortcut to avoid fixing legitimate errors. Always verify the text is already correct before adding a disable comment.
+**⚠️ CRITICAL: Sentence Case Rule Cannot Be Disabled in Code**
 
-**⚠️ CRITICAL: AI Agents Often Place Disable Comments Incorrectly**
+**The Obsidian bot will reject any attempt to disable `obsidianmd/ui/sentence-case` with eslint-disable comments**. However, you can use `/skip` in bot review comments for legitimate false positives.
 
-**Common Problem**: AI coding assistants (like Cursor, GitHub Copilot, ChatGPT, etc.) frequently place `eslint-disable` comments in the wrong location. They may place them:
-- Too far above the error line
-- On the same line as the error
-- After the error line
-- Before the wrong method in a chain
+**Step 1: Verify the text is correct**
+- First word capitalized
+- Rest lowercase except proper nouns
+- Proper nouns (framework names, product names) should be capitalized
+- Technical notation (date codes, file paths) may need special handling
 
-**The Rule**: The `eslint-disable-next-line` comment **MUST be directly on the line immediately before** the line that contains the error. There can be NO blank lines or other code between the disable comment and the error line.
+**Step 2: Try to fix the text** (preferred):
+- Rephrase to avoid the false positive
+- Use code formatting for technical notation
+- Restructure sentences if needed
 
-**Always verify placement**: After an AI agent adds a disable comment, check that it's on the line immediately before the error. If you see the error "Fixing eslint-disable comment placement. They must be directly before the line with the error:", the comment is in the wrong location and needs to be moved.
+**Step 3: If text is already correct but bot flags it** (legitimate false positive):
+- You cannot disable the rule in code
+- Use `/skip` in the bot review comment with an explanation
+- Example: `/skip False positive: "Astro" is a proper noun (framework name) and must be capitalized`
 
-1. **Verify it's actually a false positive**: 
-   - Check that the text is already in correct sentence case (first word capitalized, rest lowercase except proper nouns)
-   - Verify the text follows proper grammar and formatting rules
-   - Confirm the linter is incorrectly flagging valid text
+3. **Common scenarios**:
+   - Proper nouns (framework names, product names, company names) - Keep capitalized
+   - Technical notation (date format codes, file paths, code examples) - May need rephrasing or code formatting
+   - Placeholders that are format strings - Consider using code formatting or rephrasing
 
-2. **Format the disable comment correctly**: Use this exact format with two separate comment lines:
-   ```typescript
-   // False positive: [Brief explanation of why it's a false positive]
-   // eslint-disable-next-line obsidianmd/ui/sentence-case
-   ```
+#### Fixing Sentence Case Issues
 
-3. **Place the disable comment correctly** (AI agents often get this wrong!): 
-   - **CRITICAL**: The `eslint-disable-next-line` comment **must** be on the line immediately before the line with the error
-   - **No blank lines** between the disable comment and the error line
-   - **No other code** between the disable comment and the error line
-   - For method chaining, place it right before the method call that contains the flagged text
-   - The explanation comment goes on the line immediately before the disable comment
-   - **Always double-check placement** - AI agents frequently place these comments incorrectly
+**Remember: You cannot disable this rule. You must fix the text.**
 
-4. **Common false positive reasons**:
-   - Proper nouns (framework names, product names, company names)
-   - Technical notation (date format codes, file paths, code examples)
-   - Placeholders that are format strings (not user-facing text)
-   - Text that is already correctly formatted but the linter misinterprets
-
-#### Formatting Rules (Critical)
-
-**Rule 1: Two separate comment lines**
+**Example: Fixing text to proper sentence case**
 ```typescript
-// ✅ Correct - Two separate lines
-// False positive: Already in sentence case
-// eslint-disable-next-line obsidianmd/ui/sentence-case
+// ❌ Wrong - Cannot disable, must fix text
+// eslint-disable-next-line obsidianmd/ui/sentence-case  // ❌ Bot will reject!
 .setDesc('Display the button in the CMS toolbar.')
 
-// ❌ Wrong - Combined into one line
-// False positive: Already in sentence case // eslint-disable-next-line obsidianmd/ui/sentence-case
+// ✅ Correct - Text is already in proper sentence case
 .setDesc('Display the button in the CMS toolbar.')
 ```
 
-**Rule 2: Disable comment must be immediately before the error line**
-
-⚠️ **AI agents (Cursor, Copilot, etc.) often get this wrong!** They may place the disable comment several lines above the error, or on the wrong line entirely. Always verify the comment is directly before the error line.
-
+**Example: Handling proper nouns**
 ```typescript
-// ✅ Correct - Disable comment on line immediately before error
-.setName('Show button')
-// False positive: Already in sentence case
-// eslint-disable-next-line obsidianmd/ui/sentence-case
-.setDesc('Display the button in the CMS toolbar.')
+// ❌ Wrong - Cannot disable
+// eslint-disable-next-line obsidianmd/ui/sentence-case  // ❌ Bot will reject!
+.setDesc('Choose the default format. Astro link uses your link base path.')
 
-// ❌ Wrong - Disable comment too far from error (common AI agent mistake)
-// False positive: Already in sentence case
-// eslint-disable-next-line obsidianmd/ui/sentence-case
-.setName('Show button')
-.setDesc('Display the button in the CMS toolbar.') // Error is here, but disable is too far up
-
-// ❌ Wrong - Blank line between disable and error (AI agents sometimes do this)
-// False positive: Already in sentence case
-// eslint-disable-next-line obsidianmd/ui/sentence-case
-
-.setDesc('Display the button in the CMS toolbar.') // Error is here, but blank line breaks it
-
-// ❌ Wrong - Disable comment on same line as error (AI agents sometimes do this)
-.setDesc('Display the button in the CMS toolbar.') // eslint-disable-next-line obsidianmd/ui/sentence-case
+// ✅ Correct - Proper nouns (Astro) remain capitalized, rest is sentence case
+.setDesc('Choose the default format. Astro link uses your link base path.')
 ```
 
-**Rule 3: For method chaining, place before the specific method**
+**Example: Handling technical notation**
 ```typescript
-// ✅ Correct - Disable comment before .setDesc() where error occurs
-new Setting(containerEl)
-  .setName('Date format')
-  // False positive: Date format codes are technical notation, not UI text
-  // eslint-disable-next-line obsidianmd/ui/sentence-case
-  .setDesc('Format for the date in properties (e.g., yyyy-mm-dd, MMMM D, yyyy)')
+// ❌ Wrong - Cannot disable
+// eslint-disable-next-line obsidianmd/ui/sentence-case  // ❌ Bot will reject!
+.setDesc('Format for the date in properties (e.g., yyyy-mm-dd, MMMM D, yyyy)')
 
-// ❌ Wrong - Disable comment before wrong method
-new Setting(containerEl)
-  // False positive: Date format codes are technical notation, not UI text
-  // eslint-disable-next-line obsidianmd/ui/sentence-case
-  .setName('Date format') // Error is not here
-  .setDesc('Format for the date in properties (e.g., yyyy-mm-dd, MMMM D, yyyy)') // Error is here
-```
-
-**Rule 4: For callbacks, place before the method call inside the callback**
-```typescript
-// ✅ Correct - Disable comment before .setPlaceholder() inside callback
-.addText(text => {
-  // False positive: "index" is a placeholder, not UI text
-  // eslint-disable-next-line obsidianmd/ui/sentence-case
-  text.setPlaceholder('index');
-  text.setValue(this.plugin.settings.filename);
-})
-
-// ❌ Wrong - Disable comment outside callback
-// False positive: "index" is a placeholder, not UI text
-// eslint-disable-next-line obsidianmd/ui/sentence-case
-.addText(text => {
-  text.setPlaceholder('index'); // Error is here, but disable is outside callback
-})
-```
-
-#### Example: Complete Pattern
-
-```typescript
-new Setting(containerEl)
-  .setName('Date format')
-  // False positive: Date format codes (MMMM, yyyy, etc.) are technical notation, not UI text
-  // eslint-disable-next-line obsidianmd/ui/sentence-case
-  .setDesc('Format for the date in properties (e.g., yyyy-mm-dd, MMMM D, yyyy, yyyy-mm-dd HH:mm)')
-  .addText((text) => {
-    // False positive: "YYYY-MM-DD" is a date format placeholder, not UI text
-    // eslint-disable-next-line obsidianmd/ui/sentence-case
-    text.setPlaceholder('YYYY-MM-DD');
-    text.setValue(settings.dateFormat);
-  });
+// ✅ Correct - Rephrase to avoid false positives, or ensure text is correct
+.setDesc('Format for the date in properties. Examples: yyyy-mm-dd, MMMM D, yyyy')
+// Or use code formatting for technical notation:
+.setDesc('Format for the date in properties. Use format codes like `yyyy-mm-dd` or `MMMM D, yyyy`')
 ```
 
 #### When NOT to Use Disable Comments
