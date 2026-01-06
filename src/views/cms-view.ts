@@ -17,6 +17,7 @@ import { ScrollLayoutManager } from '../utils/scroll-layout-manager';
 import { ViewSwitchListener } from '../utils/view-switch-listener';
 import { convertGifToStatic } from '../utils/image';
 import { getFileFrontmatter } from '../utils/frontmatter-helper';
+import { isEmbeddedView } from '../utils/embedded-view-detector';
 
 export const CMS_VIEW_TYPE = 'bases-cms';
 
@@ -39,11 +40,15 @@ export class BasesCMSView extends BasesView {
 	private viewSwitchListener: ViewSwitchListener | null = null;
 	private settingsPollInterval: number | null = null;
 	private lastSettings: Partial<CMSSettings> | null = null;
+	public readonly isEmbedded: boolean;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: BasesCMSPlugin) {
 		super(controller);
 		this.containerEl = containerEl;
 		this.plugin = plugin;
+		
+		// Detect if this view is embedded in a markdown note
+		this.isEmbedded = isEmbeddedView(containerEl);
 		
 		// Initialize shared card renderer (config will be set later in onDataUpdated)
 		this.cardRenderer = new SharedCardRenderer(
