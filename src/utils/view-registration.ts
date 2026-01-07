@@ -21,6 +21,48 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 					if (pluginWithViews.activeViews) {
 						pluginWithViews.activeViews.add(view);
 					}
+					
+					// If this is an embedded view, schedule an initial refresh with retry logic
+					// This ensures embedded views populate immediately when first added to a note
+					if (view.isEmbedded) {
+						// Retry logic: try multiple times with increasing delays until data is ready
+						let retryCount = 0;
+						const maxRetries = 8; // Try up to 8 times over ~1.5 seconds
+						const baseDelay = 250; // Start with 250ms, increase by 100ms each retry
+						
+						const tryRefresh = () => {
+							try {
+								const containerEl = (view as unknown as { containerEl?: HTMLElement }).containerEl;
+								if (!containerEl || !containerEl.isConnected) {
+									return; // View no longer exists, stop retrying
+								}
+
+								// Check if data is ready
+								const viewData = (view as unknown as { data?: { data?: unknown[]; groupedData?: unknown[] } }).data;
+								const hasData = viewData && viewData.data && viewData.groupedData;
+								
+								// Always trigger onDataUpdated() - it has its own retry logic if data isn't ready
+								// This ensures the Bases plugin re-evaluates filters with current active file context
+								if (typeof (view as { onDataUpdated?: () => void }).onDataUpdated === 'function') {
+									(view as { onDataUpdated: () => void }).onDataUpdated();
+								}
+								
+								// If data wasn't ready and we haven't hit max retries, schedule another attempt
+								if (!hasData && retryCount < maxRetries) {
+									retryCount++;
+									const delay = baseDelay + (retryCount * 100); // 250ms, 350ms, 450ms, etc.
+									window.setTimeout(tryRefresh, delay);
+								}
+							} catch (error) {
+								// Silently ignore errors during initial refresh
+								console.warn('Bases CMS: Error refreshing newly created embedded view:', error);
+							}
+						};
+						
+						// Start the retry sequence after initial delay
+						window.setTimeout(tryRefresh, baseDelay);
+					}
+					
 					return view;
 				},
 				options: getCMSViewOptions()

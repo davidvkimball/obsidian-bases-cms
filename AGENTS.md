@@ -22,6 +22,8 @@ Applicability: Plugin
 
 ### Project-Specific Conventions
 
+- **Terminology: Use "properties" not "frontmatter"**: Obsidian prefers the term "properties" over "frontmatter" or "front-matter" when referring to YAML metadata at the top of markdown files. All documentation, code comments, and UI text should use "properties" to align with Obsidian's official terminology.
+
 ### Project-Specific References
 
 The following community plugins are referenced in `.ref/plugins/` for this project:

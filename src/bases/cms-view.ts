@@ -483,7 +483,7 @@ export class BasesCMSView extends BasesView {
 						const frontmatter = await getFileFrontmatter(this.app, file);
 						this.mdxFrontmatterCache[entry.file.path] = frontmatter;
 					} catch (error) {
-						console.error(`Bases CMS: Error preloading frontmatter for ${entry.file.path}:`, error);
+						console.error(`Bases CMS: Error preloading properties for ${entry.file.path}:`, error);
 						this.mdxFrontmatterCache[entry.file.path] = null;
 					}
 				}

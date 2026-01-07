@@ -12,5 +12,6 @@ Applicability: Both
 - Use **bold** to indicate literal UI labels. Prefer "select" for interactions.
 - Use arrow notation for navigation: **Settings → Community plugins**.
 - Keep in-app strings short, consistent, and free of jargon.
+- **Terminology**: Use "properties" (not "frontmatter" or "front-matter") when referring to YAML metadata in markdown files. This aligns with Obsidian's official terminology.
 
 
