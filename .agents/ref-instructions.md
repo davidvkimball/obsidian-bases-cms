@@ -175,7 +175,7 @@ ln -s ../.ref/obsidian-dev/eslint-plugin .ref/eslint-plugin
 **Important**: Adjust the relative path (`../.ref/obsidian-dev`) based on where your project is relative to your central `.ref/obsidian-dev` location. If they're in different directory structures, use absolute paths.
 
 **Easiest method**: Use the setup scripts in the `scripts/` folder:
-- **Windows**: `scripts\setup-ref-links.bat` or `.\scripts\setup-ref-links.ps1`
+- **Windows**: `scripts\setup-ref-links.bat`
 - **macOS/Linux**: `./scripts/setup-ref-links.sh`
 
 These scripts will automatically:
@@ -191,7 +191,7 @@ You can run the setup script anytime to keep your reference repos up to date.
 **Note**: Updates are **optional**. The reference materials work fine with whatever version was cloned initially. Most users never need to update. Only update if you want the latest documentation.
 
 **Easiest way to update**: Simply re-run the setup script from any project:
-- **Windows**: `scripts\setup-ref-links.bat` or `.\scripts\setup-ref-links.ps1`
+- **Windows**: `scripts\setup-ref-links.bat`
 - **macOS/Linux**: `./scripts/setup-ref-links.sh`
 
 The setup script will automatically pull the latest changes for all 6 core repos if they already exist.

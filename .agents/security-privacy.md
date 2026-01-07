@@ -6,7 +6,7 @@ Update frequency: Check Obsidian Developer Policies for updates
 
 # Security, privacy, and compliance
 
-Follow Obsidian's **Developer Policies** (https://docs.obsidian.md/Developer+policies) and **Plugin Guidelines** (https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines). See [release-readiness.md](release-readiness.md) for a comprehensive release checklist.
+Follow Obsidian's [**Developer Policies**](https://docs.obsidian.md/Developer+policies) and [**Plugin Guidelines**](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines). See [release-readiness.md](release-readiness.md) for a comprehensive release checklist.
 
 ## Developer Policies Requirements
 
@@ -33,6 +33,27 @@ If your plugin requires any of the following, you **must** disclose it clearly i
 - Clearly disclose any external services used, data sent, and risks.
 - Respect user privacy. Do not collect vault contents, filenames, or personal information unless absolutely necessary and explicitly consented.
 - Avoid deceptive patterns, ads, or spammy notifications.
+
+### Secret Storage
+
+**Source**: Based on [SecretStorage and SecretComponent guide](https://docs.obsidian.md/plugins/guides/secret-storage) (available since Obsidian 1.11.4)
+
+When your plugin needs to store sensitive data like API keys, tokens, or passwords, **always use SecretStorage** instead of storing secrets directly in your plugin's `data.json` file.
+
+**Why use SecretStorage?**
+
+- **Security**: Secrets are stored securely in a centralized location, not in plaintext alongside other plugin data
+- **User experience**: Users can share secrets across multiple plugins without duplicating them
+- **Maintenance**: When a token changes, users only need to update it once in SecretStorage, not in every plugin
+
+**Best Practices**:
+
+- **Never store secrets in `data.json`**: Use `SecretComponent` in your settings UI and store only the secret *name* (ID) in your settings
+- **Always check for null**: When retrieving secrets with `app.secretStorage.get()`, the value may be `null` if the secret doesn't exist
+- **Use descriptive secret IDs**: Follow the lowercase alphanumeric format with optional dashes (e.g., `my-plugin-api-key`)
+- **Handle missing secrets gracefully**: Provide clear error messages if a required secret is not found
+
+See [common-tasks.md](common-tasks.md) for code examples and [code-patterns.md](code-patterns.md) for comprehensive implementation patterns.
 
 ### Licensing
 

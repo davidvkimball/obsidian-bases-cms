@@ -1,4 +1,4 @@
-<!--
+﻿<!--
 Source: Based on Obsidian Sample Plugin
 Last synced: See sync-status.json for authoritative sync dates
 Update frequency: Check Obsidian Sample Plugin repo for updates
@@ -9,11 +9,11 @@ Update frequency: Check Obsidian Sample Plugin repo for updates
 - **Organize code into multiple files**: Split functionality across separate modules rather than putting everything in `main.ts`.
 - **Source file location**: 
   - **Recommended**: Place `main.ts` in `src/` directory (standard for most plugins)
-  - **Acceptable for simple plugins**: `main.ts` in project root is acceptable for extremely simple plugins (like the sample plugin template)
+  - **Acceptable for simple plugins**: `main.ts` in project root is acceptable for minimal plugins (like the sample plugin template)
   - **CRITICAL**: Never have `main.ts` in both root AND `src/` - this causes build confusion and errors
 - Keep `main.ts` small and focused on plugin lifecycle (loading, unloading, registering commands).
 - **Recommended file structure** (for plugins with multiple files):
-  ```
+  ```plaintext
   src/
     main.ts           # Plugin entry point, lifecycle management
     settings.ts       # Settings interface and defaults
@@ -29,15 +29,15 @@ Update frequency: Check Obsidian Sample Plugin repo for updates
     types.ts         # TypeScript interfaces and types
   ```
   
-  **Simple plugin structure** (acceptable for very simple plugins):
-  ```
+  **Simple plugin structure** (acceptable for minimal plugins):
+  ```plaintext
   main.ts           # ✅ OK for simple plugins (like sample plugin template)
   manifest.json
   package.json
   ```
   
   **Wrong structure** (common mistake):
-  ```
+  ```plaintext
   main.ts           # ❌ DON'T have it in both places
   src/
     main.ts         # ❌ This causes build confusion
@@ -47,5 +47,3 @@ Update frequency: Check Obsidian Sample Plugin repo for updates
 - **Do not commit build artifacts**: Never commit `node_modules/`, `main.js`, or other generated files to version control.
 - Keep the plugin small. Avoid large dependencies. Prefer browser-compatible packages.
 - Generated output should be placed at the plugin root. Release artifacts must end up at the top level of the plugin folder in the vault (`main.js`, `manifest.json`, `styles.css`).
-
-

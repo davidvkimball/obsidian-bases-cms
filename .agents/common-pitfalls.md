@@ -864,6 +864,65 @@ if (match) {
 
 **ESLint rule**: `regex-lookbehind` (from `eslint-plugin-obsidianmd`)
 
+### Pop-Out Windows Compatibility Issues
+
+**Source**: Based on [Supporting Pop-Out Windows guide](https://docs.obsidian.md/plugins/guides/supporting-pop-out-windows) (available since Obsidian v0.15.0)
+
+**Problem**: Pop-out windows have separate `Window` and `Document` objects, causing `instanceof` checks and global references to fail.
+
+**Wrong**:
+```ts
+// This will fail in pop-out windows
+if (myElement instanceof HTMLElement) {
+  // ...
+}
+
+// This always appends to main window, not the element's window
+document.body.appendChild(myElement);
+
+// This fails in pop-out windows
+if (event instanceof MouseEvent) {
+  // ...
+}
+```
+
+**Correct**: Use Obsidian's cross-window compatibility APIs:
+
+```ts
+// Use instanceOf() instead of instanceof
+if (myElement.instanceOf(HTMLElement)) {
+  // Works correctly in pop-out windows
+}
+
+// Use element.doc instead of document
+myElement.doc.body.appendChild(myElement);
+
+// Use event.instanceOf() instead of instanceof
+element.on('click', '.my-class', (event) => {
+  if (event.instanceOf(MouseEvent)) {
+    // Works correctly in pop-out windows
+  }
+});
+
+// Use activeWindow and activeDocument for current focused window
+activeDocument.body.appendChild(newElement);
+
+// Use element.win and element.doc for element's window/document
+someElement.doc.body.appendChild(myElement);
+```
+
+**Key APIs for Pop-Out Windows**:
+- `element.instanceOf(Type)` - Cross-window compatible `instanceof` check
+- `element.win` - The `Window` object the element belongs to
+- `element.doc` - The `Document` object the element belongs to
+- `activeWindow` - Global variable pointing to currently focused window
+- `activeDocument` - Global variable pointing to currently focused document
+- `HTMLElement.onWindowMigrated(callback)` - Hook for when element moves to different window
+
+**When to use**: If your plugin creates DOM elements, handles events, or uses `instanceof` checks, you should use these APIs to ensure compatibility with pop-out windows.
+
+**See also**: [Supporting Pop-Out Windows guide](https://docs.obsidian.md/plugins/guides/supporting-pop-out-windows)
+
 ## Obsidian Bot Review Requirements
 
 The Obsidian review bot has stricter requirements than local linting. This section covers general pitfalls related to bot review. For comprehensive bot requirements and detailed guidance, see the authoritative sources below.

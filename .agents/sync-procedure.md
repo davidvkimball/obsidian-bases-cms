@@ -1,4 +1,4 @@
-<!--
+﻿<!--
 Source: Project-specific procedure
 Last synced: See sync-status.json for authoritative sync dates
 Update frequency: Update as sync process evolves
@@ -320,7 +320,7 @@ git fetch
 git log HEAD..origin/main --oneline  # Shows what's new
 ```
 
-### Not sure if you're using symlinks or local clones
+### Verify Your Setup (Symlinks vs. Local Clones)
 
 **Windows**:
 ```powershell
@@ -379,5 +379,3 @@ $syncDate = Get-Date -Format "yyyy-MM-dd"
 - Some content may be project-specific and shouldn't be overwritten
 - Always review changes before committing to ensure they make sense for your project
 - **Always update sync-status.json with the actual current date** - this is the authoritative source for sync dates
-
-

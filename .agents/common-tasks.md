@@ -131,7 +131,97 @@ this.addSettingTab(new MySettingTab(this.app, this));
 
 **Note**: For settings groups (available since API 1.11.0), use `SettingGroup` from the API. Plugin docs may not yet document this feature - always check `.ref/obsidian-api/obsidian.d.ts` for the latest API.
 
+**SettingGroup Methods** (available since 1.11.0):
+- `setHeading(heading: string)` - Set the group heading
+- `addSetting(cb: (setting: Setting) => void)` - Add a setting to the group
+- `addSearch(cb: (component: SearchComponent) => any)` - Add a search input at the beginning of the group (useful for filtering)
+- `addExtraButton(cb: (component: ExtraButtonComponent) => any)` - Add an extra button to the group
+
 **Backward Compatibility**: To support users on both Obsidian 1.11.0+ and older versions, use a compatibility utility. See [code-patterns.md](code-patterns.md) for the complete implementation with `createSettingsGroup()` utility. Alternatively, you can force `minAppVersion: "1.11.0"` in `manifest.json` if you don't need to support older versions.
+
+## Secret Storage
+
+**Source**: Based on [SecretStorage and SecretComponent guide](https://docs.obsidian.md/plugins/guides/secret-storage) (available since Obsidian 1.11.4)
+
+**Important**: Always use `SecretStorage` and `SecretComponent` for storing sensitive data like API keys, tokens, or passwords. Never store secrets directly in your plugin's `data.json` file.
+
+### Using SecretComponent in Settings
+
+Store only the secret *name* (ID) in your settings, not the actual secret value:
+
+```ts
+import { App, PluginSettingTab, SecretComponent, Setting } from "obsidian";
+
+export interface MyPluginSettings {
+  apiKeySecretId: string; // Store the secret name, not the value
+}
+
+export class MySettingTab extends PluginSettingTab {
+  plugin: MyPlugin;
+
+  constructor(app: App, plugin: MyPlugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+
+  display(): void {
+    const { containerEl } = this;
+    containerEl.empty();
+
+    new Setting(containerEl)
+      .setName("API key")
+      .setDesc("Select a secret from SecretStorage")
+      .addComponent((el) =>
+        new SecretComponent(this.app, el)
+          .setValue(this.plugin.settings.apiKeySecretId)
+          .onChange(async (value) => {
+            this.plugin.settings.apiKeySecretId = value;
+            await this.plugin.saveSettings();
+          })
+      );
+  }
+}
+```
+
+**Note**: `SecretComponent` requires the `App` instance in its constructor, so it must be used with `Setting#addComponent()` rather than methods like `addText()`.
+
+### Retrieving Secrets
+
+When you need the actual secret value, retrieve it from `SecretStorage`:
+
+```ts
+// Get a secret by its ID (name)
+const secret = this.app.secretStorage.getSecret(this.settings.apiKeySecretId);
+
+if (secret) {
+  // Use the secret value
+  console.log("API key retrieved");
+} else {
+  // Secret not found - handle gracefully
+  console.warn("API key secret not found");
+}
+```
+
+### Managing Secrets Programmatically
+
+You can also manage secrets programmatically (though typically users manage them through the UI):
+
+```ts
+// Set a secret
+this.app.secretStorage.setSecret("my-api-key", "actual-secret-value");
+
+// List all secrets
+const allSecrets = this.app.secretStorage.listSecrets();
+// Returns: ["my-api-key", "another-secret", ...]
+
+// Get a secret
+const value = this.app.secretStorage.getSecret("my-api-key");
+// Returns: "actual-secret-value" or null if not found
+```
+
+**Important**: Secret IDs must be lowercase alphanumeric with optional dashes (e.g., `my-plugin-api-key`). Invalid IDs will throw an error.
+
+See [security-privacy.md](security-privacy.md) for security best practices and [code-patterns.md](code-patterns.md) for comprehensive examples with error handling.
 
 ## Modal Patterns
 

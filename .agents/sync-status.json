@@ -1,6 +1,7 @@
 {
-  "lastFullSync": "2025-12-21",
-  "lastSyncSource": "Full sync check of all 6 core repos - all up to date",
+  "_comment": "Sync date tracking: 'lastChecked' = when repo was checked for updates, 'lastSynced' = when content was actually synced from that repo. If a repo shows 'lastChecked' newer than 'lastSynced', it means we checked it but there were no new changes to sync.",
+  "lastFullSync": "2026-01-07",
+  "lastSyncSource": "Full sync with secret storage, pop-out windows, and SettingGroup updates",
   "filesSynced": [
     "project-overview.md",
     "environment.md",
@@ -22,29 +23,28 @@
   ],
   "sourceRepos": {
     "obsidian-sample-plugin": {
-      "lastChecked": "2025-12-15",
-      "lastSynced": "2025-12-15"
+      "lastChecked": "2026-01-07",
+      "lastSynced": "2026-01-07"
     },
     "obsidian-api": {
-      "lastChecked": "2025-12-15",
-      "lastSynced": "2025-12-15"
+      "lastChecked": "2026-01-07",
+      "lastSynced": "2026-01-07"
     },
     "obsidian-developer-docs": {
-      "lastChecked": "2025-12-15",
-      "lastSynced": "2025-12-15"
+      "lastChecked": "2026-01-07",
+      "lastSynced": "2026-01-07"
     },
     "obsidian-plugin-docs": {
-      "lastChecked": "2025-12-15",
+      "lastChecked": "2026-01-07",
       "lastSynced": "2025-12-15"
     },
     "obsidian-sample-theme": {
-      "lastChecked": "2025-12-15",
+      "lastChecked": "2026-01-07",
       "lastSynced": "2025-12-15"
     },
     "eslint-plugin": {
-      "lastChecked": "2025-12-15",
-      "lastSynced": "2025-12-15"
+      "lastChecked": "2026-01-07",
+      "lastSynced": "2026-01-07"
     }
   }
 }
-
