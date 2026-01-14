@@ -31,7 +31,7 @@ If your plugin requires any of the following, you **must** disclose it clearly i
 - Default to local/offline operation. Only make network requests when essential to the feature.
 - Minimize scope: read/write only what's necessary inside the vault. Do not access files outside the vault.
 - Clearly disclose any external services used, data sent, and risks.
-- Respect user privacy. Do not collect vault contents, filenames, or personal information unless absolutely necessary and explicitly consented.
+- Respect user privacy. Do not collect vault contents, file names, or personal information unless absolutely necessary and explicitly consented.
 - Avoid deceptive patterns, ads, or spammy notifications.
 
 ### Secret Storage

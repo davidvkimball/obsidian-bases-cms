@@ -168,7 +168,7 @@ this.addCommand({
 
 #### Common Scenarios Requiring Text Fixes
 
-**1. Proper Nouns (Framework/Product Names)**
+### 1. Proper Nouns (Framework/Product Names)
 
 When proper nouns like framework or product names appear in the middle of sentences, ensure they are capitalized correctly:
 
@@ -182,7 +182,7 @@ When proper nouns like framework or product names appear in the middle of senten
 // Note: "Astro" is a proper noun and should remain capitalized
 ```
 
-**2. Date/Time Format Codes**
+### 2. Date/Time Format Codes
 
 Date format placeholders and format codes (like "YYYY-MM-DD", "MMMM", "yyyy") are technical notation. The linter may flag these, but you cannot disable the rule. Ensure the surrounding text is in proper sentence case:
 
@@ -199,7 +199,7 @@ Date format placeholders and format codes (like "YYYY-MM-DD", "MMMM", "yyyy") ar
 // Note: If the linter still flags this, you may need to rephrase the description
 ```
 
-**3. Technical Notation and Code Examples**
+### 3. Technical Notation and Code Examples
 
 When descriptions contain code examples, file paths, or technical notation:
 
@@ -213,7 +213,7 @@ When descriptions contain code examples, file paths, or technical notation:
 .setDesc("Path relative to the Obsidian vault root folder. Use ../.. for two levels up. Leave blank to use the vault folder")
 ```
 
-**4. Dropdown Options with Proper Nouns**
+### 4. Dropdown Options with Proper Nouns
 
 Dropdown option labels that include proper nouns:
 

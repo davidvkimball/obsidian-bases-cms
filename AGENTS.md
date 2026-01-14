@@ -316,6 +316,7 @@ This documentation is organized into topic-based files in the `.agents/` directo
 - **[environment.md](.agents/environment.md)** - Development environment and tooling (Plugin/Theme)
 - **[file-conventions.md](.agents/file-conventions.md)** - File organization and folder structure (Plugin/Theme)
 - **[coding-conventions.md](.agents/coding-conventions.md)** - Code standards and organization (Plugin)
+- **[obsidian-file-formats.md](.agents/obsidian-file-formats.md)** - Obsidian file formats and syntax (Markdown, Bases, Canvas) (Both)
 
 ### Configuration
 - **[manifest.md](.agents/manifest.md)** - `manifest.json` rules and requirements (Plugin/Theme)

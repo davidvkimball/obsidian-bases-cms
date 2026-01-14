@@ -56,7 +56,7 @@ When the user requests "Summarize" or "Summarize for release", use these workflo
    - Prioritize feature changes over version bumps or minor updates
 
 5. **Generate commit message** in this format:
-   ```
+   ```text
    [Summary of changes]
    - [more detailed item 1]
    - [more detailed item 2]

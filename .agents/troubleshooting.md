@@ -8,33 +8,33 @@ Update frequency: Update as common issues are identified
 
 **Source**: Based on common errors from developer docs, community patterns, and API best practices. Always verify API details in `.ref/obsidian-api/obsidian.d.ts`.
 
-### Build and Loading Issues
+## Build and Loading Issues
 
 - **Plugin doesn't load after build**: Ensure `main.js` and `manifest.json` are at the top level of the plugin folder under `<Vault>/.obsidian/plugins/<plugin-id>/`.
 - **Build issues**: If `main.js` is missing, run `pnpm build` or `pnpm dev` to compile your TypeScript source code.
 - **TypeScript compilation errors**: Check `tsconfig.json` settings, ensure `"strict": true` is handled properly, verify all imports are correct.
 - **Module not found errors**: Ensure all dependencies are in `package.json` and run `pnpm install`. Check that imports use correct paths.
 
-### Command Issues
+## Command Issues
 
 - **Commands not appearing**: Verify `addCommand` runs after `onload` completes, and command IDs are unique.
 - **Command not executing**: Check that callback/editorCallback/checkCallback is properly defined and not throwing errors.
 - **Command only works sometimes**: If using `checkCallback`, ensure it returns `true` when the command should be available.
 
-### Settings Issues
+## Settings Issues
 
 - **Settings not persisting**: Ensure `loadData`/`saveData` are awaited. Check that `saveSettings()` is called after changes.
 - **Settings not loading**: Verify `loadSettings()` is called in `onload()` and properly awaited.
 - **Settings UI not updating**: Call `display()` after changing settings that affect the UI.
 - **Settings structure changed**: Old saved data may not match new interface. Add migration logic or reset settings.
 
-### View Issues
+## View Issues
 
 - **Views not appearing**: Verify `registerView()` is called in `onload()`, and view type constant matches.
 - **Views not cleaning up**: Ensure `detachLeavesOfType()` is called in `onunload()`.
 - **View errors**: Never store view references. Use `getLeavesOfType()` to access views.
 
-### Mobile Issues
+## Mobile Issues
 
 - **Mobile-only issues**: Confirm you're not using desktop-only APIs; check `isDesktopOnly` in `manifest.json` and adjust.
 - **Status bar not working on mobile**: Status bar items are not supported on mobile. Use feature detection.
@@ -99,7 +99,7 @@ app.plugins.plugins['your-plugin-id']
 ### Check Settings File
 
 Settings are stored at:
-```
+```text
 <Vault>/.obsidian/plugins/<plugin-id>/data.json
 ```
 

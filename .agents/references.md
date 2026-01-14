@@ -19,7 +19,13 @@ Applicability: Both
 - [Developer policies](https://docs.obsidian.md/Developer+policies)
 - [Plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines)
 - [Style guide](https://help.obsidian.md/style-guide)
+- [Obsidian Flavored Markdown](https://help.obsidian.md/obsidian-flavored-markdown)
+- [Obsidian Bases Syntax](https://help.obsidian.md/bases/syntax)
+- [JSON Canvas Specification](https://jsoncanvas.org/)
 - [Secret Storage guide](https://docs.obsidian.md/plugins/guides/secret-storage) - Secure storage for API keys, tokens, and passwords (available since Obsidian 1.11.4)
 - [Supporting Pop-Out Windows guide](https://docs.obsidian.md/plugins/guides/supporting-pop-out-windows) - Cross-window compatibility for plugins (available since Obsidian v0.15.0)
+
+## Community Resources
+- [obsidian-skills](https://github.com/kepano/obsidian-skills) - Claude Skills for Obsidian (comprehensive syntax documentation source)
 
 
