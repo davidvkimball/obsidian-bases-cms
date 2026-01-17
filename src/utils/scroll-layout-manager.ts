@@ -49,6 +49,15 @@ export class ScrollLayoutManager {
 		this.displayedCount = count;
 	}
 
+	/**
+	 * Reset displayed count and scroll position
+	 */
+	resetScroll(): void {
+		const isMobile = (this.app as { isMobile?: boolean }).isMobile ?? false;
+		this.displayedCount = isMobile ? 25 : 50;
+		this.containerEl.scrollTop = 0;
+	}
+
 	getDisplayedCount(): number {
 		return this.displayedCount;
 	}

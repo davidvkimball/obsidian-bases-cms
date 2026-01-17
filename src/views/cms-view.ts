@@ -40,6 +40,8 @@ export class BasesCMSView extends BasesView {
 	private viewSwitchListener: ViewSwitchListener | null = null;
 	private settingsPollInterval: number | null = null;
 	private lastSettings: Partial<CMSSettings> | null = null;
+	private lastUpdateId: number = 0;
+	private lastBaseId: string | null = null;
 	public readonly isEmbedded: boolean;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: BasesCMSPlugin) {
@@ -127,8 +129,13 @@ export class BasesCMSView extends BasesView {
 	
 
 	onDataUpdated(): void {
+		const updateId = ++this.lastUpdateId;
+
 		void (async () => {
 			try {
+				// Guard: check if this update is still valid
+				const isStillValid = () => updateId === this.lastUpdateId;
+
 				// Guard: wait for data to be ready - NEVER return early and leave blank screen
 				if (!this.data) {
 					// Show loading state instead of blank screen
@@ -142,22 +149,37 @@ export class BasesCMSView extends BasesView {
 					}
 					// Retry after a short delay
 					setTimeout(() => {
-						if (this.data) {
+						if (isStillValid() && this.data) {
 							this.onDataUpdated();
 						}
 					}, 100);
 					return;
 				}
 
+				// Check if the base configuration has changed
+				const currentBaseId = this.getBaseIdentifier();
+				if (this.lastBaseId !== currentBaseId) {
+					this.lastBaseId = currentBaseId;
+					// Reset scroll and displayed count when switching bases
+					this.scrollLayoutManager.resetScroll();
+					// Clear caches that are specific to a base
+					this.snippets = {};
+					this.images = {};
+					this.hasImageAvailable = {};
+					this.mdxFrontmatterCache = {};
+				}
+
 				// Ensure we have valid data structures
 				if (!this.data.groupedData || !this.data.data) {
 					setTimeout(() => {
-						if (this.data && this.data.groupedData && this.data.data) {
+						if (isStillValid() && this.data && this.data.groupedData && this.data.data) {
 							this.onDataUpdated();
 						}
 					}, 100);
 					return;
 				}
+
+				if (!isStillValid()) return;
 
 			const groupedData = this.data.groupedData;
 			const allEntries = this.data.data;
@@ -167,6 +189,8 @@ export class BasesCMSView extends BasesView {
 				this.config,
 				this.plugin.settings
 			);
+
+			if (!isStillValid()) return;
 
 			// Update config reference in scroll layout manager if it's now available
 			if (this.config && typeof (this.config as { get?: (key: string) => unknown }).get === 'function') {
@@ -206,6 +230,8 @@ export class BasesCMSView extends BasesView {
 			// Load snippets and images ONLY for displayed entries
 			await this.loadContentForEntries(visibleEntries, settings);
 
+			if (!isStillValid()) return;
+
 			// Set up interceptor once config is available (only on first call)
 			if (this.config && !(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup) {
 				try {
@@ -228,6 +254,8 @@ export class BasesCMSView extends BasesView {
 					(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup = true;
 				}
 			}
+
+			if (!isStillValid()) return;
 
 			// Update card renderer with config (now available)
 			(this.cardRenderer as unknown as { basesConfig?: { get?: (key: string) => unknown } }).basesConfig = this.config;
@@ -287,6 +315,8 @@ export class BasesCMSView extends BasesView {
 					this.mdxFrontmatterCache
 				);
 
+				if (!isStillValid()) return;
+
 				for (let i = 0; i < cards.length; i++) {
 					const card = cards[i];
 					const entry = groupEntries[i];
@@ -301,6 +331,8 @@ export class BasesCMSView extends BasesView {
 				displayedSoFar += entriesToDisplay;
 			}
 			
+			if (!isStillValid()) return;
+
 			// CRITICAL: If no cards were rendered, show error instead of blank screen
 			if (totalCardsRendered === 0 && allEntries.length > 0) {
 				throw new Error('No cards were rendered despite having entries. Check card rendering logic.');
@@ -326,7 +358,7 @@ export class BasesCMSView extends BasesView {
 
 				// Clear loading flag after async work completes
 				this.scrollLayoutManager.setIsLoading(false);
-			} catch {
+			} catch (error) {
 				// Ensure loading flag is cleared even on error
 				try {
 					this.scrollLayoutManager.setIsLoading(false);
@@ -346,8 +378,29 @@ export class BasesCMSView extends BasesView {
 						margin: '20px'
 					});
 				}
+				console.error('Bases CMS: Error in onDataUpdated:', error);
 			}
 		})();
+	}
+
+	/**
+	 * Get a unique identifier for the current base configuration
+	 */
+	private getBaseIdentifier(): string | null {
+		try {
+			if (this.config && typeof (this.config as unknown as { getName?: () => string }).getName === 'function') {
+				return (this.config as unknown as { getName: () => string }).getName();
+			}
+			if (this.config && (this.config as unknown as { name?: string }).name) {
+				return String((this.config as unknown as { name: string }).name);
+			}
+			if (this.data && (this.data as unknown as { baseName?: string }).baseName) {
+				return String((this.data as unknown as { baseName: string }).baseName);
+			}
+		} catch {
+			// Ignore errors
+		}
+		return null;
 	}
 
 	/**
