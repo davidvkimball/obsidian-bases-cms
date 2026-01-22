@@ -1,4 +1,4 @@
-﻿<!--
+<!--
 Source: Based on Obsidian bot review feedback and requirements
 Last synced: N/A - Project-specific documentation
 Update frequency: Update as new bot requirements are identified
@@ -107,15 +107,15 @@ const data = await fetchExternalData();
 
 **Wrong** (blank line between comment and error):
 ```ts
-// eslint-disable-next-line obsidianmd/ui/sentence-case
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-.setName("Enable Feature")
+const data: any = fetchData();
 ```
 
 **Correct** (comment directly before error):
 ```ts
-// eslint-disable-next-line obsidianmd/ui/sentence-case
-.setName("Enable Feature")
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const data: any = fetchData();
 ```
 
 ## Unused ESLint Disable Directives

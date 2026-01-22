@@ -1,4 +1,4 @@
-﻿<!--
+<!--
 Source: Based on Obsidian community guidelines
 Last synced: See sync-status.json for authoritative sync dates
 Update frequency: Check Obsidian releases repo for validation requirements

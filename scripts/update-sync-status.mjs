@@ -17,7 +17,7 @@ import { fileURLToPath } from 'url';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(scriptDir, '..');
-const syncStatusPath = join(projectRoot, '.agents', 'sync-status.json');
+const syncStatusPath = join(projectRoot, '.agent', 'skills', 'obsidian-ops', 'references', 'sync-status.json');
 
 // Get current date in YYYY-MM-DD format
 const today = new Date().toISOString().split('T')[0];
@@ -42,7 +42,7 @@ try {
   const updatedContent = JSON.stringify(syncStatus, null, 2) + '\n';
   writeFileSync(syncStatusPath, updatedContent, 'utf8');
   
-  console.log(`✓ Updated .agents/sync-status.json`);
+  console.log(`✓ Updated sync-status.json in obsidian-ops skill`);
   console.log(`  - lastFullSync: ${today}`);
   if (description && description !== 'Sync update') {
     console.log(`  - lastSyncSource: ${description}`);

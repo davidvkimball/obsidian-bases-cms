@@ -19,8 +19,13 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(scriptDir, '..');
 const syncStatusPath = join(projectRoot, '.agent', 'skills', 'obsidian-ops', 'references', 'sync-status.json');
 
-// Get current date in YYYY-MM-DD format
-const today = new Date().toISOString().split('T')[0];
+// Get current local date in YYYY-MM-DD format
+const now = new Date();
+const today = [
+  now.getFullYear(),
+  String(now.getMonth() + 1).padStart(2, '0'),
+  String(now.getDate()).padStart(2, '0'),
+].join('-');
 
 // Get optional description from command line
 const description = process.argv[2] || 'Sync update';

@@ -2,13 +2,43 @@
 
 /**
  * ESLint wrapper that adds helpful success messages
+ * Also checks for undescribed eslint-disable comments (mimics Obsidian bot)
  */
 
 import { spawn, execSync } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import process from 'process';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const args = process.argv.slice(2);
 const hasFix = args.includes('--fix');
+
+// First, check for undescribed eslint-disable comments (mimics Obsidian bot)
+try {
+	execSync('node scripts/check-disable-comments.mjs', { 
+		stdio: 'inherit', 
+		shell: true,
+		cwd: join(__dirname, '..')
+	});
+} catch (error) {
+	// Script will have already printed the error
+	process.exit(1);
+}
+
+// Check for attempts to disable non-disablable rules (mimics Obsidian bot)
+try {
+	execSync('node scripts/check-disallowed-disables.mjs', { 
+		stdio: 'inherit', 
+		shell: true,
+		cwd: join(__dirname, '..')
+	});
+} catch (error) {
+	// Script will have already printed the error
+	process.exit(1);
+}
 
 // Detect which package manager to use
 // Check if pnpm is available, otherwise fall back to npx

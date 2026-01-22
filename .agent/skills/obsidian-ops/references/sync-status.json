@@ -1,7 +1,7 @@
 {
   "_comment": "Sync date tracking: 'lastChecked' = when repo was checked for updates, 'lastSynced' = when content was actually synced from that repo. If a repo shows 'lastChecked' newer than 'lastSynced', it means we checked it but there were no new changes to sync.",
   "lastFullSync": "2026-01-20",
-  "lastSyncSource": "Transition to OpenSkills",
+  "lastSyncSource": "Description",
   "filesSynced": [
     "project-overview.md",
     "environment.md",
