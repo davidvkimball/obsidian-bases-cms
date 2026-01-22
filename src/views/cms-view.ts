@@ -42,10 +42,13 @@ export class BasesCMSView extends BasesView {
 	private lastSettings: Partial<CMSSettings> | null = null;
 	private lastUpdateId: number = 0;
 	private lastBaseId: string | null = null;
+	private hasAutoSwitched: boolean = false;
+	private basesController: QueryController;
 	public readonly isEmbedded: boolean;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: BasesCMSPlugin) {
 		super(controller);
+		this.basesController = controller;
 		this.containerEl = containerEl;
 		this.plugin = plugin;
 		
@@ -126,7 +129,313 @@ export class BasesCMSView extends BasesView {
 		this.handleSelectionChange = this.viewSwitchListener.setup(originalHandleSelectionChange);
 		}
 	}
-	
+
+	/**
+	 * Sort entries by property using consistent logic for both MD and MDX files
+	 */
+	private async sortEntriesByProperty(entries: BasesEntry[], propertyName: string, direction: 'asc' | 'desc'): Promise<BasesEntry[]> {
+		if (!propertyName || propertyName === '') {
+			return entries;
+		}
+
+		// Handle special file properties
+		if (propertyName === 'file.ctime' || propertyName === 'file.mtime') {
+			const isCtime = propertyName === 'file.ctime';
+			return [...entries].sort((a, b) => {
+				const aTime = isCtime ? a.file.stat.ctime : a.file.stat.mtime;
+				const bTime = isCtime ? b.file.stat.ctime : b.file.stat.mtime;
+				const comparison = aTime - bTime;
+				return direction === 'desc' ? -comparison : comparison;
+			});
+		}
+
+		// For other properties, use async property resolution
+		const entriesWithValues = await Promise.all(
+			entries.map(async (entry) => {
+				const value = await getFirstBasesPropertyValue(entry, propertyName, this.app);
+				return { entry, value };
+			})
+		);
+
+		return entriesWithValues
+			.sort((a, b) => {
+				const aVal = a.value;
+				const bVal = b.value;
+
+				// Handle null/undefined values (sort to end)
+				if (aVal == null && bVal == null) return 0;
+				if (aVal == null) return 1; // null sorts after
+				if (bVal == null) return -1; // null sorts after
+
+				// Parse dates for both entries using the same logic as the renderer
+				const aDate = this.parseDateValue(aVal);
+				const bDate = this.parseDateValue(bVal);
+
+				// If both are valid dates, compare them
+				if (aDate && bDate) {
+					const comparison = aDate.getTime() - bDate.getTime();
+					return direction === 'desc' ? -comparison : comparison;
+				}
+
+				// If only one is a date, dates sort first
+				if (aDate && !bDate) {
+					return direction === 'desc' ? -1 : 1; // dates sort before non-dates
+				}
+				if (!aDate && bDate) {
+					return direction === 'desc' ? 1 : -1; // dates sort before non-dates
+				}
+
+				// Neither is a date, fall back to string comparison
+				const aStr = this.valueToString(aVal);
+				const bStr = this.valueToString(bVal);
+				const comparison = aStr.localeCompare(bStr);
+				return direction === 'desc' ? -comparison : comparison;
+			})
+			.map(item => item.entry);
+	}
+
+	/**
+	 * Parse a date value using the same logic as the shared renderer
+	 */
+	private parseDateValue(value: unknown): Date | null {
+		if (!value) return null;
+
+		// Handle Bases API date objects
+		if (typeof value === 'object' && 'date' in value && value.date instanceof Date) {
+			return value.date;
+		}
+
+		// Extract data from Bases API format
+		let data: unknown = value;
+		if (typeof value === 'object' && 'data' in value) {
+			data = (value as { data: unknown }).data;
+		}
+
+		if (!data) return null;
+
+		// Handle Date objects (including those from YAML parsing)
+		if (data instanceof Date) {
+			return data;
+		}
+
+		// Handle date-like objects (YAML parsers sometimes return custom Date objects)
+		if (data && typeof data === 'object' && 'getTime' in data) {
+			const dateLike = data as { getTime: () => number };
+			try {
+				const timestamp = dateLike.getTime();
+				if (typeof timestamp === 'number' && !isNaN(timestamp)) {
+					return new Date(timestamp);
+				}
+			} catch {
+				// Fall through to string/number handling
+			}
+		}
+
+		// Handle strings - especially ISO date strings like "2025-12-29"
+		if (typeof data === 'string') {
+			const dateStr = data.trim();
+			// Try parsing as ISO date (YYYY-MM-DD) - this is what Obsidian uses
+			// Add time component to avoid timezone issues: "2025-12-29" -> "2025-12-29T00:00:00"
+			const isoDateStr = dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`;
+			const parsedDate = new Date(isoDateStr);
+			if (!isNaN(parsedDate.getTime())) {
+				return parsedDate;
+			} else {
+				// Fallback to direct Date constructor for other formats like "9/6/2025"
+				const fallbackDate = new Date(dateStr);
+				if (!isNaN(fallbackDate.getTime())) {
+					return fallbackDate;
+				}
+			}
+		}
+
+		// Handle numbers (timestamps)
+		if (typeof data === 'number') {
+			const parsedDate = new Date(data);
+			if (!isNaN(parsedDate.getTime())) {
+				return parsedDate;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Convert a value to string for comparison
+	 */
+	private valueToString(value: unknown): string {
+		if (!value) return '';
+
+		// Extract data from Bases API format
+		let data: unknown = value;
+		if (typeof value === 'object' && 'data' in value) {
+			data = (value as { data: unknown }).data;
+		}
+
+		if (typeof data === 'string') {
+			return data;
+		} else if (typeof data === 'number' || typeof data === 'boolean') {
+			return String(data);
+		} else {
+			return '';
+		}
+	}
+
+	/**
+	 * Continue processing data after sorting is complete
+	 */
+	private async continueDataProcessing(
+		processedGroups: Array<{ group: { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] }; entries: BasesEntry[] }>,
+		settings: CMSSettings,
+		totalEntriesCount: number,
+		savedScrollTop: number,
+		updateId: number
+	): Promise<void> {
+		const isStillValid = () => updateId === this.lastUpdateId;
+
+		// Collect visible entries across all groups (up to displayedCount)
+		const visibleEntries: BasesEntry[] = [];
+		let remainingCount = this.scrollLayoutManager.getDisplayedCount();
+
+		for (const processedGroup of processedGroups) {
+			if (remainingCount <= 0) break;
+			const entriesToTake = Math.min(processedGroup.entries.length, remainingCount);
+			visibleEntries.push(...processedGroup.entries.slice(0, entriesToTake));
+			remainingCount -= entriesToTake;
+		}
+
+		// Load snippets and images ONLY for displayed entries
+		await this.loadContentForEntries(visibleEntries, settings);
+
+		if (!isStillValid()) return;
+
+		// Set up interceptor once config is available (only on first call)
+		if (this.config && !(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup) {
+			try {
+				(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup = true;
+				const containerWithConfig = this.containerEl as unknown as {
+					__cmsConfig?: { get: (key: string) => unknown };
+					__cmsView?: BasesCMSView;
+				};
+				containerWithConfig.__cmsConfig = this.config;
+				containerWithConfig.__cmsView = this;
+				setupNewNoteInterceptor(
+						this.app,
+					this.containerEl,
+					this.config,
+					this.plugin.settings,
+					(cleanup) => this.register(cleanup)
+				);
+			} catch {
+				// Failed to setup interceptor - continue anyway
+				(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup = true;
+			}
+		}
+
+		if (!isStillValid()) return;
+
+		// Update card renderer with config (now available)
+		(this.cardRenderer as unknown as { basesConfig?: { get?: (key: string) => unknown } }).basesConfig = this.config;
+
+		// Update card renderer with MDX frontmatter cache for synchronous rendering
+		if (this.cardRenderer && typeof (this.cardRenderer as { setMdxFrontmatterCache?: (cache: Record<string, Record<string, unknown> | null>) => void }).setMdxFrontmatterCache === 'function') {
+			(this.cardRenderer as { setMdxFrontmatterCache: (cache: Record<string, Record<string, unknown> | null>) => void }).setMdxFrontmatterCache(this.mdxFrontmatterCache);
+		}
+
+		// Clear and re-render after content is loaded
+		this.containerEl.empty();
+
+		// Clear MDX frontmatter cache when re-rendering
+		this.mdxFrontmatterCache = {};
+
+		// Disconnect old property observers before re-rendering
+		this.propertyObservers.forEach(obs => obs.disconnect());
+		this.propertyObservers = [];
+
+		// Create cards feed container
+		const feedEl = this.containerEl.createDiv('bases-cms-grid');
+
+		// Render groups with headers
+		let displayedSoFar = 0;
+
+		let totalCardsRendered = 0;
+
+		for (const processedGroup of processedGroups) {
+			if (displayedSoFar >= this.scrollLayoutManager.getDisplayedCount()) break;
+
+			const entriesToDisplay = Math.min(processedGroup.entries.length, this.scrollLayoutManager.getDisplayedCount() - displayedSoFar);
+			if (entriesToDisplay === 0) continue;
+
+			const groupEntries = processedGroup.entries.slice(0, entriesToDisplay);
+
+			// Create group container
+			const groupEl = feedEl.createDiv('bases-cms-group');
+
+			// Render group header if key exists
+			if (processedGroup.group.hasKey()) {
+				const headerEl = groupEl.createDiv('bases-cms-group-heading');
+				const valueEl = headerEl.createDiv('bases-cms-group-value');
+				const keyValue = processedGroup.group.key?.toString() || '';
+				valueEl.setText(keyValue);
+			}
+
+			// Render cards in this group
+			const cards = await transformBasesEntries(
+				groupEntries,
+				settings,
+				'', // sortMethod not used in transformBasesEntries
+				false,
+				this.snippets,
+				this.images,
+				this.hasImageAvailable,
+				this.app,
+				this.mdxFrontmatterCache
+			);
+
+			if (!isStillValid()) return;
+
+			for (let i = 0; i < cards.length; i++) {
+				const card = cards[i];
+				const entry = groupEntries[i];
+				try {
+					this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
+					totalCardsRendered++;
+				} catch {
+					// Continue rendering other cards even if one fails
+				}
+			}
+
+			displayedSoFar += entriesToDisplay;
+		}
+
+		if (!isStillValid()) return;
+
+		// CRITICAL: If no cards were rendered, show error instead of blank screen
+		if (totalCardsRendered === 0 && totalEntriesCount > 0) {
+			throw new Error('No cards were rendered despite having entries. Check card rendering logic.');
+		}
+
+		// Images are now set via background-image in renderCard, so no batch loading needed
+		// Images will be updated by updateCardImage when they load
+
+		// Restore scroll position after rendering
+		if (savedScrollTop > 0) {
+			this.containerEl.scrollTop = savedScrollTop;
+		}
+
+		// Setup infinite scroll and resize observer
+		this.scrollLayoutManager.setupInfiniteScroll(totalEntriesCount);
+		this.scrollLayoutManager.setupResizeObserver();
+
+		// Setup settings polling to detect changes and refresh view
+		this.setupSettingsPolling(settings);
+
+		// Update selection UI
+		this.updateSelectionUI();
+
+		// Clear loading flag after async work completes
+		this.scrollLayoutManager.setIsLoading(false);
+	}
 
 	onDataUpdated(): void {
 		const updateId = ++this.lastUpdateId;
@@ -154,6 +463,46 @@ export class BasesCMSView extends BasesView {
 						}
 					}, 100);
 					return;
+				}
+
+				// Sync with default view if defined and not already active
+				const data = this.data as unknown as { defaultView?: string };
+				const topLevelDefaultView = data?.defaultView;
+				
+				const config = this.config as unknown as { getName?: () => string; name?: string };
+				const currentViewName = typeof config.getName === 'function' 
+					? config.getName() 
+					: config.name;
+
+				if (topLevelDefaultView && currentViewName !== topLevelDefaultView) {
+					// Only do this once on initial load to avoid loop
+					if (!this.hasAutoSwitched) {
+						this.hasAutoSwitched = true;
+						
+						// Logic to trigger a view switch via the core Bases plugin controller
+						const controller = this.basesController as unknown as { 
+							selectView?: (view: string) => void;
+							setView?: (view: string) => void;
+							switchView?: (view: string) => void;
+						};
+						
+						// Diagnostic log to help troubleshoot if it still doesn't work
+						console.debug('Bases CMS: Default view sync triggered', {
+							target: topLevelDefaultView,
+							current: currentViewName
+						});
+
+						if (typeof controller.selectView === 'function') {
+							controller.selectView(topLevelDefaultView);
+							return; // Exit early as the view will be replaced
+						} else if (typeof controller.setView === 'function') {
+							controller.setView(topLevelDefaultView);
+							return;
+						} else if (typeof controller.switchView === 'function') {
+							controller.switchView(topLevelDefaultView);
+							return;
+						}
+					}
 				}
 
 				// Check if the base configuration has changed
@@ -207,157 +556,59 @@ export class BasesCMSView extends BasesView {
 			// Save scroll position before re-rendering
 			const savedScrollTop = this.containerEl.scrollTop;
 
-			// Get sort method
-			const sortMethod = this.getSortMethod();
+			// Get sort configs (used for custom sorting)
+			const sortConfigs = this.config.getSort();
 
-			// Process groups
-			const processedGroups = groupedData.map(group => ({
-				group,
+			// Process groups and apply custom sorting for properties
+			let processedGroups: Array<{ group: { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] }; entries: BasesEntry[] }> = groupedData.map(group => ({
+				group: group as { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] },
 				entries: [...group.entries]
 			}));
 
-			// Collect visible entries across all groups (up to displayedCount)
-			const visibleEntries: BasesEntry[] = [];
-			let remainingCount = this.scrollLayoutManager.getDisplayedCount();
+			// Apply custom sorting if sorting by a property (not just file time)
+			if (sortConfigs && sortConfigs.length > 0) {
+				const firstSort = sortConfigs[0];
+				const property = firstSort.property;
+				const direction = firstSort.direction.toLowerCase() as 'asc' | 'desc';
 
-			for (const processedGroup of processedGroups) {
-				if (remainingCount <= 0) break;
-				const entriesToTake = Math.min(processedGroup.entries.length, remainingCount);
-				visibleEntries.push(...processedGroup.entries.slice(0, entriesToTake));
-				remainingCount -= entriesToTake;
-			}
+				// Only apply custom sorting for properties (not file.ctime/file.mtime which are handled by Bases)
+				if (property && !property.includes('ctime') && !property.includes('mtime')) {
+					// Use IIFE to handle async sorting
+					void (async () => {
+						try {
+							// Flatten all entries from all groups
+							const allEntries: BasesEntry[] = [];
+							for (const processedGroup of processedGroups) {
+								allEntries.push(...processedGroup.entries);
+							}
 
-			// Load snippets and images ONLY for displayed entries
-			await this.loadContentForEntries(visibleEntries, settings);
+							// Sort all entries by the property
+							const sortedEntries = await this.sortEntriesByProperty(allEntries, property, direction);
 
-			if (!isStillValid()) return;
+							// Re-group entries (put all in a single group since we're overriding Bases' grouping)
+							const sortedProcessedGroups: Array<{ group: { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] }; entries: BasesEntry[] }> = [{
+								group: {
+									hasKey: () => false,
+									key: null,
+									entries: sortedEntries
+								},
+								entries: sortedEntries
+							}];
 
-			// Set up interceptor once config is available (only on first call)
-			if (this.config && !(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup) {
-				try {
-					(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup = true;
-					const containerWithConfig = this.containerEl as unknown as { 
-						__cmsConfig?: { get: (key: string) => unknown };
-						__cmsView?: BasesCMSView;
-					};
-					containerWithConfig.__cmsConfig = this.config;
-					containerWithConfig.__cmsView = this;
-					setupNewNoteInterceptor(
-							this.app,
-						this.containerEl,
-						this.config,
-						this.plugin.settings,
-						(cleanup) => this.register(cleanup)
-					);
-				} catch {
-					// Failed to setup interceptor - continue anyway
-					(this.containerEl as unknown as { __cmsInterceptorSetup?: boolean }).__cmsInterceptorSetup = true;
+							// Continue processing with sorted groups
+							await this.continueDataProcessing(sortedProcessedGroups, settings, allEntries.length, savedScrollTop, updateId);
+						} catch (error) {
+							console.error('Bases CMS: Error during custom sorting:', error);
+							// Fall back to original processing
+							await this.continueDataProcessing(processedGroups, settings, allEntries.length, savedScrollTop, updateId);
+						}
+					})();
+					return; // Exit early, processing will continue in the async callback
 				}
 			}
 
-			if (!isStillValid()) return;
-
-			// Update card renderer with config (now available)
-			(this.cardRenderer as unknown as { basesConfig?: { get?: (key: string) => unknown } }).basesConfig = this.config;
-			
-			// Update card renderer with MDX frontmatter cache for synchronous rendering
-			if (this.cardRenderer && typeof (this.cardRenderer as { setMdxFrontmatterCache?: (cache: Record<string, Record<string, unknown> | null>) => void }).setMdxFrontmatterCache === 'function') {
-				(this.cardRenderer as { setMdxFrontmatterCache: (cache: Record<string, Record<string, unknown> | null>) => void }).setMdxFrontmatterCache(this.mdxFrontmatterCache);
-			}
-
-			// Clear and re-render after content is loaded
-			this.containerEl.empty();
-
-			// Clear MDX frontmatter cache when re-rendering
-			this.mdxFrontmatterCache = {};
-
-			// Disconnect old property observers before re-rendering
-			this.propertyObservers.forEach(obs => obs.disconnect());
-			this.propertyObservers = [];
-
-			// Create cards feed container
-			const feedEl = this.containerEl.createDiv('bases-cms-grid');
-
-			// Render groups with headers
-			let displayedSoFar = 0;
-			
-			let totalCardsRendered = 0;
-			
-			for (const processedGroup of processedGroups) {
-				if (displayedSoFar >= this.scrollLayoutManager.getDisplayedCount()) break;
-
-				const entriesToDisplay = Math.min(processedGroup.entries.length, this.scrollLayoutManager.getDisplayedCount() - displayedSoFar);
-				if (entriesToDisplay === 0) continue;
-
-				const groupEntries = processedGroup.entries.slice(0, entriesToDisplay);
-
-				// Create group container
-				const groupEl = feedEl.createDiv('bases-cms-group');
-
-				// Render group header if key exists
-				if (processedGroup.group.hasKey()) {
-					const headerEl = groupEl.createDiv('bases-cms-group-heading');
-					const valueEl = headerEl.createDiv('bases-cms-group-value');
-					const keyValue = processedGroup.group.key?.toString() || '';
-					valueEl.setText(keyValue);
-				}
-
-				// Render cards in this group
-				const cards = await transformBasesEntries(
-					groupEntries,
-					settings,
-					sortMethod,
-					false,
-					this.snippets,
-					this.images,
-					this.hasImageAvailable,
-					this.app,
-					this.mdxFrontmatterCache
-				);
-
-				if (!isStillValid()) return;
-
-				for (let i = 0; i < cards.length; i++) {
-					const card = cards[i];
-					const entry = groupEntries[i];
-					try {
-						this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
-						totalCardsRendered++;
-					} catch {
-						// Continue rendering other cards even if one fails
-					}
-				}
-
-				displayedSoFar += entriesToDisplay;
-			}
-			
-			if (!isStillValid()) return;
-
-			// CRITICAL: If no cards were rendered, show error instead of blank screen
-			if (totalCardsRendered === 0 && allEntries.length > 0) {
-				throw new Error('No cards were rendered despite having entries. Check card rendering logic.');
-			}
-			
-			// Images are now set via background-image in renderCard, so no batch loading needed
-			// Images will be updated by updateCardImage when they load
-
-			// Restore scroll position after rendering
-			if (savedScrollTop > 0) {
-				this.containerEl.scrollTop = savedScrollTop;
-			}
-
-			// Setup infinite scroll and resize observer
-			this.scrollLayoutManager.setupInfiniteScroll(allEntries.length);
-			this.scrollLayoutManager.setupResizeObserver();
-			
-			// Setup settings polling to detect changes and refresh view
-			this.setupSettingsPolling(settings);
-
-			// Update selection UI
-			this.updateSelectionUI();
-
-				// Clear loading flag after async work completes
-				this.scrollLayoutManager.setIsLoading(false);
+			// Continue with the rest of processing
+			this.continueDataProcessing(processedGroups, settings, allEntries.length, savedScrollTop, updateId);
 			} catch (error) {
 				// Ensure loading flag is cleared even on error
 				try {
