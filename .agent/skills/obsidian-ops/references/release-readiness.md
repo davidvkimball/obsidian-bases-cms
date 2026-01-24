@@ -1,24 +1,19 @@
 <!--
-Source: Based on Obsidian Developer Policies, Plugin Guidelines, and official release checklist
+Source: Based on Obsidian Developer Policies, Theme Guidelines, and official release checklist
 Last synced: See sync-status.json for authoritative sync dates
-Update frequency: Check Obsidian Developer Policies and Plugin Guidelines for updates
+Update frequency: Check Obsidian Developer Policies and Theme Guidelines for updates
 -->
 
 # Release Readiness Checklist
 
-**Purpose**: This document provides a comprehensive checklist to verify your plugin is ready for release to the Obsidian community. Use this when preparing a release or when asked "is my plugin ready for release?"
+This document provides a comprehensive checklist to verify your theme is ready for release to the Obsidian community. Use this when preparing a release or when asked "is my theme ready for release?"
 
 **For AI Agents**: When a user asks about release readiness, run through this checklist systematically. Perform automated checks where possible, and ask the user interactively for items that require their input.
 
-**Related documentation**:
-- [obsidian-bot-requirements.md](obsidian-bot-requirements.md) - Bot requirements (authoritative source)
-- [versioning-releases.md](versioning-releases.md) - Versioning and release process
-- [common-pitfalls.md](common-pitfalls.md) - Common development pitfalls
-
 ## Quick Reference
 
-- **Developer Policies**: [https://docs.obsidian.md/Developer+policies](https://docs.obsidian.md/Developer+policies)
-- **Plugin Guidelines**: [https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines)
+- **Developer Policies**: [Developer Policies](https://docs.obsidian.md/Developer+policies)
+- **Theme Guidelines**: [Theme Guidelines](https://docs.obsidian.md/Themes/Releasing/Theme+guidelines)
 - **Release Process**: See [versioning-releases.md](versioning-releases.md)
 
 ## Automated Checks (AI Can Verify)
@@ -27,59 +22,49 @@ These checks can be performed automatically by reading files and scanning code:
 
 ### File Requirements
 
-- [ ] **`main.js`** exists (compiled output)
-  - Check `main.js` in root (created by `pnpm build` or `pnpm dev`)
-  - **Note**: All builds output to `main.js` in the root directory
+- [ ] **`theme.css`** exists in project root (or compiled from SCSS/Sass)
+  - For themes with build tools: Check that `theme.css` is generated correctly
+  - For simple themes: Check that `theme.css` exists and is valid CSS
 - [ ] **`manifest.json`** exists in project root with valid JSON structure
-- [ ] **`styles.css`** exists (if plugin uses custom styles) - optional but should be included if present
 - [ ] **`LICENSE`** file exists in project root
 - [ ] **`README.md`** exists in project root
 
 ### Manifest Validation
 
-- [ ] **Required fields present**: `id`, `name`, `version`, `minAppVersion`, `description`, `isDesktopOnly`
-- [ ] **`id` format**: lowercase with hyphens (e.g., `"my-plugin-name"`), matches folder name
+- [ ] **Required fields present**: `name`, `version`, `minAppVersion`, `description`, `author`
+- [ ] **`name` format**: Should match the theme's display name
 - [ ] **`version` format**: Semantic Versioning (x.y.z, e.g., `"1.0.0"`)
-- [ ] **`minAppVersion`**: Set appropriately for APIs used
-- [ ] **`isDesktopOnly`**: Set correctly based on mobile compatibility
+- [ ] **`minAppVersion`**: Set appropriately for CSS features used
+- [ ] **Optional fields** (if applicable): `authorUrl`, `fundingUrl`
 - [ ] **JSON syntax**: Valid JSON (proper quotes, commas, brackets)
 
 ### Version Consistency
 
 - [ ] **GitHub release tag**: Matches `manifest.json` version exactly (no "v" prefix)
-  - **Correct**: If `manifest.json` has `"version": "0.1.0"`, tag must be `0.1.0` (not `v0.1.0`)
-  - **Wrong**: `v0.1.0` (with "v" prefix) - this will NOT match and can cause issues
   - If checking before release: Verify version format is ready
-  - If checking after release: Verify tag matches manifest version exactly
+  - If checking after release: Verify tag matches manifest version
 
-### Code Quality Checks
+### CSS Quality Checks
 
-- [ ] **No code obfuscation**: Code is readable and not minified/obfuscated
-- [ ] **No `eval()` usage**: Search codebase for `eval(` patterns
-- [ ] **No `innerHTML` misuse**: Check for unsafe `innerHTML` assignments (should use `createEl` or safe alternatives)
-- [ ] **No remote code execution**: No fetching and executing remote scripts
-- [ ] **No self-updating mechanisms**: No automatic code updates outside normal releases
-- [ ] **Console logging**: Only `console.warn()`, `console.error()`, or `console.debug()` - no `console.log()` in production code
-- [ ] **Listener cleanup**: All event listeners registered using `registerEvent()`, `registerDomEvent()`, `registerInterval()`
-- [ ] **ESLint configuration matches Obsidian bot**:
-  - [ ] `no-console` rule configured to only allow warn/error/debug
-  - [ ] `@typescript-eslint/require-await` enabled
-  - [ ] No disallowed rule disables present (no-static-styles-assignment, no-explicit-any, ui/sentence-case)
-  - [ ] All disable comments have descriptions
-  - [ ] No unused eslint-disable directives
+- [ ] **Valid CSS syntax**: No syntax errors in `theme.css`
+- [ ] **No tracking or analytics**: No external tracking scripts, analytics, or telemetry in CSS
+- [ ] **No remote resources**: No `@import` statements loading external stylesheets (unless explicitly disclosed)
+- [ ] **Browser compatibility**: CSS features used are compatible with Obsidian's browser targets (Chrome and iOS Safari)
+- [ ] **No obfuscated code**: CSS is readable and not minified/obfuscated (unless using build tools that minify for production)
 
 ### README.md Content
 
 - [ ] **File exists**: `README.md` present in root
-- [ ] **Describes purpose**: Clear description of what the plugin does
-- [ ] **Usage instructions**: How to install and use the plugin
-- [ ] **Attribution**: If using third-party code, proper attribution included
+- [ ] **Describes purpose**: Clear description of what the theme does and its design philosophy
+- [ ] **Usage instructions**: How to install and use the theme
+- [ ] **Screenshots**: Visual examples of the theme (recommended)
+- [ ] **Attribution**: If using third-party code or design elements, proper attribution included
 
 ### LICENSE File
 
 - [ ] **File exists**: `LICENSE` file present in root
 - [ ] **License specified**: Clear license type (MIT, GPL, etc.)
-- [ ] **Third-party compliance**: If using code from other plugins, verify license compatibility and attribution
+- [ ] **Third-party compliance**: If using code or design elements from other themes, verify license compatibility and attribution
 
 ## Interactive Checks (AI Asks User)
 
@@ -87,61 +72,69 @@ These checks require user input or confirmation:
 
 ### Platform Testing
 
-- [ ] **Windows**: Plugin tested and working on Windows
-- [ ] **macOS**: Plugin tested and working on macOS
-- [ ] **Linux**: Plugin tested and working on Linux
-- [ ] **Android**: Plugin tested and working on Android (if `isDesktopOnly: false`)
-- [ ] **iOS**: Plugin tested and working on iOS (if `isDesktopOnly: false`)
+- [ ] **Windows**: Theme tested and working on Windows
+- [ ] **macOS**: Theme tested and working on macOS
+- [ ] **Linux**: Theme tested and working on Linux
+- [ ] **Android**: Theme tested and working on Android (if applicable)
+- [ ] **iOS**: Theme tested and working on iOS (if applicable)
 
 **Note**: If user doesn't have access to all platforms, they should test on available platforms and note limitations.
+
+### Theme-Specific Testing
+
+- [ ] **Dark mode**: Theme includes dark mode styles and they work correctly
+- [ ] **Light mode**: Theme includes light mode styles and they work correctly (or theme is dark-only and this is documented)
+- [ ] **Mode switching**: Theme correctly switches between dark and light modes
+- [ ] **All Obsidian views**: Theme tested in:
+  - [ ] Editor (Live Preview, Source Mode, Reading Mode)
+  - [ ] File explorer
+  - [ ] Settings pages
+  - [ ] Command palette
+  - [ ] Graph view
+  - [ ] Canvas view (if applicable)
+  - [ ] Other views used by the theme
 
 ### GitHub Release
 
 - [ ] **Release created**: GitHub release exists for the version
-- [ ] **Required files attached**: `main.js`, `manifest.json`, `styles.css` (if present) attached as **individual binary assets** (not just in source.zip)
-- [ ] **Release tag format**: The release tag must exactly match `manifest.json`'s `version` field **WITHOUT** a leading "v" prefix
-  - **Correct**: If `manifest.json` has `"version": "0.1.0"`, tag must be `0.1.0` (not `v0.1.0`)
-  - **Wrong**: `v0.1.0` (with "v" prefix) - this will NOT match and can cause issues
-  - The release name can be descriptive, but the tag itself must be the version number without "v" prefix
+- [ ] **Required files attached**: `theme.css` and `manifest.json` attached as **individual binary assets** (not just in source.zip)
+- [ ] **Release name matches version**: Release name/tag exactly matches `manifest.json` version (no "v" prefix)
 
-### Community Plugin Registration
+### Community Theme Registration
 
-- [ ] **`manifest.json` id matches `community-plugins.json`**: The `id` in your `manifest.json` matches the `id` in the `community-plugins.json` file (for plugins already in the community catalog)
+- [ ] **`manifest.json` name matches `community-css-themes.json`**: The `name` in your `manifest.json` matches the `name` in the `community-css-themes.json` file (for themes already in the community catalog)
 
 ### Documentation Quality
 
-- [ ] **README.md describes purpose**: Clear explanation of what the plugin does
-- [ ] **README.md provides usage instructions**: Step-by-step guide on how to use the plugin
+- [ ] **README.md describes purpose**: Clear explanation of what the theme does and its design philosophy
+- [ ] **README.md provides usage instructions**: Step-by-step guide on how to install and use the theme
+- [ ] **Screenshots included**: Visual examples showing the theme in use (highly recommended)
 
 ### Developer Policies Adherence
 
-- [ ] **Read Developer Policies**: User confirms they have read https://docs.obsidian.md/Developer+policies
+- [ ] **Read Developer Policies**: User confirms they have read [Developer Policies](https://docs.obsidian.md/Developer+policies)
 - [ ] **No prohibited features**:
-  - [ ] No code obfuscation
-  - [ ] No dynamic ads
-  - [ ] No client-side telemetry (unless explicitly opt-in and disclosed)
+  - [ ] No tracking or analytics
+  - [ ] No remote code execution
   - [ ] No self-updating mechanisms
 - [ ] **Mandatory disclosures** (if applicable):
-  - [ ] Payments required: Disclosed in README and settings
-  - [ ] User accounts required: Disclosed in README and settings
-  - [ ] Network usage: Disclosed in README and settings
-  - [ ] Files outside vault: Disclosed in README and settings
-- [ ] **Licensing**: LICENSE file present and compliant with any third-party code licenses
+  - [ ] Remote resources: Disclosed in README if using `@import` for external stylesheets
+  - [ ] Network usage: Disclosed in README and settings (if any)
+- [ ] **Licensing**: LICENSE file present and compliant with any third-party code/licenses
 
-### Plugin Guidelines Adherence
+### Theme Guidelines Adherence
 
-- [ ] **Read Plugin Guidelines**: User confirms they have read https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines
-- [ ] **Code organization**: Code is well-organized (not all in one file if complex)
-- [ ] **Class naming**: Placeholder class names (like "MyPlugin") renamed to reflect actual functionality
-- [ ] **Console logging**: Minimal console logging (only warnings, errors, debug - no `console.log()`)
-- [ ] **UI text conventions**: UI text uses sentence case (see [ux-copy.md](ux-copy.md))
-- [ ] **Security**: No unsafe patterns (eval, innerHTML misuse, etc.)
+- [ ] **Read Theme Guidelines**: User confirms they have read [Theme Guidelines](https://docs.obsidian.md/Themes/Releasing/Theme+guidelines)
+- [ ] **CSS organization**: CSS is well-organized (logical structure, comments where helpful)
+- [ ] **Browser compatibility**: CSS features are compatible with Obsidian's browser targets
+- [ ] **Performance**: Theme doesn't cause significant performance issues
+- [ ] **Accessibility**: Theme maintains reasonable contrast ratios and readability
 
 ### Third-Party Code
 
-- [ ] **License compliance**: All third-party code licenses are compatible with your plugin's license
-- [ ] **Attribution**: Proper attribution given in README.md for any code from other plugins/projects
-- [ ] **License compatibility**: Your plugin's license is compatible with any third-party code used
+- [ ] **License compliance**: All third-party code/licenses are compatible with your theme's license
+- [ ] **Attribution**: Proper attribution given in README.md for any code or design elements from other themes/projects
+- [ ] **License compatibility**: Your theme's license is compatible with any third-party code used
 
 ## Developer Policies Summary
 
@@ -149,54 +142,51 @@ For reference, key points from [Developer Policies](https://docs.obsidian.md/Dev
 
 ### Prohibited
 
-- **Code obfuscation**: Code must be readable
-- **Dynamic ads**: No dynamic advertising
-- **Client-side telemetry**: No hidden telemetry (opt-in telemetry must be clearly disclosed)
+- **Tracking or analytics**: No tracking scripts, analytics, or telemetry
+- **Remote code execution**: No fetching and executing remote scripts
 - **Self-updating**: No automatic code updates outside normal releases
 
 ### Mandatory Disclosures
 
-If your plugin requires any of the following, you **must** disclose it clearly:
-- Payments or subscriptions
-- User accounts
-- Network usage (API calls, external services)
-- Accessing files outside the Obsidian vault
+If your theme requires any of the following, you **must** disclose it clearly:
+- Remote resources (external stylesheets via `@import`)
+- Network usage (if any)
 
 ### Licensing
 
 - Include a LICENSE file
-- Respect licenses of any third-party code used
-- Provide proper attribution for third-party code
+- Respect licenses of any third-party code or design elements used
+- Provide proper attribution for third-party code or design elements
 
-## Plugin Guidelines Summary
+## Theme Guidelines Summary
 
-For reference, key points from [Plugin Guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines):
+For reference, key points from [Theme Guidelines](https://docs.obsidian.md/Themes/Releasing/Theme+guidelines):
 
-- **Code organization**: Organize code into logical files/folders
-- **Console logging**: Minimize console output (only warnings, errors, debug)
-- **UI text**: Use sentence case for UI text (see [ux-copy.md](ux-copy.md))
-- **Class naming**: Use descriptive class names (not placeholders)
-- **Security**: Avoid unsafe patterns (eval, innerHTML misuse, etc.)
-- **Testing**: Test on all applicable platforms
+- **CSS organization**: Organize CSS into logical sections
+- **Browser compatibility**: Ensure CSS features work in Obsidian's browser targets (Chrome and iOS Safari)
+- **Performance**: Avoid CSS that causes performance issues
+- **Testing**: Test on all applicable platforms and in all Obsidian views
+- **Documentation**: Include clear README with screenshots
 
 ## AI Agent Workflow
 
-When user asks "is my plugin ready for release?" or similar:
+When user asks "is my theme ready for release?" or similar:
 
 1. **Run automated checks**:
-   - Check file existence (`main.js`, `manifest.json`, `styles.css`, `LICENSE`, `README.md`)
+   - Check file existence (`theme.css`, `manifest.json`, `LICENSE`, `README.md`)
    - Validate `manifest.json` structure and required fields
    - Check version format and consistency
-   - Scan code for prohibited patterns (eval, innerHTML misuse, obfuscation, etc.)
+   - Scan CSS for prohibited patterns (tracking, remote imports, etc.)
    - Verify README.md has basic content
 
 2. **Present interactive checklist**:
    - Ask about platform testing (Windows, macOS, Linux, Android, iOS)
+   - Ask about theme-specific testing (dark/light mode, all Obsidian views)
    - Ask about GitHub release status and file attachments
-   - Ask about community-plugins.json id matching (if applicable)
-   - Ask about README.md quality (purpose and usage instructions)
+   - Ask about community-css-themes.json name matching (if applicable)
+   - Ask about README.md quality (purpose, usage instructions, screenshots)
    - Ask about Developer Policies adherence
-   - Ask about Plugin Guidelines adherence
+   - Ask about Theme Guidelines adherence
    - Ask about third-party code license compliance and attribution
 
 3. **Report results**:
@@ -214,7 +204,7 @@ When user asks "is my plugin ready for release?" or similar:
 - [security-privacy.md](security-privacy.md) - Security and privacy guidelines
 - [manifest.md](manifest.md) - Manifest requirements and validation
 - [testing.md](testing.md) - Testing procedures and platform testing
-- [ux-copy.md](ux-copy.md) - UI text conventions
-- [common-pitfalls.md](common-pitfalls.md) - Common mistakes to avoid
-- [build-workflow.md](build-workflow.md) - Build commands (must run before release)
+- [ux-copy.md](ux-copy.md) - UI text conventions (for theme names and descriptions)
+- [build-workflow.md](build-workflow.md) - Build commands (if using build tools)
+- [performance.md](performance.md) - Performance optimization best practices
 

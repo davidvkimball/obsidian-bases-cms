@@ -5,24 +5,6 @@ REM Run this from anywhere: scripts\setup-ref-links.bat
 REM Change to project root (parent of scripts folder)
 cd /d "%~dp0\.."
 
-REM Check Node.js version (requires v16+)
-where node >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERROR: Node.js is not installed or not in PATH
-    echo Please install Node.js v16+ from https://nodejs.org/
-    exit /b 1
-)
-
-REM Verify Node.js version is v16 or higher
-for /f "tokens=1" %%i in ('node --version') do set NODE_VERSION=%%i
-set NODE_VERSION=%NODE_VERSION:v=%
-for /f "tokens=1 delims=." %%a in ("%NODE_VERSION%") do set NODE_MAJOR=%%a
-if %NODE_MAJOR% lss 16 (
-    echo ERROR: Node.js v16+ is required (found v%NODE_VERSION%)
-    echo Please upgrade Node.js from https://nodejs.org/
-    exit /b 1
-)
-
 echo Setting up symlinks to core Obsidian projects...
 
 REM Central .ref location (one level up from project)
@@ -231,4 +213,6 @@ echo Setup complete!
 echo.
 echo Verifying symlinks...
 dir .ref
+
+
 

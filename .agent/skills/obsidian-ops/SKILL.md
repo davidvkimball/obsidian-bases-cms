@@ -22,7 +22,7 @@ Load this skill when:
 ## Core Rules
 
 - **NEVER perform automatic git operations**: AI agents must never execute `git commit`, `git push`, or any command that automatically stages or commits changes without explicit user approval for each step.
-- **Verify Build**: Always run a build after significant changes to ensure TypeScript and esbuild compatibility.
+- **Verify Build**: Always run a build/lint after significant changes to ensure compatibility.
 - **Sync Status**: Keep `sync-status.json` updated when updating reference materials.
 
 ## Bundled Resources

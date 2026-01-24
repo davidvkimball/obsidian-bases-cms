@@ -8,26 +8,53 @@ Update frequency: Update as build process evolves
 
 **CRITICAL**: Always run the build command after making changes to catch errors early.
 
-After making any changes to plugin code:
+After making any changes to theme code:
 
-1. **Run the build** (assume pnpm is already installed):
+### Simple CSS Themes
+
+If your theme is simple with just `theme.css` in the root and no build tools:
+
+- **No build step required** - just edit `theme.css` directly
+- Changes take effect immediately when Obsidian reloads the theme (reload Obsidian with Ctrl+R / Cmd+R)
+- **Linting**: Run `npm run lint` to check CSS quality (optional but recommended)
+
+**How to detect**: If you have `theme.css` in root and no `src/scss/` directory, you have a simple CSS theme.
+
+### Complex Themes (SCSS + Build Tools)
+
+If your theme uses build tools (Grunt, npm scripts, SCSS compiler, etc.) and has `src/scss/` directory:
+
+1. **Run the build** (assume npm is already installed):
    ```powershell
-   pnpm build    # Production build (outputs to main.js in root)
-   pnpm dev      # Development build with watch mode (outputs to main.js in root)
+   # For themes using Grunt (like obsidian-oxygen)
+   npx grunt build
+   
+   # For themes using npm scripts
+   npm run build
+   
+   # For themes using Grunt watch mode (auto-rebuild on changes)
+   npx grunt
+   
+   # Or whatever build command your theme uses
    ```
-   
-   **Note**: Both `pnpm build` and `pnpm dev` output to `main.js` in the root directory. The difference is that `pnpm build` is a one-time build, while `pnpm dev` watches for changes and rebuilds automatically.
-   
-   **Backwards compatibility**: `npm run build` and `npm run dev` will also work since npm scripts execute the same commands.
 
-2. **If the build fails with pnpm/node errors**, then check if pnpm is installed:
+2. **If the build fails with npm/node errors**, then check if npm is installed:
    ```powershell
-   pnpm --version
+   npm --version
    ```
-   - If pnpm is not found, inform the user that pnpm needs to be installed (via `npm install -g pnpm` or `corepack enable`)
-   - Do not automatically install pnpm - let the user handle installation
+   - If npm is not found, inform the user that Node.js (which includes npm) needs to be installed
+   - Do not automatically install npm - let the user handle installation
 
-3. **Check for errors** and fix any build issues before proceeding. See [troubleshooting.md](troubleshooting.md) and [common-pitfalls.md](common-pitfalls.md) for common build issues.
+3. **Check for errors** and fix any build issues before proceeding. See [troubleshooting.md](troubleshooting.md) for common build issues.
+
+4. **Linting**: Run `npm run lint` to check SCSS/CSS quality. The lint wrapper automatically detects SCSS files in `src/scss/` and lints them appropriately.
+
+**How to detect**: If you have a `src/scss/` directory, you have a complex theme with build tools. Check for `Gruntfile.js`, `package.json` scripts, or other build configuration files.
+
+**Common build tools**:
+- **Grunt**: Look for `Gruntfile.js` → Run `npx grunt build` or `npx grunt` (watch mode)
+- **npm scripts**: Check `package.json` for `build` script → Run `npm run build`
+- **Sass CLI**: Some themes use `sass` directly → Check `package.json` scripts
 
 ## Why This Matters
 

@@ -38,6 +38,9 @@ importers:
       obsidian:
         specifier: latest
         version: 1.11.0(@codemirror/state@6.5.0)(@codemirror/view@6.38.6)
+      obsidian-dev-skills:
+        specifier: ^1.0.3
+        version: 1.0.3
       tslib:
         specifier: 2.4.0
         version: 2.4.0
@@ -1166,6 +1169,11 @@ packages:
   object.values@1.2.1:
     resolution: {integrity: sha512-gXah6aZrcUxjWg2zR2MwouP2eHlCBzdV4pygudehaKXSGW4v2AsRQUK+lwwXhii6KFZcunEnmSUoYp5CXibxtA==}
     engines: {node: '>= 0.4'}
+
+  obsidian-dev-skills@1.0.3:
+    resolution: {integrity: sha512-vkld8CA0d+M8dUOGu7vl8KHOS8sVwYLAggVr3YW/ikwSi7QUaJnaSIzyQIR6M+lAa6VSWyoPD/a5DDF/sLDf7g==}
+    engines: {node: '>=16.0.0'}
+    hasBin: true
 
   obsidian@1.11.0:
     resolution: {integrity: sha512-lVqN9AmDWHzhNATi2tDnjqVgI6WUYKeT+lIsAycAyLt4XCC6zRsWzb+tFCiB7Rn3PpttefjoovilhYwvS4Iqxw==}
@@ -2858,6 +2866,8 @@ snapshots:
       call-bound: 1.0.4
       define-properties: 1.2.1
       es-object-atoms: 1.1.1
+
+  obsidian-dev-skills@1.0.3: {}
 
   obsidian@1.11.0(@codemirror/state@6.5.0)(@codemirror/view@6.38.6):
     dependencies:

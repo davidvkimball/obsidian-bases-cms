@@ -6,38 +6,13 @@ Update frequency: Update as common issues are identified
 
 # Troubleshooting
 
-**Source**: Based on common errors from developer docs, community patterns, and API best practices. Always verify API details in `.ref/obsidian-api/obsidian.d.ts`.
+**Source**: Based on common errors from developer docs, community patterns, and best practices.
 
-## Build and Loading Issues
-
-- **Plugin doesn't load after build**: Ensure `main.js` and `manifest.json` are at the top level of the plugin folder under `<Vault>/.obsidian/plugins/<plugin-id>/`.
-- **Build issues**: If `main.js` is missing, run `pnpm build` or `pnpm dev` to compile your TypeScript source code.
-- **TypeScript compilation errors**: Check `tsconfig.json` settings, ensure `"strict": true` is handled properly, verify all imports are correct.
-- **Module not found errors**: Ensure all dependencies are in `package.json` and run `pnpm install`. Check that imports use correct paths.
-
-## Command Issues
-
-- **Commands not appearing**: Verify `addCommand` runs after `onload` completes, and command IDs are unique.
-- **Command not executing**: Check that callback/editorCallback/checkCallback is properly defined and not throwing errors.
-- **Command only works sometimes**: If using `checkCallback`, ensure it returns `true` when the command should be available.
-
-## Settings Issues
-
-- **Settings not persisting**: Ensure `loadData`/`saveData` are awaited. Check that `saveSettings()` is called after changes.
-- **Settings not loading**: Verify `loadSettings()` is called in `onload()` and properly awaited.
-- **Settings UI not updating**: Call `display()` after changing settings that affect the UI.
-- **Settings structure changed**: Old saved data may not match new interface. Add migration logic or reset settings.
-
-## View Issues
-
-- **Views not appearing**: Verify `registerView()` is called in `onload()`, and view type constant matches.
-- **Views not cleaning up**: Ensure `detachLeavesOfType()` is called in `onunload()`.
-- **View errors**: Never store view references. Use `getLeavesOfType()` to access views.
-
-## Mobile Issues
-
-- **Mobile-only issues**: Confirm you're not using desktop-only APIs; check `isDesktopOnly` in `manifest.json` and adjust.
-- **Status bar not working on mobile**: Status bar items are not supported on mobile. Use feature detection.
+- **Theme doesn't appear**: Ensure `manifest.json` and `theme.css` are at the top level of the theme folder under `<Vault>/.obsidian/themes/<theme-name>/`.
+- **Theme not applying**: Check that `manifest.json` has correct `name` field matching the folder name.
+- **CSS not loading**: Verify `theme.css` exists and is properly formatted.
+- **SCSS compilation issues**: If using SCSS, ensure build process runs and outputs `theme.css`.
+- **Mobile display issues**: Test CSS on mobile devices and check for viewport-specific styles.
 
 ## AI Agent Issues
 
@@ -56,173 +31,84 @@ Update frequency: Update as common issues are identified
 
 ## Common Error Messages
 
-### TypeScript Errors
+### CSS Errors
 
-- **"Property does not exist on type"**: Check API types in `.ref/obsidian-api/obsidian.d.ts`. Plugin docs may be outdated.
-- **"Cannot find module 'obsidian'"**: Ensure `obsidian` is in `package.json` dependencies (usually `"obsidian": "latest"`).
-- **"Type 'undefined' is not assignable"**: Add proper null checks or provide defaults for optional properties.
+- **"Invalid property value"**: Check CSS syntax, ensure all values are properly formatted.
+- **"Unknown property"**: Verify CSS property names are correct and supported by Obsidian's rendering engine.
+- **"Selector not working"**: Check CSS selector specificity and ensure you're targeting the correct Obsidian elements.
 
-### Runtime Errors
+### SCSS Compilation Errors
 
-- **"Cannot read property of undefined"**: Add null checks before accessing properties. Verify objects are initialized.
-- **"Plugin failed to load"**: Check browser console (Help → Toggle Developer Tools) for detailed error messages.
-- **"Settings failed to load"**: Check that settings file isn't corrupted. Handle errors in `loadSettings()`.
+- **"File to import not found"**: Check `@import` paths are correct relative to SCSS files.
+- **"Undefined variable"**: Ensure all SCSS variables are defined before use.
+- **"Syntax error"**: Verify SCSS syntax is correct (semicolons, brackets, etc.).
 
 ### Build Errors
 
-- **"Cannot find name"**: Check imports, ensure all dependencies are installed.
-- **"Module not found"**: Verify file paths in imports are correct relative to source files.
+- **"Command not found"**: Ensure build tools (Grunt, npm, sass) are installed.
+- **"Build failed"**: Check build configuration files (`Gruntfile.js`, `package.json` scripts).
+- **"Output file missing"**: Verify build process completed and `theme.css` was generated.
 
 ## Debugging Techniques
 
-### Console Logging
+### Browser Console
 
-```ts
-// Log plugin state
-console.log("Plugin loaded:", this);
-console.log("Settings:", this.settings);
+Open browser console (Help → Toggle Developer Tools) to check for:
+- CSS parsing errors
+- Missing CSS variables
+- Conflicting styles
 
-// Log in event handlers
-this.app.workspace.on("file-open", (file) => {
-  console.log("File opened:", file.path);
-});
-```
+### Inspect Theme CSS
 
-### Inspect Plugin State
-
-Open browser console (Help → Toggle Developer Tools) and inspect:
+In browser console, inspect the theme's CSS:
 ```javascript
-// Access your plugin instance
-app.plugins.plugins['your-plugin-id']
+// Check if theme CSS is loaded
+document.querySelector('style[data-theme="your-theme-name"]')
 ```
 
-### Check Settings File
+### Verify CSS Variables
 
-Settings are stored at:
-```text
-<Vault>/.obsidian/plugins/<plugin-id>/data.json
+Check that Obsidian CSS variables are being used correctly:
+```css
+/* Use Obsidian's built-in variables */
+color: var(--text-normal);
+background: var(--background-primary);
 ```
 
-You can manually inspect this file (backup first!) to see what's saved.
+### Check Manifest
 
-### Verify API Usage
+Verify `manifest.json` has correct `name` field matching the theme folder name.
 
-Always check `.ref/obsidian-api/obsidian.d.ts` for:
-- Correct method signatures
-- Available properties
-- New features (e.g., `SettingGroup` since 1.11.0)
-- Deprecated methods
+## SCSS Build Issues (Detailed)
 
-Plugin docs may not reflect the latest API changes.
-
-## Settings Issues (Detailed)
-
-### Settings Not Saving
-
-**Symptoms**: Changes don't persist after restart.
+### SCSS Not Compiling
 
 **Causes**:
-1. Not awaiting `saveData()`
-2. Settings object structure changed
-3. File permissions issue
-
-**Solution**:
-```ts
-async saveSettings() {
-  await this.saveData(this.settings); // Must await!
-}
-```
-
-### Settings Not Loading
-
-**Symptoms**: Settings always use defaults.
-
-**Causes**:
-1. `loadSettings()` not called or not awaited
-2. Settings file doesn't exist (first run)
-3. Settings file corrupted
-
-**Solution**:
-```ts
-async onload() {
-  await this.loadSettings(); // Must be called and awaited
-}
-
-async loadSettings() {
-  try {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-  } catch (error) {
-    console.error("Failed to load settings:", error);
-    this.settings = { ...DEFAULT_SETTINGS };
-  }
-}
-```
-
-### Settings UI Not Updating
-
-**Symptoms**: Settings tab doesn't reflect changes.
-
-**Solution**: Call `display()` after changing settings:
-```ts
-.onChange(async (value) => {
-  this.plugin.settings.value = value;
-  await this.plugin.saveSettings();
-  this.display(); // Re-render settings tab
-})
-```
-
-## View Issues (Detailed)
-
-### Views Not Appearing
-
-**Checklist**:
-1. `registerView()` called in `onload()`?
-2. View type constant matches?
-3. `activateView()` method called?
-4. View class properly extends `ItemView`?
-
-### Views Not Cleaning Up
-
-**Solution**: Always detach in `onunload()`:
-```ts
-async onunload() {
-  this.app.workspace.detachLeavesOfType(VIEW_TYPE_MY_VIEW);
-}
-```
-
-### View Reference Errors
-
-**Problem**: Storing view references causes issues.
-
-**Solution**: Always use `getLeavesOfType()`:
-```ts
-// Don't store: let myView: MyView;
-// Instead:
-const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MY_VIEW);
-```
-
-## Build Issues (Detailed)
-
-### Missing main.js
-
-**Cause**: Build didn't run or failed.
+1. Build command not run
+2. Build tool not installed
+3. Incorrect build configuration
 
 **Solution**: 
-1. Run `pnpm build`
-2. Check for TypeScript errors
-3. Verify `esbuild.config.mjs` or build config is correct
+1. Run build command (`npx grunt build` or `npm run build`)
+2. Verify `Gruntfile.js` or `package.json` scripts are correct
+3. Check that `theme.css` is generated in root directory
 
-### TypeScript Compilation Errors
+### SCSS Import Errors
 
-**Common causes**:
-- Missing type definitions
-- Incorrect import paths
-- Strict mode type errors
+**Problem**: `@import` statements fail.
 
 **Solution**: 
-1. Check `tsconfig.json` settings
-2. Verify all imports are correct
-3. Add proper type annotations
-4. Check `.ref/obsidian-api/obsidian.d.ts` for correct types
+1. Check file paths are correct relative to importing file
+2. Verify all imported files exist
+3. Use relative paths: `@import "../variables.scss";`
+
+### CSS Output Issues
+
+**Problem**: Compiled CSS doesn't match expected output.
+
+**Solution**:
+1. Check SCSS source files for syntax errors
+2. Verify build process completes without errors
+3. Inspect generated `theme.css` for issues
 
 

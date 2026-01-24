@@ -32,4 +32,4 @@ Load this skill when:
 - `references/ux-copy.md`: UI text conventions and UX best practices.
 - `references/references.md`: External links and primary source locations.
 - `references/mobile.md`: Considerations for mobile compatibility.
-- `references/performance.md`: Best practices for plugin performance.
+- `references/performance.md`: Best practices for performance.

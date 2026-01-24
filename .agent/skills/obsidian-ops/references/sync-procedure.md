@@ -1,4 +1,4 @@
-﻿<!--
+<!--
 Source: Project-specific procedure
 Last synced: See sync-status.json for authoritative sync dates
 Update frequency: Update as sync process evolves
@@ -117,17 +117,17 @@ If `.ref` contains actual repos (not symlinks), update from project root:
 **Windows (PowerShell)**:
 ```powershell
 # Always start from project root for each command
-cd C:\Users\david\Development\obsidian-sample-plugin
+cd C:\path\to\your\obsidian-project
 cd .ref/obsidian-api; git pull
-cd C:\Users\david\Development\obsidian-sample-plugin
+cd C:\path\to\your\obsidian-project
 cd .ref/obsidian-sample-plugin; git pull
-cd C:\Users\david\Development\obsidian-sample-plugin
+cd C:\path\to\your\obsidian-project
 cd .ref/obsidian-developer-docs; git pull
-cd C:\Users\david\Development\obsidian-sample-plugin
+cd C:\path\to\your\obsidian-project
 cd .ref/obsidian-plugin-docs; git pull
-cd C:\Users\david\Development\obsidian-sample-plugin
+cd C:\path\to\your\obsidian-project
 cd .ref/obsidian-sample-theme; git pull
-cd C:\Users\david\Development\obsidian-sample-plugin
+cd C:\path\to\your\obsidian-project
 cd .ref/eslint-plugin; git pull
 ```
 
@@ -178,10 +178,10 @@ cd ..
 **Windows (PowerShell)** - If using local clones:
 ```powershell
 # Always start from project root for each command
-cd C:\Users\david\Development\obsidian-sample-plugin
+cd C:\path\to\your\obsidian-project
 cd .ref\obsidian-api
 git log --oneline -10
-cd C:\Users\david\Development\obsidian-sample-plugin
+cd C:\path\to\your\obsidian-project
 cd .ref\obsidian-sample-plugin
 git log --oneline -10
 git diff HEAD~1 HEAD -- AGENTS.md
@@ -259,13 +259,13 @@ For each file that needs updating:
    node scripts/update-sync-status.mjs "Description of what was synced"
    ```
    
-   **Manual way**: Edit `.agents/sync-status.json` directly:
+   **Manual way**: Edit `.agent/sync-status.json` directly:
    ```powershell
    # Get the current date
    $syncDate = Get-Date -Format "yyyy-MM-dd"
-   
+
    # Update the central sync-status.json file
-   # Edit .agents/sync-status.json and update:
+   # Edit .agent/sync-status.json and update:
    # - "lastFullSync" to the current date
    # - "lastSyncSource" to describe what was synced
    # - Update relevant source repo dates in "sourceRepos"
@@ -273,7 +273,7 @@ For each file that needs updating:
    
    **Important**: Always use the actual current date from `Get-Date -Format "yyyy-MM-dd"`, never use placeholder dates.
 
-4. **Note**: Individual file headers still have "Last synced" dates, but the authoritative source is `.agents/sync-status.json`. When syncing, update the central file rather than individual file headers.
+4. **Note**: Individual file headers still have "Last synced" dates, but the authoritative source is `.agent/sync-status.json`. When syncing, update the central file rather than individual file headers.
 
 ### Step 6: Verify and Test
 
@@ -297,8 +297,8 @@ For each file that needs updating:
 - [ ] Review API documentation for breaking changes
 - [ ] Review developer docs for policy/guideline updates
 - [ ] Review plugin docs for best practices
-- [ ] Update relevant `.agents/*.md` files
-- [ ] **Update `.agents/sync-status.json` with actual current date** (use `Get-Date -Format "yyyy-MM-dd"` - never use placeholder dates)
+- [ ] Update relevant `.agent/skills/**/*.md` files
+- [ ] **Update `.agent/sync-status.json` with actual current date** (use `Get-Date -Format "yyyy-MM-dd"` - never use placeholder dates)
 - [ ] Review and commit changes
 
 ## Troubleshooting
@@ -353,7 +353,7 @@ Consider creating a script to:
 
 ## Updating Sync Status
 
-After completing a sync, update `.agents/sync-status.json`:
+After completing a sync, update `.agent/sync-status.json`:
 
 **Easy way** (recommended): Use the helper script:
 ```bash

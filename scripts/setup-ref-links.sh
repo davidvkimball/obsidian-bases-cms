@@ -10,49 +10,6 @@ if ! cd "$PROJECT_ROOT"; then
     exit 1
 fi
 
-# Check Node.js version (requires v16+)
-if ! command -v node &> /dev/null; then
-    echo "ERROR: Node.js is not installed or not in PATH"
-    echo "Please install Node.js v16+ from https://nodejs.org/"
-    exit 1
-fi
-
-NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-if [ "$NODE_VERSION" -lt 16 ]; then
-    echo "ERROR: Node.js v16+ is required (found v$NODE_VERSION)"
-    echo "Please upgrade Node.js from https://nodejs.org/"
-    exit 1
-fi
-
-echo "Setting up symlinks to core Obsidian projects..."
-
-# Central .ref location (one level up from project)
-CENTRAL_REF_ROOT="../.ref"
-CENTRAL_REF="../.ref/obsidian-dev"
-
-# Create central .ref root if it doesn't exist
-if [ ! -d "$CENTRAL_REF_ROOT" ]; then
-    mkdir -p "$CENTRAL_REF_ROOT"
-    echo "Created central .ref directory"
-fi
-
-# Create obsidian-dev subfolder if it doesn't exist
-if [ ! -d "$CENTRAL_REF" ]; then
-    mkdir -p "$CENTRAL_REF"
-    echo "Created obsidian-dev subfolder"
-fi
-
-# Ensure plugins and themes folders exist
-mkdir -p "$CENTRAL_REF/plugins"
-mkdir -p "$CENTRAL_REF/themes"
-
-# Check if git is available
-if ! command -v git &> /dev/null; then
-    echo "ERROR: git is not installed or not in PATH"
-    echo "Please install git from https://git-scm.com/"
-    exit 1
-fi
-
 # Clone the 6 core repos if they don't exist, or pull latest if they do
 if [ ! -d "$CENTRAL_REF/obsidian-api" ]; then
     echo "Cloning obsidian-api..."
@@ -181,4 +138,8 @@ for project in "${CORE_PROJECTS[@]}"; do
         echo "✗ $project : Missing"
     fi
 done
+
+
+
+
 

@@ -1,6 +1,6 @@
 # AGENTS
 
-This project uses the OpenSkills system for AI agent guidance.
+This project uses the OpenSkills system for AI agent guidance. General development skills are provided by the [obsidian-dev-skills](https://github.com/davidvkimball/obsidian-dev-skills) repository.
 
 <skills_system priority="1">
 
@@ -64,3 +64,4 @@ Usage notes:
 ## Terminology
 - Use **"properties"** (never "frontmatter" or "front-matter") when referring to YAML metadata at the top of Markdown files.
 - **"Markdown"** is a proper noun and must always be capitalized.
+

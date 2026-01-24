@@ -2,7 +2,6 @@
 Source: Project-specific quick reference
 Last synced: See sync-status.json for authoritative sync dates
 Update frequency: Update as needed
-Applicability: Both
 -->
 
 # Quick Sync Guide
@@ -127,10 +126,7 @@ After pulling and reviewing changes:
 
 1. **Compare** relevant files from `.ref/` with your `.agents/` files
 2. **Update** `.agents/` files with new information
-3. **Update sync status** (easy way):
-   ```bash
-   node scripts/update-sync-status.mjs "Description of sync"
-   ```
+3. **Update** the "Last synced" date in file headers
 4. **Commit** your changes
 
 See [sync-procedure.md](sync-procedure.md) for the complete workflow.
