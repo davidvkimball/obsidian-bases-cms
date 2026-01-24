@@ -10,7 +10,7 @@ import type { CMSSettings } from '../shared/data-transform';
 function showRenameDialog(app: App, file: TFile): void {
 	const modal = new Modal(app);
 	modal.titleEl.setText('Rename file');
-	
+
 	const inputContainer = modal.contentEl.createDiv();
 	// Make input container full width
 	setCssProps(inputContainer, {
@@ -25,28 +25,28 @@ function showRenameDialog(app: App, file: TFile): void {
 	});
 	input.inputEl.focus();
 	input.inputEl.select();
-	
+
 	const buttonContainer = modal.contentEl.createDiv({ cls: 'modal-button-container' });
 	const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
 	cancelButton.addEventListener('click', () => modal.close());
-	
-	const renameButton = buttonContainer.createEl('button', { 
+
+	const renameButton = buttonContainer.createEl('button', {
 		text: 'Rename',
 		cls: 'mod-cta'
 	});
-	
+
 	const handleRename = async () => {
 		const newName = input.getValue().trim();
 		if (!newName || newName === file.basename) {
 			modal.close();
 			return;
 		}
-		
+
 		// Construct new path with extension
 		const pathParts = file.path.split('/');
 		pathParts[pathParts.length - 1] = newName + (file.extension ? `.${file.extension}` : '');
 		const newPath = pathParts.join('/');
-		
+
 		try {
 			await app.fileManager.renameFile(file, newPath);
 			modal.close();
@@ -56,11 +56,11 @@ function showRenameDialog(app: App, file: TFile): void {
 			modal.close();
 		}
 	};
-	
+
 	renameButton.addEventListener('click', () => {
 		void handleRename();
 	});
-	
+
 	input.inputEl.addEventListener('keydown', (e) => {
 		if (e.key === 'Enter') {
 			e.preventDefault();
@@ -70,7 +70,7 @@ function showRenameDialog(app: App, file: TFile): void {
 			modal.close();
 		}
 	});
-	
+
 	modal.open();
 }
 
@@ -80,10 +80,10 @@ function showRenameDialog(app: App, file: TFile): void {
 function isObsidianRenameCommand(commandId: string): boolean {
 	// Obsidian's rename file command IDs (may vary by version)
 	const lowerId = commandId.toLowerCase();
-	return commandId === 'file-explorer:rename-file' || 
-		   commandId === 'rename-file' ||
-		   commandId === 'file:rename-file' ||
-		   (lowerId.includes('rename') && lowerId.includes('file') && !lowerId.includes(':'));
+	return commandId === 'file-explorer:rename-file' ||
+		commandId === 'rename-file' ||
+		commandId === 'file:rename-file' ||
+		(lowerId.includes('rename') && lowerId.includes('file') && !lowerId.includes(':'));
 }
 
 /**
@@ -93,7 +93,7 @@ function isObsidianRenameCommand(commandId: string): boolean {
 function isProblematicCommand(commandId: string, commandName: string): boolean {
 	const lowerId = commandId.toLowerCase();
 	const lowerName = commandName.toLowerCase();
-	
+
 	// Commands that need editor context and typically don't work well programmatically
 	const problematicPatterns = [
 		'add tag',
@@ -103,8 +103,8 @@ function isProblematicCommand(commandId: string, commandName: string): boolean {
 		'editor:',
 		'markdown:',
 	];
-	
-	return problematicPatterns.some(pattern => 
+
+	return problematicPatterns.some(pattern =>
 		lowerId.includes(pattern) || lowerName.includes(pattern)
 	);
 }
@@ -121,18 +121,18 @@ export function setupQuickEditIcon(
 	settings: CMSSettings
 ): void {
 	// Quick edit icon (only if enabled, command is set, and not hidden in this view)
-	if (!plugin.settings.enableQuickEdit || 
-		!plugin.settings.quickEditCommand || 
+	if (!plugin.settings.enableQuickEdit ||
+		!plugin.settings.quickEditCommand ||
 		plugin.settings.quickEditCommand === '' ||
 		settings.hideQuickEditIcon) {
 		return;
 	}
-	
+
 	// Attach to titleEl (title is always shown now)
 	const quickEditIcon = titleEl.createSpan('bases-cms-quick-edit-icon');
 	quickEditIcon.addClass('bases-cms-cursor-default');
 	setIcon(quickEditIcon, plugin.settings.quickEditIcon || 'pencil-line');
-	
+
 	// Prevent title from being clickable when clicking icon
 	titleEl.addEventListener('click', (e) => {
 		if (quickEditIcon.contains(e.target as Node)) {
@@ -140,7 +140,7 @@ export function setupQuickEditIcon(
 			e.stopImmediatePropagation();
 		}
 	}, true);
-	
+
 	// Execute command when icon is clicked
 	// Register with capture phase BEFORE card click handler can see it
 	cardEl.addEventListener('click', (e) => {
@@ -149,31 +149,31 @@ export function setupQuickEditIcon(
 			if (!quickEditIcon.contains(target) && !target.closest('.bases-cms-quick-edit-icon')) {
 				return; // Not clicking on icon
 			}
-			
+
 			e.stopPropagation();
 			e.stopImmediatePropagation();
 			e.preventDefault();
-			
+
 			// Try to execute command without opening file first
 			// For commands that need file context, try to call helper functions directly if available
 			const file = app.vault.getAbstractFileByPath(cardPath);
 			if (file instanceof TFile) {
 				const commandId = plugin.settings.quickEditCommand;
-				
+
 				// FIRST: Check if this is Obsidian's "Rename file" command
 				// Show rename dialog without opening the file, similar to Astro Composer
 				const commandRegistry = (app as { commands?: { commands?: Record<string, { name?: string }> } }).commands;
 				const command = commandRegistry?.commands?.[commandId];
 				const commandName = command?.name || '';
 				const lowerCommandName = commandName.toLowerCase();
-				
+
 				// Check if this is a rename file command by ID or name
-				if (isObsidianRenameCommand(commandId) || 
+				if (isObsidianRenameCommand(commandId) ||
 					(lowerCommandName.includes('rename') && lowerCommandName.includes('file'))) {
 					showRenameDialog(app, file);
 					return; // Success, exit early - do NOT open the file
 				}
-				
+
 				// Check if this is a known problematic command that won't work well
 				if (isProblematicCommand(commandId, commandName)) {
 					if (plugin.settings.quickEditOpenFile) {
@@ -184,7 +184,7 @@ export function setupQuickEditIcon(
 						return; // Don't try to execute - it won't work properly
 					}
 				}
-				
+
 				// Try to find and call a helper function from the plugin that registered this command
 				// Pattern: Look for [commandId]ByPath method on the source plugin
 				let helperCalled = false;
@@ -193,7 +193,7 @@ export function setupQuickEditIcon(
 					// Otherwise, try to get it from the command registry
 					let pluginId: string | null = null;
 					let baseCommandId = commandId;
-					
+
 					if (commandId.includes(':')) {
 						const parts = commandId.split(':');
 						pluginId = parts[0];
@@ -212,22 +212,22 @@ export function setupQuickEditIcon(
 							}
 						}
 					}
-					
+
 					// If we have a plugin ID, try to get the plugin instance
 					if (pluginId) {
 						const plugins = (app as { plugins?: { plugins?: Record<string, Record<string, unknown>> } }).plugins;
 						const sourcePlugin = plugins?.plugins?.[pluginId];
-						
+
 						if (sourcePlugin) {
 							// Convert command ID to camelCase method name
 							// e.g., "rename-content" -> "renameContentByPath"
 							const methodName = baseCommandId
 								.split('-')
-								.map((part, index) => 
+								.map((part, index) =>
 									index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)
 								)
 								.join('') + 'ByPath';
-							
+
 							// Check if the plugin exposes this helper function
 							if (sourcePlugin && typeof sourcePlugin[methodName] === 'function') {
 								// Call the helper function directly - no need to open file!
@@ -240,28 +240,27 @@ export function setupQuickEditIcon(
 				} catch {
 					// Fall through to try regular command execution
 				}
-				
+
 				// For other commands or if helper not available, check if user wants to try opening the file
 				if (!helperCalled) {
 					// Only attempt to open file and execute if the setting is enabled
 					if (!plugin.settings.quickEditOpenFile) {
 						// False positive: Already in sentence case; quoted text is a setting name reference
-						// eslint-disable-next-line obsidianmd/ui/sentence-case
 						new Notice(`This command doesn't have special handling. Enable "Attempt to open file and execute quick edit command" in settings to try executing it.`, 5000);
 						return; // Don't try to execute
 					}
-					
+
 					// User has enabled the setting, so try to open the file first
 					// and make it active so commands like "Rename file" target the correct file
 					// Always open the file first and make it active before executing the command
 					// This ensures commands that use getActiveFile() target the correct file
 					const leaf = app.workspace.getLeaf(false);
 					await leaf.openFile(file);
-					
+
 					// CRITICAL: Set this leaf as active so commands target the correct file
 					// Commands like "Rename file" use getActiveFile() to determine which file to operate on
 					app.workspace.setActiveLeaf(leaf, { focus: true });
-					
+
 					// Wait for the editor to be ready and the file to be active
 					// Use multiple checks to ensure the workspace state has fully updated
 					let attempts = 0;
@@ -280,12 +279,12 @@ export function setupQuickEditIcon(
 							})();
 						}
 					};
-					
+
 					const checkEditorReady = () => {
 						const view = leaf.view;
 						const viewWithEditor = view as { editor?: unknown };
 						const activeFile = app.workspace.getActiveFile();
-						
+
 						// Check that both the editor is ready AND the file is active
 						if (view && 'editor' in view && viewWithEditor.editor && activeFile === file) {
 							// Editor is ready and file is active
@@ -304,14 +303,14 @@ export function setupQuickEditIcon(
 							setTimeout(checkEditorReady, 50);
 						}
 					};
-					
+
 					// Start checking for editor readiness
 					checkEditorReady();
 				}
 			}
 		})();
 	}, true); // Capture phase - runs BEFORE the regular card click handler
-	
+
 	// Also add a mousedown handler to catch it even earlier
 	quickEditIcon.addEventListener('mousedown', (e) => {
 		e.stopPropagation();

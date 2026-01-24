@@ -51,10 +51,26 @@ export class BasesCMSView extends BasesView {
 		this.basesController = controller;
 		this.containerEl = containerEl;
 		this.plugin = plugin;
-		
+
+		// Initialize selection from plugin storage if it exists
+		// We use a stable reference for selectedFiles so managers don't lose track of it
+		const baseId = this.getBaseIdentifier();
+		if (baseId) {
+			const savedSelection = this.plugin.selections.get(baseId);
+			if (savedSelection && savedSelection !== this.selectedFiles) {
+				// Initial sync from plugin's existing selection for this base
+				savedSelection.forEach(item => this.selectedFiles.add(item));
+				// Ensure they both point to the SAME Set instance for future updates
+				this.plugin.selections.set(baseId, this.selectedFiles);
+			} else if (!savedSelection) {
+				// First time this base is seen, register our Set instance
+				this.plugin.selections.set(baseId, this.selectedFiles);
+			}
+		}
+
 		// Detect if this view is embedded in a markdown note
 		this.isEmbedded = isEmbeddedView(containerEl);
-		
+
 		// Initialize shared card renderer (config will be set later in onDataUpdated)
 		this.cardRenderer = new SharedCardRenderer(
 			this.app,
@@ -64,19 +80,19 @@ export class BasesCMSView extends BasesView {
 			undefined, // Config not available in constructor
 			controller
 		);
-		
+
 		// Add CMS container classes
 		this.containerEl.addClass('bases-cms');
 		this.containerEl.addClass('bases-cms-container');
-		
+
 		// Initialize managers with error handling
 		try {
-		this.propertyToggleHandler = new PropertyToggleHandler(
-			this.app,
-			this.config as { get: (key: string) => unknown },
-			this.plugin.settings,
-			() => this.onDataUpdated()
-		);
+			this.propertyToggleHandler = new PropertyToggleHandler(
+				this.app,
+				this.config as { get: (key: string) => unknown },
+				this.plugin.settings,
+				() => this.onDataUpdated()
+			);
 		} catch {
 			this.propertyToggleHandler = null;
 		}
@@ -86,7 +102,7 @@ export class BasesCMSView extends BasesView {
 			const configToUse = (this.config && typeof (this.config as { get?: (key: string) => unknown }).get === 'function')
 				? (this.config as { get: (key: string) => unknown })
 				: { get: () => undefined };
-			
+
 			this.scrollLayoutManager = new ScrollLayoutManager(
 				this.containerEl,
 				this.app,
@@ -109,24 +125,24 @@ export class BasesCMSView extends BasesView {
 		}
 
 		try {
-		this.viewSwitchListener = new ViewSwitchListener(
-			this.containerEl,
-			this.plugin,
-			this.config as { getName?: () => string; name?: string },
-			(this as unknown as { controller?: { getBaseName?: () => string; baseName?: string } }).controller,
-			this.data as { baseName?: string } | undefined,
-			this.selectedFiles,
-			() => this.updateSelectionUI(),
-			(cleanup) => this.register(cleanup)
-		);
+			this.viewSwitchListener = new ViewSwitchListener(
+				this.containerEl,
+				this.plugin,
+				this.config as { getName?: () => string; name?: string },
+				(this as unknown as { controller?: { getBaseName?: () => string; baseName?: string } }).controller,
+				this.data as { baseName?: string } | undefined,
+				this.selectedFiles,
+				() => this.updateSelectionUI(),
+				(cleanup) => this.register(cleanup)
+			);
 		} catch {
 			this.viewSwitchListener = null;
 		}
 
 		// Setup view switch listener - wraps handleSelectionChange
 		if (this.viewSwitchListener) {
-		const originalHandleSelectionChange = this.handleSelectionChange.bind(this);
-		this.handleSelectionChange = this.viewSwitchListener.setup(originalHandleSelectionChange);
+			const originalHandleSelectionChange = this.handleSelectionChange.bind(this);
+			this.handleSelectionChange = this.viewSwitchListener.setup(originalHandleSelectionChange);
 		}
 	}
 
@@ -320,7 +336,7 @@ export class BasesCMSView extends BasesView {
 				containerWithConfig.__cmsConfig = this.config;
 				containerWithConfig.__cmsView = this;
 				setupNewNoteInterceptor(
-						this.app,
+					this.app,
 					this.containerEl,
 					this.config,
 					this.plugin.settings,
@@ -468,24 +484,24 @@ export class BasesCMSView extends BasesView {
 				// Sync with default view if defined and not already active
 				const data = this.data as unknown as { defaultView?: string };
 				const topLevelDefaultView = data?.defaultView;
-				
+
 				const config = this.config as unknown as { getName?: () => string; name?: string };
-				const currentViewName = typeof config.getName === 'function' 
-					? config.getName() 
+				const currentViewName = typeof config.getName === 'function'
+					? config.getName()
 					: config.name;
 
 				if (topLevelDefaultView && currentViewName !== topLevelDefaultView) {
 					// Only do this once on initial load to avoid loop
 					if (!this.hasAutoSwitched) {
 						this.hasAutoSwitched = true;
-						
+
 						// Logic to trigger a view switch via the core Bases plugin controller
-						const controller = this.basesController as unknown as { 
+						const controller = this.basesController as unknown as {
 							selectView?: (view: string) => void;
 							setView?: (view: string) => void;
 							switchView?: (view: string) => void;
 						};
-						
+
 						// Diagnostic log to help troubleshoot if it still doesn't work
 						console.debug('Bases CMS: Default view sync triggered', {
 							target: topLevelDefaultView,
@@ -509,6 +525,21 @@ export class BasesCMSView extends BasesView {
 				const currentBaseId = this.getBaseIdentifier();
 				if (this.lastBaseId !== currentBaseId) {
 					this.lastBaseId = currentBaseId;
+
+					// Sync selection from plugin when base changes or is first detected
+					if (currentBaseId) {
+						const savedSelection = this.plugin.selections.get(currentBaseId);
+						if (savedSelection && savedSelection !== this.selectedFiles) {
+							// Sync contents to our local (manager-linked) Set
+							this.selectedFiles.clear();
+							savedSelection.forEach(item => this.selectedFiles.add(item));
+							// Ensure they share the reference going forward
+							this.plugin.selections.set(currentBaseId, this.selectedFiles);
+						} else if (!savedSelection) {
+							this.plugin.selections.set(currentBaseId, this.selectedFiles);
+						}
+					}
+
 					// Reset scroll and displayed count when switching bases
 					this.scrollLayoutManager.resetScroll();
 					// Clear caches that are specific to a base
@@ -530,85 +561,85 @@ export class BasesCMSView extends BasesView {
 
 				if (!isStillValid()) return;
 
-			const groupedData = this.data.groupedData;
-			const allEntries = this.data.data;
+				const groupedData = this.data.groupedData;
+				const allEntries = this.data.data;
 
-			// Read settings from Bases config
-			const settings = readCMSSettings(
-				this.config,
-				this.plugin.settings
-			);
+				// Read settings from Bases config
+				const settings = readCMSSettings(
+					this.config,
+					this.plugin.settings
+				);
 
-			if (!isStillValid()) return;
+				if (!isStillValid()) return;
 
-			// Update config reference in scroll layout manager if it's now available
-			if (this.config && typeof (this.config as { get?: (key: string) => unknown }).get === 'function') {
-				try {
-					this.scrollLayoutManager.updateConfig(this.config as { get: (key: string) => unknown });
-				} catch {
-					// Ignore - config update is optional
+				// Update config reference in scroll layout manager if it's now available
+				if (this.config && typeof (this.config as { get?: (key: string) => unknown }).get === 'function') {
+					try {
+						this.scrollLayoutManager.updateConfig(this.config as { get: (key: string) => unknown });
+					} catch {
+						// Ignore - config update is optional
+					}
 				}
-			}
 
-			// Update grid layout using scroll layout manager
-			this.scrollLayoutManager.updateGridLayout(settings);
+				// Update grid layout using scroll layout manager
+				this.scrollLayoutManager.updateGridLayout(settings);
 
-			// Save scroll position before re-rendering
-			const savedScrollTop = this.containerEl.scrollTop;
+				// Save scroll position before re-rendering
+				const savedScrollTop = this.containerEl.scrollTop;
 
-			// Get sort configs (used for custom sorting)
-			const sortConfigs = this.config.getSort();
+				// Get sort configs (used for custom sorting)
+				const sortConfigs = this.config.getSort();
 
-			// Process groups and apply custom sorting for properties
-			let processedGroups: Array<{ group: { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] }; entries: BasesEntry[] }> = groupedData.map(group => ({
-				group: group as { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] },
-				entries: [...group.entries]
-			}));
+				// Process groups and apply custom sorting for properties
+				let processedGroups: Array<{ group: { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] }; entries: BasesEntry[] }> = groupedData.map(group => ({
+					group: group as { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] },
+					entries: [...group.entries]
+				}));
 
-			// Apply custom sorting if sorting by a property (not just file time)
-			if (sortConfigs && sortConfigs.length > 0) {
-				const firstSort = sortConfigs[0];
-				const property = firstSort.property;
-				const direction = firstSort.direction.toLowerCase() as 'asc' | 'desc';
+				// Apply custom sorting if sorting by a property (not just file time)
+				if (sortConfigs && sortConfigs.length > 0) {
+					const firstSort = sortConfigs[0];
+					const property = firstSort.property;
+					const direction = firstSort.direction.toLowerCase() as 'asc' | 'desc';
 
-				// Only apply custom sorting for properties (not file.ctime/file.mtime which are handled by Bases)
-				if (property && !property.includes('ctime') && !property.includes('mtime')) {
-					// Use IIFE to handle async sorting
-					void (async () => {
-						try {
-							// Flatten all entries from all groups
-							const allEntries: BasesEntry[] = [];
-							for (const processedGroup of processedGroups) {
-								allEntries.push(...processedGroup.entries);
-							}
+					// Only apply custom sorting for properties (not file.ctime/file.mtime which are handled by Bases)
+					if (property && !property.includes('ctime') && !property.includes('mtime')) {
+						// Use IIFE to handle async sorting
+						void (async () => {
+							try {
+								// Flatten all entries from all groups
+								const allEntries: BasesEntry[] = [];
+								for (const processedGroup of processedGroups) {
+									allEntries.push(...processedGroup.entries);
+								}
 
-							// Sort all entries by the property
-							const sortedEntries = await this.sortEntriesByProperty(allEntries, property, direction);
+								// Sort all entries by the property
+								const sortedEntries = await this.sortEntriesByProperty(allEntries, property, direction);
 
-							// Re-group entries (put all in a single group since we're overriding Bases' grouping)
-							const sortedProcessedGroups: Array<{ group: { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] }; entries: BasesEntry[] }> = [{
-								group: {
-									hasKey: () => false,
-									key: null,
+								// Re-group entries (put all in a single group since we're overriding Bases' grouping)
+								const sortedProcessedGroups: Array<{ group: { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] }; entries: BasesEntry[] }> = [{
+									group: {
+										hasKey: () => false,
+										key: null,
+										entries: sortedEntries
+									},
 									entries: sortedEntries
-								},
-								entries: sortedEntries
-							}];
+								}];
 
-							// Continue processing with sorted groups
-							await this.continueDataProcessing(sortedProcessedGroups, settings, allEntries.length, savedScrollTop, updateId);
-						} catch (error) {
-							console.error('Bases CMS: Error during custom sorting:', error);
-							// Fall back to original processing
-							await this.continueDataProcessing(processedGroups, settings, allEntries.length, savedScrollTop, updateId);
-						}
-					})();
-					return; // Exit early, processing will continue in the async callback
+								// Continue processing with sorted groups
+								await this.continueDataProcessing(sortedProcessedGroups, settings, allEntries.length, savedScrollTop, updateId);
+							} catch (error) {
+								console.error('Bases CMS: Error during custom sorting:', error);
+								// Fall back to original processing
+								await this.continueDataProcessing(processedGroups, settings, allEntries.length, savedScrollTop, updateId);
+							}
+						})();
+						return; // Exit early, processing will continue in the async callback
+					}
 				}
-			}
 
-			// Continue with the rest of processing
-			this.continueDataProcessing(processedGroups, settings, allEntries.length, savedScrollTop, updateId);
+				// Continue with the rest of processing
+				await this.continueDataProcessing(processedGroups, settings, allEntries.length, savedScrollTop, updateId);
 			} catch (error) {
 				// Ensure loading flag is cleared even on error
 				try {
@@ -616,7 +647,7 @@ export class BasesCMSView extends BasesView {
 				} catch {
 					// Ignore cleanup errors
 				}
-				
+
 				// If container is empty due to error, show error message
 				if (this.containerEl && this.containerEl.isConnected) {
 					this.containerEl.empty();
@@ -639,6 +670,13 @@ export class BasesCMSView extends BasesView {
 	 */
 	private getBaseIdentifier(): string | null {
 		try {
+			// Check controller first (available earliest in constructor)
+			const controller = this.basesController as unknown as { getBaseName?: () => string; baseName?: string };
+			if (controller) {
+				if (typeof controller.getBaseName === 'function') return controller.getBaseName();
+				if (controller.baseName) return controller.baseName;
+			}
+
 			if (this.config && typeof (this.config as unknown as { getName?: () => string }).getName === 'function') {
 				return (this.config as unknown as { getName: () => string }).getName();
 			}
@@ -705,7 +743,7 @@ export class BasesCMSView extends BasesView {
 			}
 
 			// Check if any relevant settings have changed
-			const settingsChanged = 
+			const settingsChanged =
 				this.lastSettings.descriptionProperty !== currentSettings.descriptionProperty ||
 				this.lastSettings.showTextPreview !== currentSettings.showTextPreview ||
 				this.lastSettings.fallbackToContent !== currentSettings.fallbackToContent ||
@@ -886,7 +924,7 @@ export class BasesCMSView extends BasesView {
 		return async () => {
 			const { prepareDeletionPreview, executeSmartDeletion } = await import('../utils/smart-deletion');
 			const { DeletionPreviewModal } = await import('../components/deletion-preview');
-			
+
 			if (this.plugin.settings.confirmDeletions) {
 				const preview = await prepareDeletionPreview(
 					this.app,
@@ -960,7 +998,7 @@ export class BasesCMSView extends BasesView {
 			const placeholder = cardEl.querySelector('.card-cover-placeholder, .card-thumbnail-placeholder');
 			const isThumbnail = cardEl.classList.contains('image-format-thumbnail');
 			const isCover = cardEl.classList.contains('image-format-cover');
-			
+
 			if (placeholder) {
 				// Replace placeholder
 				const existingBadge = placeholder.querySelector('.card-status-badge');
@@ -993,7 +1031,7 @@ export class BasesCMSView extends BasesView {
 				}
 			}
 		}
-		
+
 		// Update background-image on the container
 		if (imageEmbedContainer) {
 			// Convert GIF to static if setting is enabled
@@ -1001,10 +1039,10 @@ export class BasesCMSView extends BasesView {
 				const finalUrl = await convertGifToStatic(url, this.plugin.settings.forceStaticGifImages);
 				imageEmbedContainer.style.backgroundImage = `url("${finalUrl}")`;
 			})();
-			
+
 			// Set initial background image (will be updated if GIF conversion is needed)
-		imageEmbedContainer.style.backgroundImage = `url("${url}")`;
-		setCssProps(imageEmbedContainer, {
+			imageEmbedContainer.style.backgroundImage = `url("${url}")`;
+			setCssProps(imageEmbedContainer, {
 				backgroundSize: 'cover',
 				backgroundPosition: 'center center',
 				backgroundRepeat: 'no-repeat'
@@ -1036,10 +1074,10 @@ export class BasesCMSView extends BasesView {
 		} else {
 			this.selectedFiles.delete(path);
 		}
-		
+
 		// Always update UI when selection changes - this will hide toolbar if selection is empty
 		this.updateSelectionUI();
-		
+
 		// Force hide toolbar immediately if selection is empty
 		// Do this after updateSelectionUI to ensure it takes precedence
 		if (this.selectedFiles.size === 0) {
@@ -1058,7 +1096,7 @@ export class BasesCMSView extends BasesView {
 
 	private async handlePropertyToggle(path: string, property: string, value: unknown): Promise<void> {
 		if (this.propertyToggleHandler) {
-		await this.propertyToggleHandler.handlePropertyToggle(path, property, value);
+			await this.propertyToggleHandler.handlePropertyToggle(path, property, value);
 		}
 	}
 
@@ -1125,7 +1163,7 @@ export class BasesCMSView extends BasesView {
 					toolbar.remove();
 				}
 			});
-			
+
 			// If toolbar doesn't exist, create it
 			if (!this.bulkToolbar) {
 				const settings = readCMSSettings(
@@ -1144,18 +1182,18 @@ export class BasesCMSView extends BasesView {
 					() => {
 						// Refresh view but preserve selection
 						const selectedPaths = Array.from(this.selectedFiles);
-						
+
 						// Set flag to prevent toolbar from being hidden during refresh
 						this.isRefreshingWithSelection = true;
-						
+
 						// Keep toolbar visible during refresh - critical to prevent it from disappearing
 						if (this.bulkToolbar && selectedPaths.length > 0) {
 							this.bulkToolbar.show();
 						}
-						
+
 						// Refresh the view
 						this.onDataUpdated();
-						
+
 						// Restore selection after refresh completes
 						// Use multiple timeouts to ensure it works even if the first one is too early
 						window.setTimeout(() => {
@@ -1165,17 +1203,17 @@ export class BasesCMSView extends BasesView {
 									this.selectedFiles.add(path);
 								}
 							});
-							
+
 							// Clear the flag and update UI
 							this.isRefreshingWithSelection = false;
 							this.updateSelectionUI();
-							
+
 							// Ensure toolbar is visible and updated
 							if (this.selectedFiles.size > 0 && this.bulkToolbar) {
 								this.bulkToolbar.show();
 								this.bulkToolbar.updateCount(this.selectedFiles.size);
 							}
-							
+
 							// Double-check after a bit more time
 							window.setTimeout(() => {
 								if (this.selectedFiles.size > 0 && this.bulkToolbar) {
@@ -1218,7 +1256,7 @@ export class BasesCMSView extends BasesView {
 	onClose(): void {
 		this.scrollLayoutManager.cleanup();
 		if (this.viewSwitchListener) {
-		this.viewSwitchListener.cleanup();
+			this.viewSwitchListener.cleanup();
 		}
 		if (this.settingsPollInterval !== null) {
 			window.clearInterval(this.settingsPollInterval);
@@ -1229,11 +1267,13 @@ export class BasesCMSView extends BasesView {
 		if (this.bulkToolbar) {
 			this.bulkToolbar.destroy();
 		}
-		// Clean up selection and toolbar when view closes
-		this.selectedFiles.clear();
+
+		// REMOVED: this.selectedFiles.clear(); 
+		// We want to persist selection in the plugin across view lifecycle
+
 		const orphanedToolbars = document.querySelectorAll('.bases-cms-bulk-toolbar');
 		orphanedToolbars.forEach(toolbar => toolbar.remove());
-		
+
 		// Remove from plugin tracking
 		const pluginWithMethod = this.plugin as { removeView?: (view: BasesCMSView) => void };
 		if (pluginWithMethod && typeof pluginWithMethod.removeView === 'function') {
@@ -1253,16 +1293,16 @@ export class BasesCMSView extends BasesView {
 		if (settings.customizeNewButton) {
 			try {
 				const locationInput = settings.newNoteLocation?.trim() || '';
-				
+
 				// If location is empty, use Obsidian's default new note location
 				if (locationInput === '') {
 					// Use Obsidian's default new note creation behavior
 					const vaultConfig = (this.app.vault as { config?: { newFileLocation?: string; newFileFolderPath?: string } }).config;
 					const newFileLocation = vaultConfig?.newFileLocation || 'folder';
 					const newFileFolderPath = vaultConfig?.newFileFolderPath || '';
-					
+
 					let filePath = 'Untitled.md';
-					
+
 					// Handle Obsidian's new file location settings
 					if (newFileLocation === 'folder' && newFileFolderPath) {
 						filePath = `${newFileFolderPath}/Untitled.md`;
@@ -1274,29 +1314,29 @@ export class BasesCMSView extends BasesView {
 					} else if (newFileLocation === 'root') {
 						filePath = 'Untitled.md';
 					}
-					
+
 					const file = await this.app.vault.create(filePath, '');
 					await this.app.workspace.openLinkText(file.path, '', false);
 					return true;
 				}
-				
+
 				// If location is "/" or just slashes, use vault root
 				if (locationInput === '/' || locationInput.replace(/\//g, '') === '') {
 					const newFile = await this.app.vault.create('Untitled.md', '');
 					await this.app.workspace.openLinkText(newFile.path, '', false);
 					return true;
 				}
-				
+
 				// Otherwise, use the specified folder
 				const folderPath = locationInput.replace(/^\/+|\/+$/g, '');
-				
+
 				let folder = this.app.vault.getAbstractFileByPath(folderPath);
-				
+
 				if (!folder || !('children' in folder)) {
 					await this.app.vault.createFolder(folderPath);
 					folder = this.app.vault.getAbstractFileByPath(folderPath);
 				}
-				
+
 				if (folder && 'children' in folder) {
 					const newFile = await this.app.vault.create(`${folderPath}/Untitled.md`, '');
 					await this.app.workspace.openLinkText(newFile.path, '', false);
@@ -1306,7 +1346,7 @@ export class BasesCMSView extends BasesView {
 				// Error creating new note - silently fail
 			}
 		}
-		
+
 		// Default behavior - let Bases handle it
 		return false;
 	}

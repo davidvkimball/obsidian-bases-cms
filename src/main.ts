@@ -9,6 +9,7 @@ export default class BasesCMSPlugin extends Plugin {
 	activeViews: Set<BasesCMSView> = new Set();
 	registrationTimeout: number | null = null;
 	private refreshEmbeddedViewsTimeout: number | null = null;
+	selections: Map<string, Set<string>> = new Map();
 
 	async onload() {
 		await this.loadSettings();

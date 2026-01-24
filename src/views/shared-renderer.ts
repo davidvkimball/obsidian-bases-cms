@@ -20,7 +20,7 @@ export class SharedCardRenderer {
 	protected basesController?: { getPropertyDisplayName?: (name: string) => string };
 	private propertyRenderer: PropertyRenderer;
 	protected mdxFrontmatterCache?: Record<string, Record<string, unknown> | null>;
-	
+
 	constructor(
 		protected app: App,
 		protected plugin: BasesCMSPlugin,
@@ -61,14 +61,14 @@ export class SharedCardRenderer {
 	): void {
 		// Create card element
 		const cardEl = container.createDiv('card bases-cms-card');
-		
+
 		// CRITICAL: Force immediate layout reflow to prevent Folder Notes plugin interference
 		// Inline styles trigger layout calculation before Folder Notes' MutationObserver processes the element
 		setCssProps(cardEl, {
 			display: 'block',
 			position: 'relative'
 		});
-		
+
 		if (settings.imageFormat === 'cover') {
 			cardEl.classList.add('image-format-cover');
 		} else if (settings.imageFormat === 'thumbnail') {
@@ -84,15 +84,18 @@ export class SharedCardRenderer {
 		const checkboxEl = cardEl.createDiv('bases-cms-select-checkbox');
 		const checkbox = checkboxEl.createEl('input', { type: 'checkbox', cls: 'selection-checkbox' });
 		checkbox.checked = isSelected;
-		checkbox.addEventListener('change', (e) => {
+
+		// Handle click on the checkbox container (the expanded hit area)
+		checkboxEl.addEventListener('click', (e) => {
 			e.stopPropagation();
 			e.stopImmediatePropagation();
+
+			// Toggle checkbox state (if click wasn't directly on the checkbox itself)
+			if (e.target !== checkbox) {
+				checkbox.checked = !checkbox.checked;
+			}
+
 			onSelect(card.path, checkbox.checked);
-		});
-		// Also handle click on checkbox to ensure it works
-		checkbox.addEventListener('click', (e) => {
-			e.stopPropagation();
-			e.stopImmediatePropagation();
 		});
 
 		// Draft status badge for non-cover formats (positioned absolutely, aligned with checkbox)
@@ -121,6 +124,19 @@ export class SharedCardRenderer {
 			) {
 				return;
 			}
+
+			// Shift+Click: Toggle selection instead of opening
+			if (e.shiftKey) {
+				e.preventDefault();
+				e.stopPropagation();
+				e.stopImmediatePropagation();
+
+				// Toggle selection
+				const newSelectedState = !checkbox.checked;
+				onSelect(card.path, newSelectedState);
+				return;
+			}
+
 			const newLeaf = e.metaKey || e.ctrlKey;
 			void this.app.workspace.openLinkText(card.path, '', newLeaf);
 		});
@@ -147,12 +163,12 @@ export class SharedCardRenderer {
 				// Prevent the card click handler from firing
 				e.stopPropagation();
 				// Don't prevent default - Obsidian's menu system needs default behavior
-				
+
 				const menu = new Menu();
-				
+
 				// Check current selection state dynamically by checking the checkbox
 				const currentlySelected = checkbox.checked;
-				
+
 				// Add Select/Unselect item
 				if (currentlySelected) {
 					menu.addItem((item) => {
@@ -171,12 +187,12 @@ export class SharedCardRenderer {
 						});
 					});
 				}
-				
+
 				menu.addSeparator();
-				
+
 				// Trigger file-menu event - this allows other plugins to add their items
 				this.app.workspace.trigger('file-menu', menu, file, 'bases');
-				
+
 				// Add Delete at the bottom (after all file-menu subscriptions have run)
 				// Always show Delete option - toolbarActions should always be provided
 				menu.addSeparator();
@@ -190,20 +206,20 @@ export class SharedCardRenderer {
 						}
 					});
 				});
-				
+
 				menu.showAtMouseEvent(e);
-				
+
 				// Style Delete menu item as destructive (red/warning color)
 				setTimeout(() => {
 					const menuEl = document.querySelector('.menu');
 					if (!menuEl) return;
-					
+
 					const menuItems = Array.from(menuEl.querySelectorAll('.menu-item'));
 					const deleteItem = menuItems.find(item => {
 						const title = item.textContent?.trim();
 						return title === 'Delete';
 					});
-					
+
 					if (deleteItem) {
 						deleteItem.addClass('is-danger');
 						// Style the icon and text with error color
@@ -215,8 +231,8 @@ export class SharedCardRenderer {
 							});
 						}
 						const title = deleteItem.querySelector('.menu-item-title');
-					if (title) {
-						setCssProps(title as HTMLElement, {
+						if (title) {
+							setCssProps(title as HTMLElement, {
 								color: 'var(--text-error)'
 							});
 						}
@@ -228,7 +244,7 @@ export class SharedCardRenderer {
 		// Title - always render (defaults to file name if no title property is set)
 		const titleEl = cardEl.createDiv('card-title');
 		titleEl.appendText(card.title);
-			
+
 		// Quick edit icon - attach to titleEl
 		setupQuickEditIcon(this.app, this.plugin, titleEl, cardEl, card.path, settings);
 
@@ -236,39 +252,39 @@ export class SharedCardRenderer {
 		if (settings.showDate && settings.dateProperty) {
 			// Try synchronous Bases API first (works for .md files)
 			let dateValue = entry.getValue(settings.dateProperty as `note.${string}` | `formula.${string}` | `file.${string}`) as { date?: Date; data?: unknown; icon?: string } | null;
-			
+
 			// Check if we actually have a valid date value
 			// For MDX files, Bases API might return {icon: 'lucide-file-question'} which is truthy but has no date
 			const hasValidDate = dateValue && (
 				('date' in dateValue && dateValue.date instanceof Date) ||
 				('data' in dateValue && dateValue.data != null)
 			);
-			
+
 			// For MDX files, fallback to manual frontmatter parsing if no valid date
 			if (!hasValidDate) {
 				const file = this.app.vault.getAbstractFileByPath(entry.file.path);
-				
+
 				if (file instanceof TFile && file.extension === 'mdx') {
 					// Load date asynchronously for MDX files
 					void (async () => {
 						const frontmatter = await getFileFrontmatter(this.app, file);
-						
+
 						if (frontmatter) {
 							// Strip "note." prefix if present
-							const cleanProp = settings.dateProperty.startsWith('note.') 
-								? settings.dateProperty.substring(5) 
+							const cleanProp = settings.dateProperty.startsWith('note.')
+								? settings.dateProperty.substring(5)
 								: settings.dateProperty;
-							
+
 							const frontmatterValue = frontmatter[cleanProp];
-							
+
 							if (frontmatterValue != null) {
 								// Parse date from frontmatter value
 								let date: Date | null = null;
-								
+
 								// Handle Date objects (including those from YAML parsing)
 								if (frontmatterValue instanceof Date) {
 									date = frontmatterValue;
-								} 
+								}
 								// Handle date-like objects (YAML parsers sometimes return custom Date objects)
 								else if (frontmatterValue && typeof frontmatterValue === 'object' && 'getTime' in frontmatterValue) {
 									const dateLike = frontmatterValue as { getTime: () => number };
@@ -305,7 +321,7 @@ export class SharedCardRenderer {
 										date = parsedDate;
 									}
 								}
-								
+
 								// Always try to render the date, even if cardEl might not be connected yet
 								// The date element will be created/updated when the card is rendered
 								if (date) {
@@ -318,17 +334,17 @@ export class SharedCardRenderer {
 												// Format date and time separately, then combine (respects user's system locale)
 												// Use options to exclude seconds and match user's expected format
 												const datePart = date.toLocaleDateString();
-												const timePart = date.toLocaleTimeString(undefined, { 
-													hour: 'numeric', 
-													minute: '2-digit', 
-													hour12: true 
+												const timePart = date.toLocaleTimeString(undefined, {
+													hour: 'numeric',
+													minute: '2-digit',
+													hour12: true
 												});
 												dateString = `${datePart}, ${timePart}`;
 											} else {
 												// When time is not included, use date-only format (respects user's system locale)
 												dateString = date.toLocaleDateString();
 											}
-											
+
 											// Find or create date element
 											let dateEl = cardEl.querySelector('.card-date');
 											if (!dateEl) {
@@ -351,11 +367,11 @@ export class SharedCardRenderer {
 					})();
 				}
 			}
-			
+
 			if (hasValidDate && dateValue) {
 				const dateObj = dateValue as { date?: Date; data?: unknown } | null;
 				let date: Date | null = null;
-				
+
 				if (dateObj && 'date' in dateObj && dateObj.date instanceof Date) {
 					date = dateObj.date;
 				} else if (dateObj && 'data' in dateObj && dateObj.data) {
@@ -369,7 +385,7 @@ export class SharedCardRenderer {
 						}
 					}
 				}
-				
+
 				if (date) {
 					// Format date based on settings
 					let dateString: string;
@@ -377,17 +393,17 @@ export class SharedCardRenderer {
 						// Format date and time separately, then combine (respects user's system locale)
 						// Use options to exclude seconds and match user's expected format
 						const datePart = date.toLocaleDateString();
-						const timePart = date.toLocaleTimeString(undefined, { 
-							hour: 'numeric', 
-							minute: '2-digit', 
-							hour12: true 
+						const timePart = date.toLocaleTimeString(undefined, {
+							hour: 'numeric',
+							minute: '2-digit',
+							hour12: true
 						});
 						dateString = `${datePart}, ${timePart}`;
 					} else {
 						// When time is not included, use date-only format (respects user's system locale)
 						dateString = date.toLocaleDateString();
 					}
-					
+
 					const dateEl = cardEl.createDiv('card-date');
 					dateEl.appendText(dateString);
 				}
@@ -415,28 +431,28 @@ export class SharedCardRenderer {
 					const imageEl = contentContainer.createDiv('card-thumbnail');
 					const imageEmbedContainer = imageEl.createDiv('image-embed');
 					const originalUrl = imageUrls[0];
-					
+
 					// Convert GIF to static if setting is enabled
 					void (async () => {
 						const finalUrl = await convertGifToStatic(originalUrl, this.plugin.settings.forceStaticGifImages);
 						imageEmbedContainer.style.backgroundImage = `url("${finalUrl}")`;
 					})();
-					
-				// Set initial background image (will be updated if GIF conversion is needed)
-				imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
-				setCssProps(imageEmbedContainer, {
-					backgroundSize: 'cover',
-					backgroundPosition: 'center center',
-					backgroundRepeat: 'no-repeat'
-				});
-			}
-		}
 
-		// For thumbnail format, handle positioning
+					// Set initial background image (will be updated if GIF conversion is needed)
+					imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
+					setCssProps(imageEmbedContainer, {
+						backgroundSize: 'cover',
+						backgroundPosition: 'center center',
+						backgroundRepeat: 'no-repeat'
+					});
+				}
+			}
+
+			// For thumbnail format, handle positioning
 			if (settings.imageFormat === 'thumbnail') {
 				// Create text wrapper
 				const textWrapper = contentContainer.createDiv('card-text-wrapper');
-				
+
 				// Text preview - always create if showTextPreview is enabled, even if snippet isn't loaded yet
 				if (settings.showTextPreview) {
 					const textPreviewEl = textWrapper.createDiv('card-text-preview');
@@ -455,16 +471,16 @@ export class SharedCardRenderer {
 					if (tagStyle !== 'plain') {
 						tagsContainer.addClass(`tag-style-${tagStyle}`);
 					}
-					
+
 					const maxTags = settings.maxTagsToShow;
 					const tagsToShow = card.displayTags.slice(0, maxTags);
 					const remainingCount = card.displayTags.length - maxTags;
-					
+
 					tagsToShow.forEach(tag => {
 						const tagEl = tagsContainer.createSpan('card-tag');
 						tagEl.appendText(showTagHashPrefix() ? `#${tag}` : tag);
 					});
-					
+
 					if (remainingCount > 0) {
 						const moreEl = tagsContainer.createSpan('card-tag-more');
 						moreEl.appendText(`+${remainingCount} more`);
@@ -490,16 +506,16 @@ export class SharedCardRenderer {
 					if (tagStyle !== 'plain') {
 						tagsContainer.addClass(`tag-style-${tagStyle}`);
 					}
-					
+
 					const maxTags = settings.maxTagsToShow;
 					const tagsToShow = card.displayTags.slice(0, maxTags);
 					const remainingCount = card.displayTags.length - maxTags;
-					
+
 					tagsToShow.forEach(tag => {
 						const tagEl = tagsContainer.createSpan('card-tag');
 						tagEl.appendText(showTagHashPrefix() ? `#${tag}` : tag);
 					});
-					
+
 					if (remainingCount > 0) {
 						const moreEl = tagsContainer.createSpan('card-tag-more');
 						moreEl.appendText(`+${remainingCount} more`);
@@ -510,46 +526,46 @@ export class SharedCardRenderer {
 			// Cover image
 			if (settings.imageFormat === 'cover') {
 				if (card.imageUrl) {
-				const rawUrls = Array.isArray(card.imageUrl) ? card.imageUrl : [card.imageUrl];
-				const imageUrls = rawUrls.filter(url => url && typeof url === 'string' && url.trim().length > 0);
+					const rawUrls = Array.isArray(card.imageUrl) ? card.imageUrl : [card.imageUrl];
+					const imageUrls = rawUrls.filter(url => url && typeof url === 'string' && url.trim().length > 0);
 
-				if (imageUrls.length > 0) {
+					if (imageUrls.length > 0) {
 						const imageEl = contentContainer.createDiv('card-cover');
-					const imageEmbedContainer = imageEl.createDiv('image-embed');
-					const originalUrl = imageUrls[0];
-					
-					// Convert GIF to static if setting is enabled
-					void (async () => {
-						const finalUrl = await convertGifToStatic(originalUrl, this.plugin.settings.forceStaticGifImages);
-						imageEmbedContainer.style.backgroundImage = `url("${finalUrl}")`;
-					})();
-					
-					// Set initial background image (will be updated if GIF conversion is needed)
-				imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
-				setCssProps(imageEmbedContainer, {
-					backgroundSize: 'cover',
-					backgroundPosition: 'center center',
-					backgroundRepeat: 'no-repeat'
-				});
-				
-				// Draft status badge (top-left, clickable to toggle)
+						const imageEmbedContainer = imageEl.createDiv('image-embed');
+						const originalUrl = imageUrls[0];
+
+						// Convert GIF to static if setting is enabled
+						void (async () => {
+							const finalUrl = await convertGifToStatic(originalUrl, this.plugin.settings.forceStaticGifImages);
+							imageEmbedContainer.style.backgroundImage = `url("${finalUrl}")`;
+						})();
+
+						// Set initial background image (will be updated if GIF conversion is needed)
+						imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
+						setCssProps(imageEmbedContainer, {
+							backgroundSize: 'cover',
+							backgroundPosition: 'center center',
+							backgroundRepeat: 'no-repeat'
+						});
+
+						// Draft status badge (top-left, clickable to toggle)
 						if (settings.showDraftStatus) {
-						renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
+							renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
+						}
+
+						// Bottom properties - MUST be called before returning (for images)
+						this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle, 'bottom');
+
+						// Images are set via background-image, no return value needed
+						return;
 					}
-					
-					// Bottom properties - MUST be called before returning (for images)
-					this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle, 'bottom');
-					
-					// Images are set via background-image, no return value needed
-					return;
 				}
-				}
-				
+
 				// For cover format, render placeholder if image is expected but not loaded yet, or always
 				if (card.hasImageAvailable && !card.imageUrl) {
 					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
-				// Draft status badge on placeholder (top-left, clickable to toggle)
-				renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
+					// Draft status badge on placeholder (top-left, clickable to toggle)
+					renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
 				} else if (!card.imageUrl) {
 					// No image and not expected - create placeholder anyway for cover format
 					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
@@ -561,7 +577,7 @@ export class SharedCardRenderer {
 
 		// Bottom properties (for cards without images)
 		this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle, 'bottom');
-		
+
 		return; // No image for this card
 	}
 }

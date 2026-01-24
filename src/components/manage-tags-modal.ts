@@ -33,7 +33,6 @@ export class ManageTagsModal extends Modal {
 			.addText(text => {
 				text
 					// False positive: Placeholder text with code examples, not UI text
-					// eslint-disable-next-line obsidianmd/ui/sentence-case
 					.setPlaceholder('tag1, tag2, tag3')
 					.onChange(value => {
 						this.tagsToAdd = value;
@@ -54,7 +53,7 @@ export class ManageTagsModal extends Modal {
 					void (async () => {
 						const frontmatter = await getFileFrontmatter(this.app, file);
 						if (frontmatter?.tags) {
-							const tags = Array.isArray(frontmatter.tags) 
+							const tags = Array.isArray(frontmatter.tags)
 								? (frontmatter.tags as string[])
 								: [frontmatter.tags as string];
 							tags.forEach(tag => {
@@ -73,7 +72,7 @@ export class ManageTagsModal extends Modal {
 					const metadata = this.app.metadataCache.getFileCache(file);
 					const frontmatter = metadata?.frontmatter;
 					if (frontmatter?.tags) {
-						const tags = Array.isArray(frontmatter.tags) 
+						const tags = Array.isArray(frontmatter.tags)
 							? (frontmatter.tags as string[])
 							: [frontmatter.tags as string];
 						tags.forEach(tag => allTags.add(tag));

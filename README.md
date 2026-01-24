@@ -45,7 +45,7 @@ Bases CMS is not yet available in the Community plugins section. Install using [
 
 1. **Set Up a Base**: Ensure you have the Bases core plugin enabled and have created at least one base in your vault.
 2. **Open CMS View**: In your base, select "CMS" from the view selector to switch to the card-based CMS view.
-3. **Select Items**: Click on cards to select them. Selected items are highlighted, and a bulk operations toolbar appears at the top.
+3. **Select Items**: Click on selection circles to select individual cards, or **Shift + Click** anywhere on a card to toggle its selection. Selected items are highlighted, and a bulk operations toolbar appears at the top.
 4. **Bulk Operations**: Use the toolbar buttons to:
    - **Select all**: Select all visible cards
    - **Clear**: Deselect all cards

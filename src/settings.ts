@@ -47,8 +47,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show select all button')
-				// False positive: Already in sentence case
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setDesc('Display the select all button in the CMS toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarSelectAll);
@@ -63,8 +61,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show clear button')
-				// False positive: Already in sentence case
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setDesc('Display the clear selection button in the CMS toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarClear);
@@ -79,8 +75,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show publish button')
-				// False positive: Already in sentence case
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setDesc('Display the publish button in the CMS toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarPublish);
@@ -95,8 +89,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show draft button')
-				// False positive: Already in sentence case
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setDesc('Display the draft button in the CMS toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarDraft);
@@ -111,8 +103,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show tags button')
-				// False positive: Already in sentence case
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setDesc('Display the tags button in the CMS toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarTags);
@@ -127,8 +117,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show set button')
-				// False positive: Already in sentence case
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setDesc('Display the set property button in the CMS toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarSet);
@@ -143,8 +131,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show remove button')
-				// False positive: Already in sentence case
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setDesc('Display the remove property button in the CMS toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarRemove);
@@ -159,8 +145,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show delete button')
-				// False positive: Already in sentence case
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setDesc('Display the delete button in the CMS toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarDelete);
@@ -193,8 +177,6 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				.setName('Folder deletion file name')
 				.setDesc('File name that triggers parent folder deletion.')
 				.addText(text => {
-					// False positive: Placeholder text, not UI text
-					// eslint-disable-next-line obsidianmd/ui/sentence-case
 					text.setPlaceholder('index');
 					text.setValue(this.plugin.settings.deleteParentFolderFilename);
 					text.onChange(async (value) => {
@@ -236,11 +218,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		appearanceGroup.addSetting(setting => {
 			setting
-				// False positive: Already in sentence case; "CMS" is a proper noun
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setName('Use home icon for CMS view')
-				// False positive: Already in sentence case; "CMS" and "Obsidian" are proper nouns
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setDesc('Use the home icon instead of blocks icon for the CMS view in the Bases view selector. Restart Obsidian for this change to take effect.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.useHomeIcon);
@@ -253,11 +231,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		appearanceGroup.addSetting(setting => {
 			setting
-				// False positive: Already in sentence case; "GIFs" is a proper noun/acronym
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setName('Force static image for animated GIFs')
-				// False positive: Already in sentence case; "GIFs" is a proper noun/acronym
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setDesc('When enabled, animated GIFs will display only the first frame when used as card covers or thumbnails.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.forceStaticGifImages);
@@ -322,7 +296,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				.setName('Quick edit command')
 				.setDesc('The command to execute when clicking the quick edit icon on a card title.')
 				.addButton(button => {
-					const currentCommandName = this.plugin.settings.quickEditCommandName || 
+					const currentCommandName = this.plugin.settings.quickEditCommandName ||
 						(this.plugin.settings.quickEditCommand ? 'Select command...' : 'No command selected');
 					button.setButtonText(currentCommandName)
 						.onClick(() => {
@@ -331,7 +305,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 									// Get command name by looking it up
 									const commandRegistry = (this.app as { commands?: { listCommands?: () => Array<{ id: string; name: string }>; commands?: Record<string, { name?: string }> } }).commands;
 									let commandName = '';
-									
+
 									// Try to find the command name
 									if (commandRegistry) {
 										// Try listCommands()
@@ -342,7 +316,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 												commandName = command.name;
 											}
 										}
-										
+
 										// Fallback: try direct registry access
 										if (!commandName) {
 											const registry = commandRegistry.commands;
@@ -351,18 +325,18 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 											}
 										}
 									}
-									
+
 									this.plugin.settings.quickEditCommand = commandId;
 									this.plugin.settings.quickEditCommandName = commandName;
 									await this.plugin.saveData(this.plugin.settings);
-									
+
 									// Re-render to update the UI
 									this.display();
 								})();
 							});
 							modal.open();
 						});
-					
+
 					// Add a clear button if a command is selected
 					if (this.plugin.settings.quickEditCommand) {
 						const clearButton = button.buttonEl.parentElement?.createEl('button', {

@@ -41,7 +41,7 @@ export function createSettingsGroup(
 		// Use SettingGroup - it's guaranteed to exist if requireApiVersion returns true
 		// Access SettingGroup from the obsidian module dynamically to avoid type errors
 		// We need to use require here because SettingGroup may not be in type definitions for older versions
-		// eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef
+		// eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef -- Required for dynamic asset loading on desktop
 		const obsidianModule = require('obsidian') as { SettingGroup?: SettingGroupConstructor };
 		const SettingGroup = obsidianModule.SettingGroup;
 		if (SettingGroup) {
@@ -54,17 +54,17 @@ export function createSettingsGroup(
 		}
 		// Fallback if SettingGroup is not found (shouldn't happen if requireApiVersion is correct)
 	}
-	
+
 	// Fallback path (either API < 1.11.0 or SettingGroup not found)
 	// Add scoping class to containerEl to scope CSS to only this plugin's settings
 	if (manifestId) {
 		containerEl.addClass(`${manifestId}-settings-compat`);
 	}
-	
+
 	// Fallback: Create a heading manually and use container directly
 	const headingEl = containerEl.createDiv('setting-group-heading');
 	headingEl.createEl('h3', { text: heading });
-	
+
 	return {
 		addSetting(cb: (setting: Setting) => void) {
 			const setting = new Setting(containerEl);

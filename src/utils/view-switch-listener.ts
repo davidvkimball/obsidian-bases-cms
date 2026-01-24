@@ -19,66 +19,23 @@ export class ViewSwitchListener {
 		private selectedFiles: Set<string>,
 		private onSelectionCleared: () => void,
 		private registerCleanup: (cleanup: () => void) => void
-	) {}
+	) { }
 
 	setup(handleSelectionChange: (path: string, selected: boolean) => void): (path: string, selected: boolean) => void {
 		const startObserving = () => {
-			if (this.mutationObserver) return; // Already observing
-			
-			this.mutationObserver = new MutationObserver((mutations) => {
-				// Only check if we have selection
-				if (this.selectedFiles.size === 0) {
-					return;
-				}
-				
-				// Check if any cards were removed
-				for (const mutation of mutations) {
-					if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
-						// Cards were removed - check if our selected cards are gone
-						let foundSelectedCard = false;
-						for (const path of this.selectedFiles) {
-							const card = this.containerEl.querySelector(`[data-path="${path}"]`);
-							if (card) {
-								foundSelectedCard = true;
-								break;
-							}
-						}
-						
-						// Also check if container has any cards at all
-						const allCards = this.containerEl.querySelectorAll('.card[data-path]');
-						
-						if (!foundSelectedCard || allCards.length === 0) {
-							this.selectedFiles.clear();
-							this.onSelectionCleared();
-							break;
-						}
-					}
-				}
-			});
-			
-			// Observe the container for child removals
-			if (this.containerEl) {
-				this.mutationObserver.observe(this.containerEl, {
-					childList: true,
-					subtree: true
-				});
-			}
+			// REMOVED: MutationObserver that cleared selection when cards were removed.
+			// This was causing selection to clear during view refreshes or partial updates.
 		};
-		
+
 		const stopObserving = () => {
 			if (this.mutationObserver) {
 				this.mutationObserver.disconnect();
 				this.mutationObserver = null;
-				
-				// When observer stops, it means selection is empty or view switched
-				// Force clear selection and hide toolbar
-				if (this.selectedFiles.size > 0) {
-					this.selectedFiles.clear();
-				}
-				this.onSelectionCleared();
 			}
+			// REMOVED: Force clear selection on stopObserving.
+			// This was too aggressive for view lifecycle management.
 		};
-		
+
 		// Get base identifier - try multiple methods
 		const getBaseIdentifier = (): string | null => {
 			try {
@@ -109,7 +66,7 @@ export class ViewSwitchListener {
 			}
 			return null;
 		};
-		
+
 		// Also check periodically as backup (slower, 500ms)
 		const backupCheck = () => {
 			if (this.selectedFiles.size === 0) {
@@ -119,10 +76,10 @@ export class ViewSwitchListener {
 				}
 				return;
 			}
-			
+
 			// Check if base identifier changed
 			const currentBaseId = getBaseIdentifier();
-			if (this.currentBaseIdentifier !== null && currentBaseId !== null && 
+			if (this.currentBaseIdentifier !== null && currentBaseId !== null &&
 				this.currentBaseIdentifier !== currentBaseId) {
 				this.selectedFiles.clear();
 				this.onSelectionCleared();
@@ -133,7 +90,7 @@ export class ViewSwitchListener {
 				}
 				return;
 			}
-			
+
 			// Check if container has cards
 			const allCards = this.containerEl.querySelectorAll('.card[data-path]');
 			if (allCards.length === 0) {
@@ -141,12 +98,12 @@ export class ViewSwitchListener {
 				this.onSelectionCleared();
 			}
 		};
-		
+
 		// Start observing when selection is made
 		const originalHandleSelectionChange = handleSelectionChange.bind(this);
 		const wrappedHandleSelectionChange = (path: string, selected: boolean) => {
 			originalHandleSelectionChange(path, selected);
-			
+
 			// Start observing if we have selection, stop if we don't
 			if (this.selectedFiles.size > 0) {
 				// Store current base identifier when selection starts
@@ -169,7 +126,7 @@ export class ViewSwitchListener {
 				}
 			}
 		};
-		
+
 		// Register cleanup
 		this.registerCleanup(() => {
 			stopObserving();
