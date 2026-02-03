@@ -1,6 +1,6 @@
 /**
  * Scroll and Layout Manager
- * Handles infinite scroll and responsive grid layout
+ * Handles infinite scroll, virtual scrolling, and responsive grid layout
  */
 
 import { App } from 'obsidian';
@@ -10,6 +10,13 @@ import type { BasesCMSSettings } from '../types';
 
 interface BasesConfig {
 	get(key: string): unknown;
+}
+
+export interface VirtualScrollRange {
+	startIndex: number;
+	endIndex: number;
+	topPadding: number;
+	bottomPadding: number;
 }
 
 export class ScrollLayoutManager {
@@ -24,6 +31,13 @@ export class ScrollLayoutManager {
 	private configPollInterval: number | null = null;
 	private lastCardSize: number | null = null;
 	private lastImageAspectRatio: number | null = null;
+
+	// Virtual scrolling state
+	private virtualScrollEnabled: boolean = false;
+	private estimatedCardHeight: number = 300; // Default estimate, updated on render
+	private cardsPerRow: number = 3; // Default, updated based on container width
+	private lastScrollTop: number = 0;
+	private virtualScrollCallback: ((range: VirtualScrollRange) => void) | null = null;
 
 	constructor(
 		private containerEl: HTMLElement,
@@ -236,6 +250,161 @@ export class ScrollLayoutManager {
 			window.clearInterval(this.configPollInterval);
 			this.configPollInterval = null;
 		}
+		this.virtualScrollCallback = null;
+	}
+
+	/**
+	 * Check if virtual scrolling should be enabled based on total entries and settings
+	 */
+	shouldEnableVirtualScroll(totalEntries: number): boolean {
+		const threshold = this.pluginSettings.virtualScrollThreshold;
+		return totalEntries > threshold;
+	}
+
+	/**
+	 * Get whether virtual scrolling is currently enabled
+	 */
+	isVirtualScrollEnabled(): boolean {
+		return this.virtualScrollEnabled;
+	}
+
+	/**
+	 * Update estimated card height based on actual rendered cards
+	 */
+	updateCardMetrics(cardHeight: number, cardsPerRow: number): void {
+		if (cardHeight > 0) {
+			this.estimatedCardHeight = cardHeight;
+		}
+		if (cardsPerRow > 0) {
+			this.cardsPerRow = cardsPerRow;
+		}
+	}
+
+	/**
+	 * Calculate cards per row based on container width and card min width
+	 */
+	private calculateCardsPerRow(): number {
+		const containerWidth = this.containerEl.clientWidth;
+		const cardMinWidth = this.lastCardSize || 280;
+		const gap = 16; // CSS grid gap
+		return Math.max(1, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
+	}
+
+	/**
+	 * Calculate which cards should be visible in the viewport
+	 */
+	calculateVisibleRange(totalEntries: number): VirtualScrollRange {
+		const scrollTop = this.containerEl.scrollTop;
+		const viewportHeight = this.containerEl.clientHeight;
+		const buffer = this.pluginSettings.virtualScrollBuffer;
+
+		// Update cards per row based on current container
+		this.cardsPerRow = this.calculateCardsPerRow();
+
+		// Calculate row height (card height + gap)
+		const rowHeight = this.estimatedCardHeight + 16; // 16px gap
+
+		// Calculate total rows
+		const totalRows = Math.ceil(totalEntries / this.cardsPerRow);
+
+		// Calculate which rows are visible
+		const firstVisibleRow = Math.max(0, Math.floor(scrollTop / rowHeight) - buffer);
+		const lastVisibleRow = Math.min(
+			totalRows - 1,
+			Math.ceil((scrollTop + viewportHeight) / rowHeight) + buffer
+		);
+
+		// Convert rows to card indices
+		const startIndex = firstVisibleRow * this.cardsPerRow;
+		const endIndex = Math.min(totalEntries - 1, (lastVisibleRow + 1) * this.cardsPerRow - 1);
+
+		// Calculate padding for scroll position
+		const topPadding = firstVisibleRow * rowHeight;
+		const bottomPadding = Math.max(0, (totalRows - lastVisibleRow - 1) * rowHeight);
+
+		return {
+			startIndex,
+			endIndex,
+			topPadding,
+			bottomPadding
+		};
+	}
+
+	/**
+	 * Setup virtual scrolling for large card sets
+	 */
+	setupVirtualScroll(
+		totalEntries: number,
+		onRangeChange: (range: VirtualScrollRange) => void
+	): VirtualScrollRange | null {
+		this.totalEntries = totalEntries;
+		this.virtualScrollCallback = onRangeChange;
+
+		// Check if we should enable virtual scrolling
+		if (!this.shouldEnableVirtualScroll(totalEntries)) {
+			this.virtualScrollEnabled = false;
+			return null;
+		}
+
+		this.virtualScrollEnabled = true;
+
+		// Clean up existing listener
+		if (this.scrollListener) {
+			this.containerEl.removeEventListener('scroll', this.scrollListener);
+			this.scrollListener = null;
+		}
+
+		// Create virtual scroll handler
+		this.scrollListener = () => {
+			// Throttle scroll events
+			if (this.scrollThrottleTimeout !== null) {
+				return;
+			}
+
+			const currentScrollTop = this.containerEl.scrollTop;
+
+			// Only update if scroll position changed significantly (at least 50px)
+			if (Math.abs(currentScrollTop - this.lastScrollTop) < 50) {
+				return;
+			}
+
+			this.lastScrollTop = currentScrollTop;
+
+			// Calculate new visible range
+			const range = this.calculateVisibleRange(this.totalEntries);
+
+			// Notify callback
+			if (this.virtualScrollCallback) {
+				this.virtualScrollCallback(range);
+			}
+
+			// Throttle
+			this.scrollThrottleTimeout = window.setTimeout(() => {
+				this.scrollThrottleTimeout = null;
+			}, 16); // ~60fps
+		};
+
+		this.containerEl.addEventListener('scroll', this.scrollListener, { passive: true });
+
+		// Register cleanup
+		this.registerCleanup(() => {
+			if (this.scrollListener) {
+				this.containerEl.removeEventListener('scroll', this.scrollListener);
+				this.scrollListener = null;
+			}
+		});
+
+		// Return initial visible range
+		return this.calculateVisibleRange(totalEntries);
+	}
+
+	/**
+	 * Get total scroll height for virtual scrolling
+	 */
+	getVirtualScrollHeight(totalEntries: number): number {
+		const totalRows = Math.ceil(totalEntries / this.cardsPerRow);
+		const rowHeight = this.estimatedCardHeight + 16;
+		return totalRows * rowHeight;
 	}
 }
 

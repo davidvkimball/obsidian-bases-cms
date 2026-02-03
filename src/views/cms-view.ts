@@ -25,7 +25,7 @@ export class BasesCMSView extends BasesView {
 	readonly type = CMS_VIEW_TYPE;
 	private containerEl: HTMLElement;
 	private plugin: BasesCMSPlugin;
-	private selectedFiles: Set<string> = new Set();
+	public selectedFiles: Set<string> = new Set();
 	private snippets: Record<string, string> = {};
 	private images: Record<string, string | string[]> = {};
 	private hasImageAvailable: Record<string, boolean> = {};
@@ -45,6 +45,8 @@ export class BasesCMSView extends BasesView {
 	private hasAutoSwitched: boolean = false;
 	private basesController: QueryController;
 	public readonly isEmbedded: boolean;
+	private lastClickedPath: string | null = null;
+	private lastVisiblePaths: string[] = [];
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: BasesCMSPlugin) {
 		super(controller);
@@ -309,15 +311,29 @@ export class BasesCMSView extends BasesView {
 	): Promise<void> {
 		const isStillValid = () => updateId === this.lastUpdateId;
 
-		// Collect visible entries across all groups (up to displayedCount)
-		const visibleEntries: BasesEntry[] = [];
-		let remainingCount = this.scrollLayoutManager.getDisplayedCount();
-
+		// Flatten all entries for virtual scrolling
+		const allFlatEntries: BasesEntry[] = [];
 		for (const processedGroup of processedGroups) {
-			if (remainingCount <= 0) break;
-			const entriesToTake = Math.min(processedGroup.entries.length, remainingCount);
-			visibleEntries.push(...processedGroup.entries.slice(0, entriesToTake));
-			remainingCount -= entriesToTake;
+			allFlatEntries.push(...processedGroup.entries);
+		}
+
+		// Check if virtual scrolling should be enabled
+		const useVirtualScroll = this.scrollLayoutManager.shouldEnableVirtualScroll(totalEntriesCount);
+
+		// Calculate which entries to display
+		let visibleEntries: BasesEntry[];
+		let startIndex = 0;
+		let virtualRange: { startIndex: number; endIndex: number; topPadding: number; bottomPadding: number } | null = null;
+
+		if (useVirtualScroll) {
+			// Use virtual scrolling - only load visible entries
+			virtualRange = this.scrollLayoutManager.calculateVisibleRange(totalEntriesCount);
+			startIndex = virtualRange.startIndex;
+			visibleEntries = allFlatEntries.slice(virtualRange.startIndex, virtualRange.endIndex + 1);
+		} else {
+			// Use infinite scroll - load up to displayedCount
+			const remainingCount = this.scrollLayoutManager.getDisplayedCount();
+			visibleEntries = allFlatEntries.slice(0, remainingCount);
 		}
 
 		// Load snippets and images ONLY for displayed entries
@@ -371,57 +387,87 @@ export class BasesCMSView extends BasesView {
 		// Create cards feed container
 		const feedEl = this.containerEl.createDiv('bases-cms-grid');
 
-		// Render groups with headers
-		let displayedSoFar = 0;
+		// For virtual scrolling, add top spacer
+		if (useVirtualScroll && virtualRange && virtualRange.topPadding > 0) {
+			const topSpacer = feedEl.createDiv('bases-cms-virtual-spacer');
+			topSpacer.style.height = `${virtualRange.topPadding}px`;
+			setCssProps(topSpacer, { gridColumn: '1 / -1' });
+		}
 
+		// Render cards
 		let totalCardsRendered = 0;
 
-		for (const processedGroup of processedGroups) {
-			if (displayedSoFar >= this.scrollLayoutManager.getDisplayedCount()) break;
+		// Transform entries to cards
+		const cards = await transformBasesEntries(
+			visibleEntries,
+			settings,
+			'', // sortMethod not used in transformBasesEntries
+			false,
+			this.snippets,
+			this.images,
+			this.hasImageAvailable,
+			this.app,
+			this.mdxFrontmatterCache
+		);
 
-			const entriesToDisplay = Math.min(processedGroup.entries.length, this.scrollLayoutManager.getDisplayedCount() - displayedSoFar);
-			if (entriesToDisplay === 0) continue;
+		if (!isStillValid()) return;
 
-			const groupEntries = processedGroup.entries.slice(0, entriesToDisplay);
+		// If using groups (not virtual scroll), render with group headers
+		if (!useVirtualScroll && processedGroups.some(g => g.group.hasKey())) {
+			let displayedSoFar = 0;
+			let cardIndex = 0;
 
-			// Create group container
-			const groupEl = feedEl.createDiv('bases-cms-group');
+			for (const processedGroup of processedGroups) {
+				if (displayedSoFar >= this.scrollLayoutManager.getDisplayedCount()) break;
 
-			// Render group header if key exists
-			if (processedGroup.group.hasKey()) {
-				const headerEl = groupEl.createDiv('bases-cms-group-heading');
-				const valueEl = headerEl.createDiv('bases-cms-group-value');
-				const keyValue = processedGroup.group.key?.toString() || '';
-				valueEl.setText(keyValue);
+				const entriesToDisplay = Math.min(processedGroup.entries.length, this.scrollLayoutManager.getDisplayedCount() - displayedSoFar);
+				if (entriesToDisplay === 0) continue;
+
+				// Create group container
+				const groupEl = feedEl.createDiv('bases-cms-group');
+
+				// Render group header if key exists
+				if (processedGroup.group.hasKey()) {
+					const headerEl = groupEl.createDiv('bases-cms-group-heading');
+					const valueEl = headerEl.createDiv('bases-cms-group-value');
+					const keyValue = processedGroup.group.key?.toString() || '';
+					valueEl.setText(keyValue);
+				}
+
+				// Render cards in this group
+				for (let i = 0; i < entriesToDisplay && cardIndex < cards.length; i++) {
+					const card = cards[cardIndex];
+					const entry = visibleEntries[cardIndex];
+					try {
+						this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
+						totalCardsRendered++;
+					} catch {
+						// Continue rendering other cards even if one fails
+					}
+					cardIndex++;
+				}
+
+				displayedSoFar += entriesToDisplay;
 			}
-
-			// Render cards in this group
-			const cards = await transformBasesEntries(
-				groupEntries,
-				settings,
-				'', // sortMethod not used in transformBasesEntries
-				false,
-				this.snippets,
-				this.images,
-				this.hasImageAvailable,
-				this.app,
-				this.mdxFrontmatterCache
-			);
-
-			if (!isStillValid()) return;
-
+		} else {
+			// Render flat list (virtual scroll or no groups)
 			for (let i = 0; i < cards.length; i++) {
 				const card = cards[i];
-				const entry = groupEntries[i];
+				const entry = visibleEntries[i];
 				try {
-					this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
+					this.renderCard(feedEl, card, entry, startIndex + i, settings);
 					totalCardsRendered++;
 				} catch {
 					// Continue rendering other cards even if one fails
 				}
 			}
+		}
 
-			displayedSoFar += entriesToDisplay;
+		// For virtual scrolling, add bottom spacer
+		if (useVirtualScroll && virtualRange && virtualRange.bottomPadding > 0) {
+			const bottomSpacer = feedEl.createDiv('bases-cms-virtual-spacer');
+			bottomSpacer.style.height = `${virtualRange.bottomPadding}px`;
+			setCssProps(bottomSpacer, { gridColumn: '1 / -1' });
 		}
 
 		if (!isStillValid()) return;
@@ -431,16 +477,43 @@ export class BasesCMSView extends BasesView {
 			throw new Error('No cards were rendered despite having entries. Check card rendering logic.');
 		}
 
-		// Images are now set via background-image in renderCard, so no batch loading needed
-		// Images will be updated by updateCardImage when they load
+		// Update card metrics for virtual scrolling
+		if (totalCardsRendered > 0) {
+			const firstCard = feedEl.querySelector('.bases-cms-card') as HTMLElement;
+			if (firstCard) {
+				// Measure actual card height after render
+				requestAnimationFrame(() => {
+					const cardHeight = firstCard.offsetHeight;
+					const containerWidth = this.containerEl.clientWidth;
+					const cardMinWidth = settings.cardSize || 280;
+					const gap = 16;
+					const cardsPerRow = Math.max(1, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
+					this.scrollLayoutManager.updateCardMetrics(cardHeight, cardsPerRow);
+				});
+			}
+		}
 
 		// Restore scroll position after rendering
 		if (savedScrollTop > 0) {
 			this.containerEl.scrollTop = savedScrollTop;
 		}
 
-		// Setup infinite scroll and resize observer
-		this.scrollLayoutManager.setupInfiniteScroll(totalEntriesCount);
+		// Setup scrolling (virtual or infinite) and resize observer
+		if (useVirtualScroll) {
+			// Store context for virtual scroll handler
+			const cachedAllEntries = allFlatEntries;
+			const cachedSettings = settings;
+			const cachedUpdateId = updateId;
+
+			this.scrollLayoutManager.setupVirtualScroll(totalEntriesCount, (range) => {
+				// Re-render when scroll range changes significantly
+				if (cachedUpdateId === this.lastUpdateId) {
+					void this.renderVirtualRange(cachedAllEntries, cachedSettings, range, feedEl);
+				}
+			});
+		} else {
+			this.scrollLayoutManager.setupInfiniteScroll(totalEntriesCount);
+		}
 		this.scrollLayoutManager.setupResizeObserver();
 
 		// Setup settings polling to detect changes and refresh view
@@ -451,6 +524,64 @@ export class BasesCMSView extends BasesView {
 
 		// Clear loading flag after async work completes
 		this.scrollLayoutManager.setIsLoading(false);
+	}
+
+	/**
+	 * Render cards for a specific virtual scroll range
+	 */
+	private async renderVirtualRange(
+		allEntries: BasesEntry[],
+		settings: CMSSettings,
+		range: { startIndex: number; endIndex: number; topPadding: number; bottomPadding: number },
+		feedEl: HTMLElement
+	): Promise<void> {
+		const visibleEntries = allEntries.slice(range.startIndex, range.endIndex + 1);
+
+		// Load content for newly visible entries
+		await this.loadContentForEntries(visibleEntries, settings);
+
+		// Clear and re-render
+		feedEl.empty();
+
+		// Add top spacer
+		if (range.topPadding > 0) {
+			const topSpacer = feedEl.createDiv('bases-cms-virtual-spacer');
+			topSpacer.style.height = `${range.topPadding}px`;
+			setCssProps(topSpacer, { gridColumn: '1 / -1' });
+		}
+
+		// Transform and render cards
+		const cards = await transformBasesEntries(
+			visibleEntries,
+			settings,
+			'',
+			false,
+			this.snippets,
+			this.images,
+			this.hasImageAvailable,
+			this.app,
+			this.mdxFrontmatterCache
+		);
+
+		for (let i = 0; i < cards.length; i++) {
+			const card = cards[i];
+			const entry = visibleEntries[i];
+			try {
+				this.renderCard(feedEl, card, entry, range.startIndex + i, settings);
+			} catch {
+				// Continue rendering other cards
+			}
+		}
+
+		// Add bottom spacer
+		if (range.bottomPadding > 0) {
+			const bottomSpacer = feedEl.createDiv('bases-cms-virtual-spacer');
+			bottomSpacer.style.height = `${range.bottomPadding}px`;
+			setCssProps(bottomSpacer, { gridColumn: '1 / -1' });
+		}
+
+		// Update selection UI
+		this.updateSelectionUI();
 	}
 
 	onDataUpdated(): void {
@@ -571,6 +702,10 @@ export class BasesCMSView extends BasesView {
 				);
 
 				if (!isStillValid()) return;
+
+				// Store flat list of paths for selection and range selection
+				const allFlatEntries = Array.isArray(this.data.data) ? this.data.data : [];
+				this.lastVisiblePaths = allFlatEntries.map(e => e.file?.path).filter(Boolean);
 
 				// Update config reference in scroll layout manager if it's now available
 				if (this.config && typeof (this.config as { get?: (key: string) => unknown }).get === 'function') {
@@ -970,8 +1105,8 @@ export class BasesCMSView extends BasesView {
 			settings,
 			this,
 			isSelected,
-			(path: string, selected: boolean) => {
-				this.handleSelectionChange(path, selected);
+			(path: string, selected: boolean, shiftKey?: boolean) => {
+				this.handleSelectionChange(path, selected, shiftKey);
 			},
 			(path: string, property: string, value: unknown) => {
 				void this.handlePropertyToggle(path, property, value);
@@ -1068,12 +1203,34 @@ export class BasesCMSView extends BasesView {
 
 
 
-	private handleSelectionChange(path: string, selected: boolean): void {
-		if (selected) {
-			this.selectedFiles.add(path);
+	private handleSelectionChange(path: string, selected: boolean, shiftKey?: boolean): void {
+		if (shiftKey && this.lastClickedPath && this.lastClickedPath !== path) {
+			// Implement range selection
+			const start = this.lastVisiblePaths.indexOf(this.lastClickedPath);
+			const end = this.lastVisiblePaths.indexOf(path);
+
+			if (start !== -1 && end !== -1) {
+				const min = Math.min(start, end);
+				const max = Math.max(start, end);
+				const pathsToToggle = this.lastVisiblePaths.slice(min, max + 1);
+
+				pathsToToggle.forEach(p => {
+					if (selected) {
+						this.selectedFiles.add(p);
+					} else {
+						this.selectedFiles.delete(p);
+					}
+				});
+			}
 		} else {
-			this.selectedFiles.delete(path);
+			if (selected) {
+				this.selectedFiles.add(path);
+			} else {
+				this.selectedFiles.delete(path);
+			}
 		}
+
+		this.lastClickedPath = path;
 
 		// Always update UI when selection changes - this will hide toolbar if selection is empty
 		this.updateSelectionUI();
@@ -1100,22 +1257,46 @@ export class BasesCMSView extends BasesView {
 		}
 	}
 
-	private selectAll(): void {
-		const cards = this.containerEl.querySelectorAll('.bases-cms-card');
-		cards.forEach((cardEl) => {
-			const path = cardEl.getAttribute('data-path');
-			if (path) {
-				this.selectedFiles.add(path);
-			}
+	public selectAll(): void {
+		this.lastVisiblePaths.forEach(path => {
+			this.selectedFiles.add(path);
 		});
 		this.updateSelectionUI();
 	}
 
-	private deselectAll(): void {
+	public deselectAll(): void {
+		// Update visual state of currently selected cards before clearing the set
+		const cards = this.containerEl.querySelectorAll('.bases-cms-card.selected');
+		cards.forEach((cardEl) => {
+			cardEl.removeClass('selected');
+			const checkbox = cardEl.querySelector('input[type="checkbox"].selection-checkbox') as HTMLInputElement;
+			if (checkbox) {
+				checkbox.checked = false;
+			}
+		});
+
 		this.selectedFiles.clear();
+		this.lastClickedPath = null;
 		this.updateSelectionUI();
 	}
 
+	/**
+	 * Update checkbox and class for a specific card in the DOM
+	 */
+	private updateCardCheckboxState(path: string, selected: boolean): void {
+		const cardEl = this.containerEl.querySelector(`.bases-cms-card[data-path="${path}"]`);
+		if (cardEl instanceof HTMLElement) {
+			if (selected) {
+				cardEl.addClass('selected');
+			} else {
+				cardEl.removeClass('selected');
+			}
+			const checkbox = cardEl.querySelector('input[type="checkbox"].selection-checkbox') as HTMLInputElement;
+			if (checkbox) {
+				checkbox.checked = selected;
+			}
+		}
+	}
 	/**
 	 * Refresh the toolbar when settings change
 	 * Called from settings tab when toolbar button visibility settings are updated

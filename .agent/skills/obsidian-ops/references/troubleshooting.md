@@ -25,7 +25,7 @@ Update frequency: Update as common issues are identified
 - Use `list_dir` with the project root to see hidden directories
 - Use `glob_file_search` with pattern `.ref/**` to search recursively
 - Try direct paths like `.ref/obsidian-api/README.md`
-- See [ref-instructions.md](ref-instructions.md) for detailed search strategies
+- See [sync-procedure.md](sync-procedure.md) for detailed search strategies
 
 **For AI agents**: When user asks about `.ref`, actively search using multiple methods. Don't assume it doesn't exist if first search fails.
 

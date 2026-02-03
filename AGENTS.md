@@ -12,7 +12,6 @@ When users ask you to perform tasks, check if any of the available skills below 
 
 How to use skills:
 - Read skill: `cat ./.agent/skills/<skill-name>/SKILL.md`
-  - For multiple: `cat ./.agent/skills/skill-one/SKILL.md ./.agent/skills/skill-two/SKILL.md`
 - The skill content will load with detailed instructions on how to complete the task
 - Skills are stored locally in ./.agent/skills/ directory
 
@@ -26,7 +25,7 @@ Usage notes:
 
 <skill>
 <name>obsidian-dev</name>
-<description>Logic patterns, lifecycle management, and core development rules for Obsidian plugins. Load when editing src/main.ts, implementing new features, or handling plugin lifecycle events.</description>
+<description>Core development patterns for Obsidian plugins. Load when editing src/main.ts, implementing features, handling API calls, or managing plugin lifecycle.</description>
 <location>project</location>
 </skill>
 

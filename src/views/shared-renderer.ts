@@ -55,7 +55,7 @@ export class SharedCardRenderer {
 		settings: CMSSettings,
 		hoverParent: unknown,
 		isSelected: boolean,
-		onSelect: (path: string, selected: boolean) => void,
+		onSelect: (path: string, selected: boolean, shiftKey?: boolean) => void,
 		onPropertyToggle?: (path: string, property: string, value: unknown) => void | Promise<void>,
 		toolbarActions?: { handleDelete: () => Promise<void> }
 	): void {
@@ -95,7 +95,7 @@ export class SharedCardRenderer {
 				checkbox.checked = !checkbox.checked;
 			}
 
-			onSelect(card.path, checkbox.checked);
+			onSelect(card.path, checkbox.checked, e.shiftKey);
 		});
 
 		// Draft status badge for non-cover formats (positioned absolutely, aligned with checkbox)
@@ -133,7 +133,7 @@ export class SharedCardRenderer {
 
 				// Toggle selection
 				const newSelectedState = !checkbox.checked;
-				onSelect(card.path, newSelectedState);
+				onSelect(card.path, newSelectedState, true);
 				return;
 			}
 
@@ -175,7 +175,7 @@ export class SharedCardRenderer {
 						item.setTitle('Unselect');
 						item.setIcon('square');
 						item.onClick(() => {
-							onSelect(card.path, false);
+							onSelect(card.path, false, false);
 						});
 					});
 				} else {
@@ -183,7 +183,7 @@ export class SharedCardRenderer {
 						item.setTitle('Select');
 						item.setIcon('copy-check');
 						item.onClick(() => {
-							onSelect(card.path, true);
+							onSelect(card.path, true, false);
 						});
 					});
 				}

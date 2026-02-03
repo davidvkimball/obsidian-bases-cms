@@ -5,25 +5,25 @@
 export interface BasesCMSSettings {
 	// Bulk operation settings
 	confirmBulkOperations: boolean;
-	
+
 	// Deletion settings
 	deleteParentFolder: boolean;
 	deleteParentFolderFilename: string;
 	deleteUniqueAttachments: boolean;
-	
+
 	// Confirmation dialog settings
 	confirmDeletions: boolean;
-	
+
 	// Icon settings
 	useHomeIcon: boolean;
-	
+
 	// Quick edit settings
 	enableQuickEdit: boolean;
 	quickEditCommand: string;
 	quickEditCommandName: string; // Store command name for display
 	quickEditIcon: string; // Icon ID for the quick edit icon
 	quickEditOpenFile: boolean; // Attempt to open file and execute command for unsupported commands
-	
+
 	// Toolbar button visibility settings
 	showToolbarSelectAll: boolean;
 	showToolbarClear: boolean;
@@ -33,9 +33,16 @@ export interface BasesCMSSettings {
 	showToolbarSet: boolean;
 	showToolbarRemove: boolean;
 	showToolbarDelete: boolean;
-	
+
 	// Appearance settings
 	forceStaticGifImages: boolean;
+
+	// Performance settings
+	embeddedViewRefreshDebounceMs: number;
+
+	// Virtual scrolling settings
+	virtualScrollThreshold: number; // Number of cards above which virtual scrolling is enabled
+	virtualScrollBuffer: number; // Number of cards to render above/below viewport
 }
 
 export const DEFAULT_SETTINGS: BasesCMSSettings = {
@@ -59,6 +66,9 @@ export const DEFAULT_SETTINGS: BasesCMSSettings = {
 	showToolbarRemove: true,
 	showToolbarDelete: true,
 	forceStaticGifImages: false,
+	embeddedViewRefreshDebounceMs: 250,
+	virtualScrollThreshold: 100, // Enable virtual scrolling for >100 cards
+	virtualScrollBuffer: 20, // Render 20 cards above/below viewport
 };
 
 /**
@@ -82,7 +92,7 @@ export interface CardData {
 /**
  * Bulk operation types
  */
-export type BulkOperation = 
+export type BulkOperation =
 	| 'set-draft'
 	| 'publish'
 	| 'manage-tags'

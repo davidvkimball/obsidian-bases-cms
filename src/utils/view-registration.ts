@@ -9,8 +9,12 @@ import { BasesCMSView, CMS_VIEW_TYPE } from '../views/cms-view';
  */
 export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void {
 	try {
-		const basesPlugin = plugin as { registerBasesView?: (type: string, config: { name: string; icon: string; factory: (controller: QueryController, containerEl: HTMLElement) => BasesCMSView; options: () => unknown[] }) => void };
+		// Use the plugin instance itself for registration.
+		// The Bases plugin likely monkey-patches this onto the Plugin prototype.
+		const basesPlugin = plugin as any;
+
 		if (typeof basesPlugin.registerBasesView === 'function') {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- registerBasesView is monkey-patched onto the plugin instance by the Bases core plugin
 			basesPlugin.registerBasesView(CMS_VIEW_TYPE, {
 				name: 'CMS',
 				icon: plugin.settings.useHomeIcon ? 'lucide-home' : 'lucide-blocks',
@@ -21,7 +25,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 					if (pluginWithViews.activeViews) {
 						pluginWithViews.activeViews.add(view);
 					}
-					
+
 					// If this is an embedded view, schedule an initial refresh with retry logic
 					// This ensures embedded views populate immediately when first added to a note
 					if (view.isEmbedded) {
@@ -29,7 +33,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 						let retryCount = 0;
 						const maxRetries = 8; // Try up to 8 times over ~1.5 seconds
 						const baseDelay = 250; // Start with 250ms, increase by 100ms each retry
-						
+
 						const tryRefresh = () => {
 							try {
 								const containerEl = (view as unknown as { containerEl?: HTMLElement }).containerEl;
@@ -40,13 +44,13 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 								// Check if data is ready
 								const viewData = (view as unknown as { data?: { data?: unknown[]; groupedData?: unknown[] } }).data;
 								const hasData = viewData && viewData.data && viewData.groupedData;
-								
+
 								// Always trigger onDataUpdated() - it has its own retry logic if data isn't ready
 								// This ensures the Bases plugin re-evaluates filters with current active file context
 								if (typeof (view as { onDataUpdated?: () => void }).onDataUpdated === 'function') {
 									(view as { onDataUpdated: () => void }).onDataUpdated();
 								}
-								
+
 								// If data wasn't ready and we haven't hit max retries, schedule another attempt
 								if (!hasData && retryCount < maxRetries) {
 									retryCount++;
@@ -58,11 +62,11 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 								console.warn('Bases CMS: Error refreshing newly created embedded view:', error);
 							}
 						};
-						
+
 						// Start the retry sequence after initial delay
 						window.setTimeout(tryRefresh, baseDelay);
 					}
-					
+
 					return view;
 				},
 				options: getCMSViewOptions()

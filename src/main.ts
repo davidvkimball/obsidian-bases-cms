@@ -1,4 +1,4 @@
-import { Plugin } from 'obsidian';
+import { Plugin, View, Constructor } from 'obsidian';
 import { BasesCMSSettingTab } from './settings';
 import { BasesCMSView } from './views/cms-view';
 import { BasesCMSSettings, DEFAULT_SETTINGS } from './types';
@@ -21,6 +21,36 @@ export default class BasesCMSPlugin extends Plugin {
 		// Graceful degradation: if Base plugin not installed, this will simply do nothing
 		// On mobile, Bases plugin may not be loaded yet, so we wait a bit
 		registerBasesCMSView(this);
+		// Register keyboard shortcuts for bulk operations
+		this.addCommand({
+			id: 'select-all',
+			name: 'Select all visible cards',
+			checkCallback: (checking: boolean) => {
+				const activeView = this.getActiveCMSView();
+				if (activeView) {
+					if (!checking) {
+						activeView.selectAll();
+					}
+					return true;
+				}
+				return false;
+			}
+		});
+
+		this.addCommand({
+			id: 'deselect-all',
+			name: 'Deselect all cards',
+			checkCallback: (checking: boolean) => {
+				const activeView = this.getActiveCMSView();
+				if (activeView) {
+					if (!checking) {
+						activeView.deselectAll();
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 
 		// Listen for active file changes to refresh embedded views
 		// This ensures embedded views update when the active file changes (for dynamic filters using this.file)
@@ -50,7 +80,7 @@ export default class BasesCMSPlugin extends Plugin {
 			window.clearTimeout(this.refreshEmbeddedViewsTimeout);
 			this.refreshEmbeddedViewsTimeout = null;
 		}
-		
+
 		// Clean up active views
 		this.activeViews.clear();
 	}
@@ -60,27 +90,73 @@ export default class BasesCMSPlugin extends Plugin {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
 	}
 
+	/**
+	 * Robustly find the active CMS view
+	 */
+	private getActiveCMSView(): BasesCMSView | null {
+		// 1. Try standard Obsidian way
+		try {
+			// Use string-based constructor access if possible, or direct class reference
+			const obsidianActiveView = this.app.workspace.getActiveViewOfType(BasesCMSView as unknown as Constructor<View>);
+			if (obsidianActiveView && obsidianActiveView instanceof BasesCMSView) {
+				return obsidianActiveView;
+			}
+		} catch (e) {
+			// Ignore errors from standard detection
+		}
+
+		// 2. Fallback: check all our tracked views
+		// This is necessary because Bases plugin might manage views in a way that
+		// getActiveViewOfType doesn't recognize (e.g., if it wraps the view)
+		const activeLeaf = this.app.workspace.activeLeaf;
+		if (!activeLeaf) return null;
+
+		for (const view of this.activeViews) {
+			try {
+				// Use type check instead of instanceof to avoid circular dependency issues
+				if (view.type !== 'bases-cms') continue;
+
+				const containerEl = (view as unknown as { containerEl?: HTMLElement }).containerEl;
+				if (containerEl && containerEl.isConnected) {
+					// Check if this view's container is within the active leaf's container
+					if (activeLeaf.view.containerEl.contains(containerEl)) {
+						return view;
+					}
+				}
+			} catch (e) {
+				// Skip if view is in a weird state
+			}
+		}
+
+		return null;
+	}
+
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	/**
+	 * Clean up stale view references that are no longer in the DOM
+	 * Returns the number of views removed
+	 */
+	private cleanupStaleViews(): number {
+		const viewsToRemove: BasesCMSView[] = [];
+		this.activeViews.forEach(view => {
+			const containerEl = (view as unknown as { containerEl?: HTMLElement }).containerEl;
+			if (!containerEl || !containerEl.parentElement) {
+				viewsToRemove.push(view);
+			}
+		});
+		viewsToRemove.forEach(view => this.activeViews.delete(view));
+		return viewsToRemove.length;
 	}
 
 	/**
 	 * Refresh toolbars in all active CMS views
 	 */
 	refreshAllToolbars(): void {
-		// Clean up any views that are no longer active
-		const viewsToRemove: BasesCMSView[] = [];
-		this.activeViews.forEach(view => {
-			// Check if view is still in DOM
-			const containerEl = (view as unknown as { containerEl?: HTMLElement }).containerEl;
-			if (!containerEl || !containerEl.parentElement) {
-				viewsToRemove.push(view);
-			}
-		});
-		
-		// Remove inactive views
-		viewsToRemove.forEach(view => this.activeViews.delete(view));
-		
+		this.cleanupStaleViews();
+
 		// Refresh all active views
 		this.activeViews.forEach(view => {
 			if (view && typeof view.refreshToolbar === 'function') {
@@ -110,18 +186,7 @@ export default class BasesCMSPlugin extends Plugin {
 		this.refreshEmbeddedViewsTimeout = window.setTimeout(() => {
 			this.refreshEmbeddedViewsTimeout = null;
 
-			// Clean up any views that are no longer active
-			const viewsToRemove: BasesCMSView[] = [];
-			this.activeViews.forEach(view => {
-				// Check if view is still in DOM
-				const containerEl = (view as unknown as { containerEl?: HTMLElement }).containerEl;
-				if (!containerEl || !containerEl.parentElement) {
-					viewsToRemove.push(view);
-				}
-			});
-
-			// Remove inactive views
-			viewsToRemove.forEach(view => this.activeViews.delete(view));
+			this.cleanupStaleViews();
 
 			// Refresh all embedded views
 			let refreshedCount = 0;
@@ -150,7 +215,7 @@ export default class BasesCMSPlugin extends Plugin {
 			if (refreshedCount > 0) {
 				console.debug(`Bases CMS: Refreshed ${refreshedCount} embedded view(s) after active file change`);
 			}
-		}, 150); // 150ms debounce - short enough to feel responsive, long enough to batch rapid changes
+		}, this.settings.embeddedViewRefreshDebounceMs); // Configurable debounce delay
 	}
 
 }

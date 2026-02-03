@@ -12,10 +12,10 @@ Update frequency: Check Obsidian Sample Theme repo for updates
   - **Complex theme with build tools** (for themes using SCSS, Grunt, etc.): `src/scss/` directory with SCSS source files that compile to `theme.css`
   - **CRITICAL**: Never have both `theme.css` as source AND `src/scss/` - choose one pattern
 
-### Simple CSS Theme Structure
+## Simple CSS Theme Structure
 
 **Recommended for simple themes** (like the sample theme template):
-```
+```text
 theme.css          # ✅ Source CSS file (edit directly)
 manifest.json
 package.json
@@ -25,10 +25,10 @@ package.json
 - Changes take effect when Obsidian reloads the theme
 - Perfect for learning and simple themes
 
-### Complex Theme Structure (SCSS + Build Tools)
+## Complex Theme Structure (SCSS + Build Tools)
 
 **For themes using SCSS, Grunt, npm scripts, or other build tools**:
-```
+```text
 src/
   scss/            # ✅ SCSS source files
     index.scss
@@ -47,9 +47,9 @@ package.json
 - Run build command after making changes (see [build-workflow.md](build-workflow.md))
 - **Example**: The `obsidian-oxygen` theme uses this pattern with Grunt
 
-### Wrong Structure (Common Mistakes)
+## Wrong Structure (Common Mistakes)
 
-```
+```text
 theme.css         # ❌ DON'T have both
 src/
   scss/          # ❌ This causes confusion about which is the source

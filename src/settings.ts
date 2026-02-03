@@ -6,6 +6,7 @@ import { createSettingsGroup } from './utils/settings-compat';
 
 export class BasesCMSSettingTab extends PluginSettingTab {
 	plugin: Plugin & { settings: BasesCMSSettings };
+	public icon = 'lucide-blocks';
 
 	constructor(app: App, plugin: Plugin & { settings: BasesCMSSettings }) {
 		super(app, plugin);
@@ -247,6 +248,54 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 								}
 							});
 						}
+					});
+				});
+		});
+
+		// Performance settings
+		const performanceGroup = createSettingsGroup(containerEl, 'Performance', 'bases-cms');
+
+		performanceGroup.addSetting(setting => {
+			setting
+				.setName('Embedded view refresh debounce (ms)')
+				.setDesc('Delay in milliseconds before refreshing embedded views when switching files. Higher values reduce CPU usage but may make views feel less responsive. Range: 50-500ms.')
+				.addSlider(slider => {
+					slider.setLimits(50, 500, 25);
+					slider.setValue(this.plugin.settings.embeddedViewRefreshDebounceMs);
+					slider.setDynamicTooltip();
+					slider.onChange(async (value) => {
+						this.plugin.settings.embeddedViewRefreshDebounceMs = value;
+						await this.plugin.saveData(this.plugin.settings);
+					});
+				});
+		});
+
+		performanceGroup.addSetting(setting => {
+			setting
+				.setName('Virtual scrolling threshold')
+				.setDesc('Number of cards above which virtual scrolling is enabled. Virtual scrolling only renders cards in the viewport, improving performance for large collections. Set to 0 to always enable, or a high value to disable.')
+				.addSlider(slider => {
+					slider.setLimits(0, 500, 25);
+					slider.setValue(this.plugin.settings.virtualScrollThreshold);
+					slider.setDynamicTooltip();
+					slider.onChange(async (value) => {
+						this.plugin.settings.virtualScrollThreshold = value;
+						await this.plugin.saveData(this.plugin.settings);
+					});
+				});
+		});
+
+		performanceGroup.addSetting(setting => {
+			setting
+				.setName('Virtual scroll buffer')
+				.setDesc('Number of cards to render above and below the visible viewport when virtual scrolling is active. Higher values reduce visual glitches when scrolling fast but use more memory.')
+				.addSlider(slider => {
+					slider.setLimits(5, 50, 5);
+					slider.setValue(this.plugin.settings.virtualScrollBuffer);
+					slider.setDynamicTooltip();
+					slider.onChange(async (value) => {
+						this.plugin.settings.virtualScrollBuffer = value;
+						await this.plugin.saveData(this.plugin.settings);
 					});
 				});
 		});

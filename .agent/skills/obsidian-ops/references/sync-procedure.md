@@ -61,9 +61,15 @@ if ($item.LinkType -eq "Junction" -or $item.LinkType -eq "SymbolicLink") {
 ```bash
 # Check if a specific repo is a symlink
 if [ -L .ref/obsidian-api ]; then
-    echo "Symlink detected - target: $(readlink .ref/obsidian-api)"
+    # Portable approach for macOS/BSD and Linux
+    if command -v realpath >/dev/null 2>&1; then
+        TARGET=$(realpath .ref/obsidian-api)
+    else
+        TARGET=$(readlink .ref/obsidian-api)
+    fi
+    echo "Symlink detected - target: $TARGET"
     # Navigate to the actual target location
-    cd "$(readlink -f .ref/obsidian-api)"
+    cd "$TARGET"
 else
     echo "Regular directory - can use .ref/obsidian-api directly"
     cd .ref/obsidian-api
@@ -97,7 +103,12 @@ cd eslint-plugin; git pull; cd ..
 **macOS/Linux**:
 ```bash
 # First, check where symlinks point (usually ../.ref/obsidian-dev)
-TARGET=$(readlink -f .ref/obsidian-api | sed 's|/obsidian-api$||')
+if command -v realpath >/dev/null 2>&1; then
+    TARGET_REPO=$(realpath .ref/obsidian-api)
+else
+    TARGET_REPO=$(readlink .ref/obsidian-api)
+fi
+TARGET=$(echo "$TARGET_REPO" | sed 's|/obsidian-api$||')
 echo "Symlinks point to: $TARGET"
 
 # Navigate to central location and update all repos
