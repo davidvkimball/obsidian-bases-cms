@@ -43,6 +43,9 @@ export interface BasesCMSSettings {
 	// Virtual scrolling settings
 	virtualScrollThreshold: number; // Number of cards above which virtual scrolling is enabled
 	virtualScrollBuffer: number; // Number of cards to render above/below viewport
+
+	// Migration tracking
+	migrationBasesCmsToCmsDone: boolean;
 }
 
 export const DEFAULT_SETTINGS: BasesCMSSettings = {
@@ -69,6 +72,7 @@ export const DEFAULT_SETTINGS: BasesCMSSettings = {
 	embeddedViewRefreshDebounceMs: 250,
 	virtualScrollThreshold: 100, // Enable virtual scrolling for >100 cards
 	virtualScrollBuffer: 20, // Render 20 cards above/below viewport
+	migrationBasesCmsToCmsDone: false,
 };
 
 /**

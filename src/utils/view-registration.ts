@@ -14,6 +14,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 		const basesPlugin = plugin as any;
 
 		if (typeof basesPlugin.registerBasesView === 'function') {
+			const viewOptionsFn = getCMSViewOptions();
 			const viewConfig = {
 				name: 'CMS',
 				icon: plugin.settings.useHomeIcon ? 'lucide-home' : 'lucide-blocks',
@@ -68,14 +69,11 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 
 					return view;
 				},
-				options: getCMSViewOptions()
+				options: () => viewOptionsFn(CMS_VIEW_TYPE)
 			};
 
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- registerBasesView is monkey-patched onto the plugin instance by the Bases core plugin
 			basesPlugin.registerBasesView(CMS_VIEW_TYPE, viewConfig);
-			// Register alias for backwards and easier usage
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-			basesPlugin.registerBasesView('cms', viewConfig);
 		} else if (retries > 0) {
 			// Method not available yet, retry after a short delay (common on mobile)
 			// Clear any existing timeout before setting a new one
@@ -99,10 +97,10 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 /**
  * Get CMS view options for Base plugin configuration
  */
-function getCMSViewOptions(): () => unknown[] {
+function getCMSViewOptions(): (viewType?: string) => unknown[] {
 	// Dynamic import to avoid circular dependency
 	// eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef -- Need dynamic import for circular dependency
-	const { getCMSViewOptions } = require('../shared/settings-schema') as { getCMSViewOptions: () => unknown[] };
+	const { getCMSViewOptions } = require('../shared/settings-schema') as { getCMSViewOptions: (viewType?: string) => unknown[] };
 	return getCMSViewOptions;
 }
 

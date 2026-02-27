@@ -21,9 +21,9 @@ export function readCMSSettings(
 	const getConfig = (key: string): unknown => {
 		return config?.get?.(key);
 	};
-	
+
 	return {
-		titleProperty: (getConfig('titleProperty') as string) || '',
+		titleProperty: (getConfig('titleProperty') as string) || 'note.title',
 		descriptionProperty: (getConfig('descriptionProperty') as string) || '',
 		imageProperty: (getConfig('imageProperty') as string) || '',
 		showTitle: true, // Always show title, defaulting to file name if no property set
@@ -91,14 +91,14 @@ export function readCMSSettings(
  * CMS view options for Bases configuration
  */
 export function getCMSViewOptions(): unknown[] {
-	return [
+	const options = [
 		// Card size (standalone)
 		{
 			type: 'slider',
 			displayName: 'Card size',
 			key: 'cardSize',
 			min: 50,
-			max: 800,
+			max: 1000,
 			step: 10,
 			default: 250
 		},
@@ -595,5 +595,6 @@ export function getCMSViewOptions(): unknown[] {
 			]
 		}
 	];
-}
 
+	return options;
+}

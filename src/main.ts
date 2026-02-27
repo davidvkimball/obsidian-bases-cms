@@ -1,8 +1,10 @@
 import { Plugin, View, Constructor } from 'obsidian';
 import { BasesCMSSettingTab } from './settings';
-import { BasesCMSView, CMS_VIEW_TYPE, CMS_VIEW_ALIAS } from './views/cms-view';
+import { BasesCMSView, CMS_VIEW_TYPE } from './views/cms-view';
 import { BasesCMSSettings, DEFAULT_SETTINGS } from './types';
 import { registerBasesCMSView } from './utils/view-registration';
+import { migrateBasesCmsToCms } from './utils/migration';
+import { Notice } from 'obsidian';
 
 export default class BasesCMSPlugin extends Plugin {
 	settings!: BasesCMSSettings;
@@ -13,6 +15,29 @@ export default class BasesCMSPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+
+		// Run one-time vault migration once the layout is ready and vault is indexed
+		this.app.workspace.onLayoutReady(async () => {
+			if (!this.settings.migrationBasesCmsToCmsDone) {
+				const migratedCount = await migrateBasesCmsToCms(this.app);
+				this.settings.migrationBasesCmsToCmsDone = true;
+				await this.saveSettings();
+
+				if (migratedCount > 0) {
+					new Notice(`Bases CMS: Successfully migrated ${migratedCount} files to new 'cms' view type.`);
+				}
+			}
+		});
+
+		// Add manual migration command
+		this.addCommand({
+			id: 'run-bases-cms-migration',
+			name: 'Run Vault Migration (Convert bases-cms to cms)',
+			callback: async () => {
+				const migratedCount = await migrateBasesCmsToCms(this.app);
+				new Notice(`Bases CMS: Migration complete. ${migratedCount} files updated.`);
+			}
+		});
 
 		// Register settings tab
 		this.addSettingTab(new BasesCMSSettingTab(this.app, this));
@@ -114,7 +139,7 @@ export default class BasesCMSPlugin extends Plugin {
 		for (const view of this.activeViews) {
 			try {
 				// Use type check instead of instanceof to avoid circular dependency issues
-				if (view.type !== CMS_VIEW_TYPE && view.type !== CMS_VIEW_ALIAS) continue;
+				if (view.type !== CMS_VIEW_TYPE) continue;
 
 				const containerEl = (view as unknown as { containerEl?: HTMLElement }).containerEl;
 				if (containerEl && containerEl.isConnected) {

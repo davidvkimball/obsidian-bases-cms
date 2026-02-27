@@ -6,8 +6,8 @@
 import { App, BasesEntry, TFile } from 'obsidian';
 import type { CardData, CMSSettings } from '../shared/data-transform';
 import { getPropertyLabel } from './property';
-import { 
-	shouldHideMissingProperties, 
+import {
+	shouldHideMissingProperties,
 	shouldHideEmptyProperties,
 	getEmptyValueMarker,
 	getTagStyle,
@@ -19,7 +19,7 @@ export class PropertyRenderer {
 		private app: App,
 		private getBasesConfig?: () => { get?: (key: string) => unknown } | undefined,
 		private getBasesController?: () => { getPropertyDisplayName?: (name: string) => string } | undefined
-	) {}
+	) { }
 
 	/**
 	 * Renders property fields for a card
@@ -167,11 +167,11 @@ export class PropertyRenderer {
 		// Helper function to check if property should be hidden
 		const shouldHideProperty = (propName: string, propValue: string | null): boolean => {
 			if (!propName || propName === '') return true;
-			
-			const isEmptyValue = propValue === null || 
-				propValue === '' || 
+
+			const isEmptyValue = propValue === null ||
+				propValue === '' ||
 				(typeof propValue === 'string' && propValue.trim() === '');
-			
+
 			// Check if property exists in frontmatter
 			let propertyExists = false;
 			try {
@@ -204,22 +204,22 @@ export class PropertyRenderer {
 				// Silently ignore errors when checking property existence
 				// This can happen if metadataCache isn't ready yet
 			}
-			
+
 			// Hide missing properties
 			if (shouldHideMissingProperties() && !propertyExists) {
 				return true;
 			}
-			
+
 			// Hide empty properties
 			if (shouldHideEmptyProperties() && propertyExists && isEmptyValue) {
 				return true;
 			}
-			
+
 			// Also hide if empty and hide empty is enabled (fallback for formula properties)
 			if (shouldHideEmptyProperties() && isEmptyValue) {
 				return true;
 			}
-			
+
 			return false;
 		};
 
@@ -230,11 +230,11 @@ export class PropertyRenderer {
 				// Check if either property should be rendered
 				const prop1ShouldRender = group.props[0] && !shouldHideProperty(group.props[0], group.values[0]);
 				const prop2ShouldRender = group.props[1] && !shouldHideProperty(group.props[1], group.values[1]);
-				
+
 				if (!prop1ShouldRender && !prop2ShouldRender) {
 					return; // Skip this group entirely if both properties are hidden
 				}
-				
+
 				const rowEl = topMetaEl.createDiv(`property-row property-row-group-${groupIndex + 1}`);
 				if (group.sideBySide) {
 					rowEl.addClass('property-row-side-by-side');
@@ -257,11 +257,11 @@ export class PropertyRenderer {
 				// Check if either property should be rendered
 				const prop1ShouldRender = group.props[0] && !shouldHideProperty(group.props[0], group.values[0]);
 				const prop2ShouldRender = group.props[1] && !shouldHideProperty(group.props[1], group.values[1]);
-				
+
 				if (!prop1ShouldRender && !prop2ShouldRender) {
 					return; // Skip this group entirely if both properties are hidden
 				}
-				
+
 				const rowEl = bottomMetaEl.createDiv(`property-row property-row-group-${groupIndex + 1}`);
 				if (group.sideBySide) {
 					rowEl.addClass('property-row-side-by-side');
@@ -281,7 +281,7 @@ export class PropertyRenderer {
 	/**
 	 * Renders individual property content
 	 */
-	private renderPropertyContent(
+	public renderPropertyContent(
 		container: HTMLElement,
 		propertyName: string,
 		resolvedValue: string | null,
@@ -296,12 +296,12 @@ export class PropertyRenderer {
 		// - resolvedValue === null means property doesn't exist (missing)
 		// - resolvedValue === "" means property exists but is empty
 		// This matches how resolveBasesProperty works
-		
+
 		// Hide missing properties if toggle enabled (resolvedValue is null for missing properties)
 		if (resolvedValue === null && shouldHideMissingProperties()) {
 			return;
 		}
-		
+
 		// Hide empty properties if toggle enabled (resolvedValue is '' for empty properties)
 		if (resolvedValue === "" && shouldHideEmptyProperties()) {
 			return;
@@ -340,7 +340,7 @@ export class PropertyRenderer {
 
 		// Universal wrapper for all content types
 		const metaContent = container.createDiv('property-content');
-		
+
 		// Add class for inline labels to enable proper CSS styling
 		if (settings.propertyLabels === 'inline') {
 			metaContent.addClass('property-content-inline');
@@ -373,7 +373,7 @@ export class PropertyRenderer {
 			if (tagStyle !== 'plain') {
 				tagsWrapper.addClass(`tag-style-${tagStyle}`);
 			}
-			
+
 			card.yamlTags.forEach(tag => {
 				const tagEl = tagsWrapper.createEl('a', {
 					cls: 'tag',
@@ -395,7 +395,7 @@ export class PropertyRenderer {
 			if (tagStyle !== 'plain') {
 				tagsWrapper.addClass(`tag-style-${tagStyle}`);
 			}
-			
+
 			card.tags.forEach(tag => {
 				const tagEl = tagsWrapper.createEl('a', {
 					cls: 'tag',
@@ -419,7 +419,7 @@ export class PropertyRenderer {
 				this.renderPropertyValueWithLinks(textWrapper, resolvedValue, card.path, propertyName);
 				return;
 			}
-			
+
 			// Try to get property info - wrap in try-catch as getAllPropertyInfos might fail
 			// This is optional - we can detect checkboxes from entry value alone
 			let propInfo: { widget?: string } | undefined = undefined;
@@ -434,7 +434,7 @@ export class PropertyRenderer {
 				// Silently fail - getAllPropertyInfos may not be available or may fail
 				// We can still detect checkboxes from entry value
 			}
-			
+
 			// Try to get value from entry to check if it's boolean
 			// Guard: ensure entry exists and has getValue method
 			let entryValue: { data?: unknown } | null = null;
@@ -445,17 +445,17 @@ export class PropertyRenderer {
 			} catch {
 				// Silently fail - entry might not have this property
 			}
-			const isCheckbox = propInfo?.widget === 'checkbox' || 
+			const isCheckbox = propInfo?.widget === 'checkbox' ||
 				(entryValue && 'data' in entryValue && typeof entryValue.data === 'boolean');
 
 			if (isCheckbox && onPropertyToggle) {
 				// Render as native Obsidian checkbox - simple input checkbox
 				const checkbox = metaContent.createEl('input', { type: 'checkbox' });
 				checkbox.checked = entryValue && 'data' in entryValue ? Boolean(entryValue.data) : false;
-				
+
 				// Use the property label (which uses getDisplayName) instead of raw property name
 				metaContent.createSpan({ text: propertyLabel });
-				
+
 				checkbox.addEventListener('change', (e) => {
 					e.stopPropagation();
 					const checked = checkbox.checked;
@@ -498,7 +498,7 @@ export class PropertyRenderer {
 		}
 
 		const trimmedValue = value.trim();
-		
+
 		// Check if entire value is a URL (http/https) - make it clickable
 		if ((trimmedValue.startsWith('http://') || trimmedValue.startsWith('https://')) && !trimmedValue.includes(' ')) {
 			const linkEl = container.createEl('a', {
@@ -513,19 +513,19 @@ export class PropertyRenderer {
 			});
 			return;
 		}
-		
+
 		// For image properties, make file paths clickable (like Obsidian does in property editor)
 		const isImageProperty = propertyName && (
-			propertyName.toLowerCase().includes('image') || 
+			propertyName.toLowerCase().includes('image') ||
 			propertyName.toLowerCase() === 'cover' ||
 			propertyName.toLowerCase() === 'thumbnail'
 		);
-		
-		if (isImageProperty && !trimmedValue.includes(' ') && 
-			!trimmedValue.startsWith('http://') && 
+
+		if (isImageProperty && !trimmedValue.includes(' ') &&
+			!trimmedValue.startsWith('http://') &&
 			!trimmedValue.startsWith('https://') &&
-			(trimmedValue.includes('/') || trimmedValue.includes('\\') || 
-			 trimmedValue.match(/\.(png|jpg|jpeg|gif|svg|webp|mp4|mov|avi)$/i))) {
+			(trimmedValue.includes('/') || trimmedValue.includes('\\') ||
+				trimmedValue.match(/\.(png|jpg|jpeg|gif|svg|webp|mp4|mov|avi)$/i))) {
 			// Make it clickable as an internal link (like Obsidian does for image properties)
 			const linkEl = container.createEl('a', {
 				cls: 'internal-link',
@@ -540,51 +540,51 @@ export class PropertyRenderer {
 			});
 			return;
 		}
-		
+
 		// Parse for wikilinks [[...]] and markdown links [...](...)
 		const wikilinkRegex = /\[\[([^\]]+)\]\]/g;
 		const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-		
+
 		const matches: Array<{ index: number; type: 'wikilink' | 'markdown'; match: RegExpMatchArray }> = [];
-		
+
 		// Find wikilinks
 		for (const m of value.matchAll(wikilinkRegex)) {
 			if (m.index !== undefined) {
 				matches.push({ index: m.index, type: 'wikilink', match: m });
 			}
 		}
-		
+
 		// Find markdown links
 		for (const m of value.matchAll(markdownLinkRegex)) {
 			if (m.index !== undefined) {
 				matches.push({ index: m.index, type: 'markdown', match: m });
 			}
 		}
-		
+
 		// Sort by index
 		matches.sort((a, b) => a.index - b.index);
-		
+
 		let lastIndex = 0;
-		
+
 		// Render text and links
 		for (const { index, type, match } of matches) {
 			// Add text before the link
 			if (index > lastIndex) {
 				container.appendText(value.substring(lastIndex, index));
 			}
-			
+
 			if (type === 'wikilink') {
 				const linkContent = match[1];
 				const parts = linkContent.split('|');
 				const linkPath = parts[0].trim();
 				const displayText = parts.length > 1 ? parts[1].trim() : linkPath;
-				
+
 				const linkEl = container.createEl('a', {
 					cls: 'internal-link',
 					href: linkPath
 				});
 				linkEl.textContent = displayText;
-				
+
 				linkEl.addEventListener('click', (e: MouseEvent) => {
 					e.stopPropagation();
 					e.preventDefault();
@@ -594,7 +594,7 @@ export class PropertyRenderer {
 			} else if (type === 'markdown') {
 				const linkText = match[1];
 				const linkUrl = match[2];
-				
+
 				if (linkUrl.startsWith('http://') || linkUrl.startsWith('https://')) {
 					// External link
 					const linkEl = container.createEl('a', {
@@ -614,7 +614,7 @@ export class PropertyRenderer {
 						href: linkUrl
 					});
 					linkEl.textContent = linkText;
-					
+
 					linkEl.addEventListener('click', (e: MouseEvent) => {
 						e.stopPropagation();
 						e.preventDefault();
@@ -623,10 +623,10 @@ export class PropertyRenderer {
 					});
 				}
 			}
-			
+
 			lastIndex = index + match[0].length;
 		}
-		
+
 		// Add remaining text
 		if (lastIndex < value.length) {
 			container.appendText(value.substring(lastIndex));

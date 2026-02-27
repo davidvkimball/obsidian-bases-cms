@@ -19,8 +19,7 @@ import { convertGifToStatic } from '../utils/image';
 import { getFileFrontmatter } from '../utils/frontmatter-helper';
 import { isEmbeddedView } from '../utils/embedded-view-detector';
 
-export const CMS_VIEW_TYPE = 'bases-cms';
-export const CMS_VIEW_ALIAS = 'cms';
+export const CMS_VIEW_TYPE = 'cms';
 
 export class BasesCMSView extends BasesView {
 	readonly type = CMS_VIEW_TYPE;
