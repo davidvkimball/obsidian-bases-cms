@@ -66,7 +66,7 @@ export class BulkToolbar {
 
 		// Try to find and position the toolbar - use a small delay to ensure DOM is ready
 		this.positionToolbar();
-		
+
 		// Also try positioning after a short delay in case DOM isn't ready yet
 		const timeoutId = window.setTimeout(() => this.positionToolbar(), 100);
 		this.timeoutIds.push(timeoutId);
@@ -75,79 +75,53 @@ export class BulkToolbar {
 	private positionToolbar(): void {
 		if (!this.toolbarEl) return;
 
-		// Find the bases-header - it should be a sibling of our container
-		// The structure should be: bases-header, then bulk toolbar, then bases-view bases-cms bases-cms-container
-		let basesHeader = this.container.closest('.bases-header');
-		if (!basesHeader) {
-			// Try finding it in the parent hierarchy
-			let parent = this.container.parentElement;
-			while (parent && !basesHeader) {
-				if (parent.classList.contains('bases-header')) {
-					basesHeader = parent;
-					break;
-				}
-				parent = parent.parentElement;
+		// Helper to safely insert before a reference node
+		const safeInsertBefore = (parent: HTMLElement, newNode: HTMLElement, refNode: Node | null) => {
+			if (!parent || !newNode) return false;
+
+			// If we're already there, don't do anything
+			if (newNode.parentElement === parent && (refNode === null ? !newNode.nextSibling : newNode.nextSibling === refNode)) {
+				return true;
 			}
+
+			try {
+				if (refNode && !parent.contains(refNode)) {
+					// Reference node is not a child, fallback to appending
+					parent.appendChild(newNode);
+				} else {
+					parent.insertBefore(newNode, refNode);
+				}
+				return true;
+			} catch (e) {
+				console.warn('[Bases CMS] Failed to insert toolbar:', e);
+				return false;
+			}
+		};
+
+		// 1. Try to find the bases-header in the vicinity
+		// It's usually a sibling of the bases-view which contains our container
+		const basesHeader = this.container.closest('.view-content')?.querySelector('.bases-header') ||
+			this.container.parentElement?.querySelector('.bases-header');
+
+		if (basesHeader instanceof HTMLElement && basesHeader.parentElement) {
+			// Insert right after the header
+			if (safeInsertBefore(basesHeader.parentElement, this.toolbarEl, basesHeader.nextSibling)) return;
 		}
-		if (!basesHeader) {
-			// Try querying from document - look for one that contains our container
-			const allHeaders = Array.from(document.querySelectorAll('.bases-header'));
-			for (const header of allHeaders) {
-				if (header.contains(this.container)) {
-					basesHeader = header;
-					break;
-				}
-			}
-		}
-		
-		// Find the view-content container that should contain both bases-header and our container
-		// The structure should be: view-content > bases-header > bases-toolbar, then our bulk toolbar, then bases-view
-		const viewContent = this.container.closest('.view-content');
-		
-		if (viewContent) {
-			// Position toolbar as a sibling of bases-header, right after it, before bases-view container
-			// Find where to insert - should be after bases-header, before our container
-			if (this.toolbarEl.parentElement !== viewContent) {
-				if (this.toolbarEl.parentElement) {
-					this.toolbarEl.remove();
-				}
-				// Insert after bases-header, before the bases-view container
-				viewContent.insertBefore(this.toolbarEl, this.container);
-			} else if (this.toolbarEl.nextSibling !== this.container) {
-				// Reposition if it's not right before the container
-				if (this.toolbarEl.parentElement) {
-					this.toolbarEl.remove();
-				}
-				viewContent.insertBefore(this.toolbarEl, this.container);
-			}
-		} else if (basesHeader && basesHeader.parentElement) {
-			// Fallback: insert after bases-header in its parent
-			if (this.toolbarEl.parentElement !== basesHeader.parentElement) {
-				if (this.toolbarEl.parentElement) {
-					this.toolbarEl.remove();
-				}
-				basesHeader.parentElement.insertBefore(this.toolbarEl, basesHeader.nextSibling);
-			}
-		} else {
-			// Last resort: insert before container
-			const parent = this.container.parentElement;
-			if (parent) {
-				if (this.toolbarEl.parentElement !== parent || this.toolbarEl.nextSibling !== this.container) {
-					if (this.toolbarEl.parentElement) {
-						this.toolbarEl.remove();
-					}
-					parent.insertBefore(this.toolbarEl, this.container);
-				}
-			}
+
+		// 2. Fallback: Insert directly before our container in its immediate parent
+		// This handles cases where bases-header is missing or we are in a unique layout
+		const parent = this.container.parentElement;
+		if (parent) {
+			safeInsertBefore(parent, this.toolbarEl, this.container);
 		}
 	}
 
 	private createToolbarContent(): void {
 		if (!this.toolbarEl) return;
-		
+
 		// Left side container (Select all, Clear selection, Count)
 		const leftContainer = this.toolbarEl.createDiv('bases-cms-bulk-toolbar-left');
-		
+
 		// Helper function to create Bases-style icon+text button
 		const createBasesButton = (iconName: string, text: string, onClick: () => void, container: HTMLElement, isDestructive = false): HTMLElement => {
 			const toolbarItem = container.createDiv('bases-toolbar-item');
@@ -156,13 +130,13 @@ export class BulkToolbar {
 				button.addClass('destructive');
 			}
 			button.setAttribute('tabindex', '0');
-			
+
 			const iconEl = button.createSpan('text-button-icon');
 			setIcon(iconEl, iconName);
-			
+
 			const textEl = button.createSpan('text-button-label');
 			textEl.setText(text);
-			
+
 			button.addEventListener('click', onClick);
 			return button;
 		};
@@ -241,7 +215,7 @@ export class BulkToolbar {
 			});
 			this.resizeObserver.observe(this.toolbarEl);
 		}
-		
+
 		// Also observe container as fallback
 		const container = this.container;
 		if (container) {
@@ -254,7 +228,7 @@ export class BulkToolbar {
 				this.timeoutIds.push(timeoutId);
 			});
 			containerObserver.observe(container);
-			
+
 			// Store for cleanup
 			(this as unknown as { containerObserver?: ResizeObserver }).containerObserver = containerObserver;
 		}
@@ -263,10 +237,29 @@ export class BulkToolbar {
 	private updateCollapsedState(): void {
 		if (!this.toolbarEl) return;
 
-		// Check if toolbar itself is narrow (collapsed)
-		// Use the toolbar's actual width, not the container
+		// Calculate threshold dynamically based on number of visible buttons
+		// Standard Bases buttons with text need less than 100px on average
+		const visibleButtons = this.toolbarEl.querySelectorAll('.text-icon-button');
+		const buttonCount = visibleButtons.length;
+
+		// Base width for count text (typically ~100px) + side padding
+		const baseWidth = 140;
+		const perButtonWidth = 75; // More compact threshold to keep text longer
+		const dynamicThreshold = baseWidth + (buttonCount * perButtonWidth);
+
 		const toolbarWidth = this.toolbarEl.offsetWidth;
-		const isCollapsed = toolbarWidth < 680; // Threshold for collapsing
+
+		// If width is 0 (hidden), but we have a cached width from a parent, use it
+		// Otherwise return to avoid premature collapsing during transitions
+		if (toolbarWidth === 0) {
+			const containerWidth = this.container.offsetWidth;
+			if (containerWidth > 0 && containerWidth < dynamicThreshold) {
+				this.toolbarEl.addClass('collapsed');
+			}
+			return;
+		}
+
+		const isCollapsed = toolbarWidth < dynamicThreshold;
 
 		if (isCollapsed) {
 			this.toolbarEl.addClass('collapsed');
@@ -279,6 +272,8 @@ export class BulkToolbar {
 		if (this.countEl) {
 			this.countEl.setText(`${count} selected`);
 		}
+		// Count change might affect width/threshold
+		this.updateCollapsedState();
 	}
 
 	private handleSelectAll(): void {
@@ -292,24 +287,24 @@ export class BulkToolbar {
 			console.warn('[Bases CMS] Toolbar element not found, recreating...');
 			this.createToolbar();
 		}
-		
+
 		if (this.toolbarEl) {
 			// Make sure it's positioned correctly first
 			this.positionToolbar();
-			
+
 			// Ensure it's in the DOM
 			if (!this.toolbarEl.parentElement) {
 				console.warn('[Bases CMS] Toolbar not in DOM, repositioning...');
 				this.positionToolbar();
 			}
-			
+
 			// Show it with flex display
 			this.toolbarEl.removeClass('bases-cms-bulk-toolbar-hidden');
 			this.toolbarEl.addClass('bases-cms-bulk-toolbar-visible');
-			
+
 			// Force reflow to ensure transition works
 			void this.toolbarEl.offsetHeight;
-			
+
 			// Animate in - use setTimeout instead of requestAnimationFrame for more reliability
 			const timeoutId = window.setTimeout(() => {
 				if (this.toolbarEl) {
@@ -347,7 +342,7 @@ export class BulkToolbar {
 	recreate(): void {
 		const wasVisible = this.toolbarEl && !this.toolbarEl.hasClass('bases-cms-bulk-toolbar-hidden');
 		let currentCount = 0;
-		
+
 		// Get current count before destroying
 		if (this.countEl && this.countEl.textContent) {
 			const match = this.countEl.textContent.match(/\d+/);
@@ -355,13 +350,13 @@ export class BulkToolbar {
 				currentCount = parseInt(match[0], 10);
 			}
 		}
-		
+
 		// Destroy existing toolbar
 		this.destroy();
-		
+
 		// Recreate toolbar
 		this.createToolbar();
-		
+
 		// Restore visibility and count if it was visible
 		if (wasVisible && this.toolbarEl && currentCount > 0) {
 			this.updateCount(currentCount);
@@ -373,7 +368,7 @@ export class BulkToolbar {
 		// Clear all timeouts
 		this.timeoutIds.forEach(id => window.clearTimeout(id));
 		this.timeoutIds = [];
-		
+
 		if (this.resizeObserver) {
 			this.resizeObserver.disconnect();
 			this.resizeObserver = null;
