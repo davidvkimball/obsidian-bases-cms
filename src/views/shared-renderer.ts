@@ -98,8 +98,8 @@ export class SharedCardRenderer {
 			onSelect(card.path, checkbox.checked, e.shiftKey);
 		});
 
-		// Draft status badge for non-cover formats (positioned absolutely, aligned with checkbox)
-		if (settings.showDraftStatus && settings.imageFormat !== 'cover') {
+		// Draft status badge (positioned absolutely, aligned with checkbox)
+		if (settings.showDraftStatus) {
 			renderDraftStatusBadge(cardEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
 		}
 
@@ -548,10 +548,6 @@ export class SharedCardRenderer {
 							backgroundRepeat: 'no-repeat'
 						});
 
-						// Draft status badge (top-left, clickable to toggle)
-						if (settings.showDraftStatus) {
-							renderDraftStatusBadge(imageEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
-						}
 
 						// Bottom properties - MUST be called before returning (for images)
 						this.propertyRenderer.renderProperties(cardEl, card, entry, settings, onPropertyToggle, 'bottom');
@@ -564,12 +560,9 @@ export class SharedCardRenderer {
 				// For cover format, render placeholder if image is expected but not loaded yet, or always
 				if (card.hasImageAvailable && !card.imageUrl) {
 					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
-					// Draft status badge on placeholder (top-left, clickable to toggle)
-					renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
 				} else if (!card.imageUrl) {
 					// No image and not expected - create placeholder anyway for cover format
 					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
-					renderDraftStatusBadge(placeholderEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
 				}
 			}
 		}
