@@ -14,8 +14,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 		const basesPlugin = plugin as any;
 
 		if (typeof basesPlugin.registerBasesView === 'function') {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- registerBasesView is monkey-patched onto the plugin instance by the Bases core plugin
-			basesPlugin.registerBasesView(CMS_VIEW_TYPE, {
+			const viewConfig = {
 				name: 'CMS',
 				icon: plugin.settings.useHomeIcon ? 'lucide-home' : 'lucide-blocks',
 				factory: (controller: QueryController, containerEl: HTMLElement) => {
@@ -41,9 +40,9 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 									return; // View no longer exists, stop retrying
 								}
 
-								// Check if data is ready
+								// Check if data is ready (ensure array is populated, not just an empty structure)
 								const viewData = (view as unknown as { data?: { data?: unknown[]; groupedData?: unknown[] } }).data;
-								const hasData = viewData && viewData.data && viewData.groupedData;
+								const hasData = viewData && Array.isArray(viewData.data) && viewData.data.length > 0 && viewData.groupedData;
 
 								// Always trigger onDataUpdated() - it has its own retry logic if data isn't ready
 								// This ensures the Bases plugin re-evaluates filters with current active file context
@@ -70,7 +69,13 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 					return view;
 				},
 				options: getCMSViewOptions()
-			});
+			};
+
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- registerBasesView is monkey-patched onto the plugin instance by the Bases core plugin
+			basesPlugin.registerBasesView(CMS_VIEW_TYPE, viewConfig);
+			// Register alias for backwards and easier usage
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+			basesPlugin.registerBasesView('cms', viewConfig);
 		} else if (retries > 0) {
 			// Method not available yet, retry after a short delay (common on mobile)
 			// Clear any existing timeout before setting a new one

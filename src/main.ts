@@ -1,6 +1,6 @@
 import { Plugin, View, Constructor } from 'obsidian';
 import { BasesCMSSettingTab } from './settings';
-import { BasesCMSView } from './views/cms-view';
+import { BasesCMSView, CMS_VIEW_TYPE, CMS_VIEW_ALIAS } from './views/cms-view';
 import { BasesCMSSettings, DEFAULT_SETTINGS } from './types';
 import { registerBasesCMSView } from './utils/view-registration';
 
@@ -114,7 +114,7 @@ export default class BasesCMSPlugin extends Plugin {
 		for (const view of this.activeViews) {
 			try {
 				// Use type check instead of instanceof to avoid circular dependency issues
-				if (view.type !== 'bases-cms') continue;
+				if (view.type !== CMS_VIEW_TYPE && view.type !== CMS_VIEW_ALIAS) continue;
 
 				const containerEl = (view as unknown as { containerEl?: HTMLElement }).containerEl;
 				if (containerEl && containerEl.isConnected) {

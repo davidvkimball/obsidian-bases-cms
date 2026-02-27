@@ -20,6 +20,7 @@ import { getFileFrontmatter } from '../utils/frontmatter-helper';
 import { isEmbeddedView } from '../utils/embedded-view-detector';
 
 export const CMS_VIEW_TYPE = 'bases-cms';
+export const CMS_VIEW_ALIAS = 'cms';
 
 export class BasesCMSView extends BasesView {
 	readonly type = CMS_VIEW_TYPE;
@@ -48,10 +49,15 @@ export class BasesCMSView extends BasesView {
 	private lastClickedPath: string | null = null;
 	private lastVisiblePaths: string[] = [];
 
-	constructor(controller: QueryController, containerEl: HTMLElement, plugin: BasesCMSPlugin) {
+	constructor(controller: QueryController, parentContainerEl: HTMLElement, plugin: BasesCMSPlugin) {
 		super(controller);
 		this.basesController = controller;
-		this.containerEl = containerEl;
+		// We create a wrapper div inside the parent container to prevent our 
+		// `.empty()` calls from destroying UI elements added by the core Bases plugin
+		this.containerEl = parentContainerEl.createDiv('bases-cms-wrapper');
+		this.containerEl.style.height = '100%';
+		this.containerEl.style.width = '100%';
+
 		this.plugin = plugin;
 
 		// Initialize selection from plugin storage if it exists
@@ -71,7 +77,7 @@ export class BasesCMSView extends BasesView {
 		}
 
 		// Detect if this view is embedded in a markdown note
-		this.isEmbedded = isEmbeddedView(containerEl);
+		this.isEmbedded = isEmbeddedView(parentContainerEl);
 
 		// Initialize shared card renderer (config will be set later in onDataUpdated)
 		this.cardRenderer = new SharedCardRenderer(
@@ -595,8 +601,9 @@ export class BasesCMSView extends BasesView {
 				// Guard: wait for data to be ready - NEVER return early and leave blank screen
 				if (!this.data) {
 					// Show loading state instead of blank screen
-					if (this.containerEl.children.length === 0) {
-						const loadingEl = this.containerEl.createDiv('bases-cms-loading');
+					let loadingEl = this.containerEl.querySelector('.bases-cms-loading') as HTMLElement;
+					if (!loadingEl && this.containerEl.children.length === 0) {
+						loadingEl = this.containerEl.createDiv('bases-cms-loading');
 						loadingEl.setText('Loading...');
 						setCssProps(loadingEl, {
 							padding: '20px',
@@ -611,6 +618,8 @@ export class BasesCMSView extends BasesView {
 					}, 100);
 					return;
 				}
+
+				if (!isStillValid()) return;
 
 				// Sync with default view if defined and not already active
 				const data = this.data as unknown as { defaultView?: string };
@@ -1434,7 +1443,7 @@ export class BasesCMSView extends BasesView {
 		}
 	}
 
-	onClose(): void {
+	async onClose(): Promise<void> {
 		this.scrollLayoutManager.cleanup();
 		if (this.viewSwitchListener) {
 			this.viewSwitchListener.cleanup();

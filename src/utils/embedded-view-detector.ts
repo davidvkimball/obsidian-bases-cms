@@ -14,11 +14,13 @@ export function isEmbeddedView(containerEl: HTMLElement): boolean {
 
 	// Check if container is inside a markdown embed
 	// Obsidian uses various classes for embeds:
-	// - .markdown-embed for markdown embeds
+	// - .markdown-embed for markdown embeds (transclusions)
 	// - .internal-embed for internal file embeds
 	// - .markdown-embed-content for the content wrapper
-	const embedParent = containerEl.closest('.markdown-embed, .internal-embed, .markdown-embed-content');
-	
+	// - .markdown-source-view for standard code blocks in Live Preview
+	// - .markdown-reading-view for standard code blocks in Reading mode
+	const embedParent = containerEl.closest('.markdown-embed, .internal-embed, .markdown-embed-content, .markdown-source-view, .markdown-reading-view');
+
 	return embedParent !== null;
 }
 
