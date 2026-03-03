@@ -30,11 +30,11 @@ export class ManageTagsModal extends Modal {
 		new Setting(contentEl)
 			.setName('Add tags')
 			.setDesc('Enter tags to add (comma-separated).')
-			.addText((text: any) => {
+			.addText(text => {
 				text
 					// False positive: Placeholder text with code examples, not UI text
 					.setPlaceholder('tag1, tag2, tag3')
-					.onChange((value: any) => {
+					.onChange(value => {
 						this.tagsToAdd = value;
 					});
 			});
@@ -85,10 +85,10 @@ export class ManageTagsModal extends Modal {
 		for (const tag of Array.from(allTags).sort()) {
 			new Setting(removeContainer)
 				.setName(tag)
-				.addToggle((toggle: any) => {
+				.addToggle(toggle => {
 					toggle
 						.setValue(this.tagsToRemove.has(tag))
-						.onChange((value: any) => {
+						.onChange(value => {
 							if (value) {
 								this.tagsToRemove.add(tag);
 							} else {
@@ -120,10 +120,10 @@ export class ManageTagsModal extends Modal {
 	private addTagCheckbox(container: HTMLElement, tag: string): void {
 		new Setting(container)
 			.setName(tag)
-			.addToggle((toggle: any) => {
+			.addToggle(toggle => {
 				toggle
 					.setValue(this.tagsToRemove.has(tag))
-					.onChange((value: any) => {
+					.onChange(value => {
 						if (value) {
 							this.tagsToRemove.add(tag);
 						} else {

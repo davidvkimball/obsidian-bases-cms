@@ -103,10 +103,10 @@ export class RemovePropertyModal extends Modal {
 	private addPropertyCheckbox(container: HTMLElement, prop: string): void {
 		new Setting(container)
 			.setName(prop)
-			.addToggle((toggle: any) => {
+			.addToggle(toggle => {
 				toggle
 					.setValue(this.propertiesToRemove.has(prop))
-					.onChange((value: any) => {
+					.onChange(value => {
 						if (value) {
 							this.propertiesToRemove.add(prop);
 						} else {
