@@ -1,8 +1,8 @@
-import { PluginSettingTab, Setting, App, Plugin } from 'obsidian';
+import { PluginSettingTab, Setting, App, Plugin , SettingGroup} from 'obsidian';
 import { BasesCMSSettings } from './types';
 import { CommandPickerModal } from './components/command-picker-modal';
 import { IconPickerModal } from './components/icon-picker-modal';
-import { createSettingsGroup } from './utils/settings-compat';
+
 
 export class BasesCMSSettingTab extends PluginSettingTab {
 	plugin: Plugin & { settings: BasesCMSSettings };
@@ -33,9 +33,9 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Confirm bulk operations')
 			.setDesc('Show confirmation dialogs before performing bulk operations.')
-			.addToggle(toggle => toggle
+			.addToggle((toggle: any) => toggle
 				.setValue(this.plugin.settings.confirmBulkOperations)
-				.onChange((value) => {
+				.onChange((value: any) => {
 					void (async () => {
 						this.plugin.settings.confirmBulkOperations = value;
 						await this.plugin.saveData(this.plugin.settings);
@@ -43,15 +43,15 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				}));
 
 		// Toolbar button visibility settings
-		const toolbarButtonsGroup = createSettingsGroup(containerEl, 'Toolbar buttons', 'bases-cms');
+		const toolbarButtonsGroup = new SettingGroup(containerEl).setHeading('Toolbar buttons');
 
-		toolbarButtonsGroup.addSetting(setting => {
+		toolbarButtonsGroup.addSetting((setting: any) => {
 			setting
 				.setName('Show select all button')
 				.setDesc('Display the select all button in the CMS toolbar.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.showToolbarSelectAll);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.showToolbarSelectAll = value;
 						await this.plugin.saveData(this.plugin.settings);
 						this.refreshActiveToolbars();
@@ -59,13 +59,13 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				});
 		});
 
-		toolbarButtonsGroup.addSetting(setting => {
+		toolbarButtonsGroup.addSetting((setting: any) => {
 			setting
 				.setName('Show clear button')
 				.setDesc('Display the clear selection button in the CMS toolbar.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.showToolbarClear);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.showToolbarClear = value;
 						await this.plugin.saveData(this.plugin.settings);
 						this.refreshActiveToolbars();
@@ -73,13 +73,13 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				});
 		});
 
-		toolbarButtonsGroup.addSetting(setting => {
+		toolbarButtonsGroup.addSetting((setting: any) => {
 			setting
 				.setName('Show publish button')
 				.setDesc('Display the publish button in the CMS toolbar.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.showToolbarPublish);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.showToolbarPublish = value;
 						await this.plugin.saveData(this.plugin.settings);
 						this.refreshActiveToolbars();
@@ -87,13 +87,13 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				});
 		});
 
-		toolbarButtonsGroup.addSetting(setting => {
+		toolbarButtonsGroup.addSetting((setting: any) => {
 			setting
 				.setName('Show draft button')
 				.setDesc('Display the draft button in the CMS toolbar.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.showToolbarDraft);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.showToolbarDraft = value;
 						await this.plugin.saveData(this.plugin.settings);
 						this.refreshActiveToolbars();
@@ -101,13 +101,13 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				});
 		});
 
-		toolbarButtonsGroup.addSetting(setting => {
+		toolbarButtonsGroup.addSetting((setting: any) => {
 			setting
 				.setName('Show tags button')
 				.setDesc('Display the tags button in the CMS toolbar.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.showToolbarTags);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.showToolbarTags = value;
 						await this.plugin.saveData(this.plugin.settings);
 						this.refreshActiveToolbars();
@@ -115,13 +115,13 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				});
 		});
 
-		toolbarButtonsGroup.addSetting(setting => {
+		toolbarButtonsGroup.addSetting((setting: any) => {
 			setting
 				.setName('Show set button')
 				.setDesc('Display the set property button in the CMS toolbar.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.showToolbarSet);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.showToolbarSet = value;
 						await this.plugin.saveData(this.plugin.settings);
 						this.refreshActiveToolbars();
@@ -129,13 +129,13 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				});
 		});
 
-		toolbarButtonsGroup.addSetting(setting => {
+		toolbarButtonsGroup.addSetting((setting: any) => {
 			setting
 				.setName('Show remove button')
 				.setDesc('Display the remove property button in the CMS toolbar.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.showToolbarRemove);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.showToolbarRemove = value;
 						await this.plugin.saveData(this.plugin.settings);
 						this.refreshActiveToolbars();
@@ -143,13 +143,13 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				});
 		});
 
-		toolbarButtonsGroup.addSetting(setting => {
+		toolbarButtonsGroup.addSetting((setting: any) => {
 			setting
 				.setName('Show delete button')
 				.setDesc('Display the delete button in the CMS toolbar.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.showToolbarDelete);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.showToolbarDelete = value;
 						await this.plugin.saveData(this.plugin.settings);
 						this.refreshActiveToolbars();
@@ -158,29 +158,29 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		});
 
 		// Deletion settings
-		const deletionsGroup = createSettingsGroup(containerEl, 'Deletions', 'bases-cms');
+		const deletionsGroup = new SettingGroup(containerEl).setHeading('Deletions');
 
-		deletionsGroup.addSetting(setting => {
+		deletionsGroup.addSetting((setting: any) => {
 			setting
 				.setName('Delete parent folder for specific file name')
 				.setDesc('When enabled, deleting a note will delete its parent folder and all its contents if the note file name matches the specified name.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.deleteParentFolder);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.deleteParentFolder = value;
 						await this.plugin.saveData(this.plugin.settings);
 					});
 				});
 		});
 
-		deletionsGroup.addSetting(setting => {
+		deletionsGroup.addSetting((setting: any) => {
 			setting
 				.setName('Folder deletion file name')
 				.setDesc('File name that triggers parent folder deletion.')
-				.addText(text => {
+				.addText((text: any) => {
 					text.setPlaceholder('index');
 					text.setValue(this.plugin.settings.deleteParentFolderFilename);
-					text.onChange(async (value) => {
+					text.onChange(async (value: any) => {
 						this.plugin.settings.deleteParentFolderFilename = value;
 						await this.plugin.saveData(this.plugin.settings);
 					});
@@ -188,26 +188,26 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				.setDisabled(!this.plugin.settings.deleteParentFolder);
 		});
 
-		deletionsGroup.addSetting(setting => {
+		deletionsGroup.addSetting((setting: any) => {
 			setting
 				.setName('Delete associated unique attachments')
 				.setDesc('When deleting a note, automatically delete attachments that are only used by that note. Attachments used by other notes will be preserved.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.deleteUniqueAttachments);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.deleteUniqueAttachments = value;
 						await this.plugin.saveData(this.plugin.settings);
 					});
 				});
 		});
 
-		deletionsGroup.addSetting(setting => {
+		deletionsGroup.addSetting((setting: any) => {
 			setting
 				.setName('Confirm deletions')
 				.setDesc('Show confirmation dialog before deleting files.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.confirmDeletions);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.confirmDeletions = value;
 						await this.plugin.saveData(this.plugin.settings);
 					});
@@ -215,28 +215,28 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		});
 
 		// Icon settings
-		const appearanceGroup = createSettingsGroup(containerEl, 'Appearance', 'bases-cms');
+		const appearanceGroup = new SettingGroup(containerEl).setHeading('Appearance');
 
-		appearanceGroup.addSetting(setting => {
+		appearanceGroup.addSetting((setting: any) => {
 			setting
 				.setName('Use home icon for CMS view')
 				.setDesc('Use the home icon instead of blocks icon for the CMS view in the Bases view selector. Restart Obsidian for this change to take effect.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.useHomeIcon);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.useHomeIcon = value;
 						await this.plugin.saveData(this.plugin.settings);
 					});
 				});
 		});
 
-		appearanceGroup.addSetting(setting => {
+		appearanceGroup.addSetting((setting: any) => {
 			setting
 				.setName('Force static image for animated GIFs')
 				.setDesc('When enabled, animated GIFs will display only the first frame when used as card covers or thumbnails.')
-				.addToggle(toggle => {
+				.addToggle((toggle: any) => {
 					toggle.setValue(this.plugin.settings.forceStaticGifImages);
-					toggle.onChange(async (value) => {
+					toggle.onChange(async (value: any) => {
 						this.plugin.settings.forceStaticGifImages = value;
 						await this.plugin.saveData(this.plugin.settings);
 						// Refresh all active views to apply the change
@@ -253,47 +253,47 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		});
 
 		// Performance settings
-		const performanceGroup = createSettingsGroup(containerEl, 'Performance', 'bases-cms');
+		const performanceGroup = new SettingGroup(containerEl).setHeading('Performance');
 
-		performanceGroup.addSetting(setting => {
+		performanceGroup.addSetting((setting: any) => {
 			setting
 				.setName('Embedded view refresh debounce (ms)')
 				.setDesc('Delay in milliseconds before refreshing embedded views when switching files. Higher values reduce CPU usage but may make views feel less responsive. Range: 50-500ms.')
-				.addSlider(slider => {
+				.addSlider((slider: any) => {
 					slider.setLimits(50, 500, 25);
 					slider.setValue(this.plugin.settings.embeddedViewRefreshDebounceMs);
 					slider.setDynamicTooltip();
-					slider.onChange(async (value) => {
+					slider.onChange(async (value: any) => {
 						this.plugin.settings.embeddedViewRefreshDebounceMs = value;
 						await this.plugin.saveData(this.plugin.settings);
 					});
 				});
 		});
 
-		performanceGroup.addSetting(setting => {
+		performanceGroup.addSetting((setting: any) => {
 			setting
 				.setName('Virtual scrolling threshold')
 				.setDesc('Number of cards above which virtual scrolling is enabled. Virtual scrolling only renders cards in the viewport, improving performance for large collections. Set to 0 to always enable, or a high value to disable.')
-				.addSlider(slider => {
+				.addSlider((slider: any) => {
 					slider.setLimits(0, 500, 25);
 					slider.setValue(this.plugin.settings.virtualScrollThreshold);
 					slider.setDynamicTooltip();
-					slider.onChange(async (value) => {
+					slider.onChange(async (value: any) => {
 						this.plugin.settings.virtualScrollThreshold = value;
 						await this.plugin.saveData(this.plugin.settings);
 					});
 				});
 		});
 
-		performanceGroup.addSetting(setting => {
+		performanceGroup.addSetting((setting: any) => {
 			setting
 				.setName('Virtual scroll buffer')
 				.setDesc('Number of cards to render above and below the visible viewport when virtual scrolling is active. Higher values reduce visual glitches when scrolling fast but use more memory.')
-				.addSlider(slider => {
+				.addSlider((slider: any) => {
 					slider.setLimits(5, 50, 5);
 					slider.setValue(this.plugin.settings.virtualScrollBuffer);
 					slider.setDynamicTooltip();
-					slider.onChange(async (value) => {
+					slider.onChange(async (value: any) => {
 						this.plugin.settings.virtualScrollBuffer = value;
 						await this.plugin.saveData(this.plugin.settings);
 					});
@@ -302,20 +302,20 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		// Properties info modal setting
 		// Quick edit settings
-		const quickEditGroup = createSettingsGroup(containerEl, 'Quick edit', 'bases-cms');
+		const quickEditGroup = new SettingGroup(containerEl).setHeading('Quick edit');
 
 		// Define quick edit settings first (needed for visibility toggling)
 		let quickEditCommandSetting: Setting;
 		let quickEditIconSetting: Setting;
 		let quickEditOpenFileSetting: Setting;
 
-		quickEditGroup.addSetting(setting => {
+		quickEditGroup.addSetting((setting: any) => {
 			setting
 				.setName('Enable quick edit')
 				.setDesc('Show an icon on card titles that launches a command when clicked.')
-				.addToggle(toggle => toggle
+				.addToggle((toggle: any) => toggle
 					.setValue(this.plugin.settings.enableQuickEdit)
-					.onChange((value) => {
+					.onChange((value: any) => {
 						void (async () => {
 							this.plugin.settings.enableQuickEdit = value;
 							await this.plugin.saveData(this.plugin.settings);
@@ -339,12 +339,12 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		});
 
 		// Command picker setting
-		quickEditGroup.addSetting(setting => {
+		quickEditGroup.addSetting((setting: any) => {
 			quickEditCommandSetting = setting;
 			setting
 				.setName('Quick edit command')
 				.setDesc('The command to execute when clicking the quick edit icon on a card title.')
-				.addButton(button => {
+				.addButton((button: any) => {
 					const currentCommandName = this.plugin.settings.quickEditCommandName ||
 						(this.plugin.settings.quickEditCommand ? 'Select command...' : 'No command selected');
 					button.setButtonText(currentCommandName)
@@ -408,12 +408,12 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		});
 
 		// Icon picker setting
-		quickEditGroup.addSetting(setting => {
+		quickEditGroup.addSetting((setting: any) => {
 			quickEditIconSetting = setting;
 			setting
 				.setName('Quick edit icon')
 				.setDesc('Select the icon to display for the quick edit button on card titles.')
-				.addButton(button => {
+				.addButton((button: any) => {
 					const iconName = this.getIconName(this.plugin.settings.quickEditIcon || 'pencil-line');
 					button.setButtonText(iconName || 'Select icon...')
 						.onClick(() => {
@@ -433,14 +433,14 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		});
 
 		// Quick edit open file setting
-		quickEditGroup.addSetting(setting => {
+		quickEditGroup.addSetting((setting: any) => {
 			quickEditOpenFileSetting = setting;
 			setting
 				.setName('Attempt to open file and execute quick edit command')
 				.setDesc('For commands that don\'t have special handling, attempt to open the file and execute the command. Some commands may not work properly this way.')
-				.addToggle(toggle => toggle
+				.addToggle((toggle: any) => toggle
 					.setValue(this.plugin.settings.quickEditOpenFile)
-					.onChange((value) => {
+					.onChange((value: any) => {
 						void (async () => {
 							this.plugin.settings.quickEditOpenFile = value;
 							await this.plugin.saveData(this.plugin.settings);

@@ -30,10 +30,10 @@ export class SetPropertyModal extends Modal {
 		new Setting(contentEl)
 			.setName('Property name')
 			.setDesc('Enter the property name to set.')
-			.addText(text => {
+			.addText((text: any) => {
 				text
 					.setPlaceholder('Enter name')
-					.onChange(value => {
+					.onChange((value: any) => {
 						this.propertyName = value;
 					});
 			});
@@ -42,14 +42,14 @@ export class SetPropertyModal extends Modal {
 		new Setting(contentEl)
 			.setName('Property type')
 			.setDesc('Select the property type.')
-			.addDropdown(dropdown => {
+			.addDropdown((dropdown: any) => {
 				dropdown
 					.addOption('text', 'Text')
 					.addOption('number', 'Number')
 					.addOption('checkbox', 'Checkbox')
 					.addOption('date', 'Date')
 					.setValue(this.propertyType)
-					.onChange(value => {
+					.onChange((value: any) => {
 						this.propertyType = value;
 					});
 			});
@@ -58,10 +58,10 @@ export class SetPropertyModal extends Modal {
 		new Setting(contentEl)
 			.setName('Property value')
 			.setDesc('Enter the property value.')
-			.addText(text => {
+			.addText((text: any) => {
 				text
 					.setPlaceholder('Enter value')
-					.onChange(value => {
+					.onChange((value: any) => {
 						this.propertyValue = value;
 					});
 			});
