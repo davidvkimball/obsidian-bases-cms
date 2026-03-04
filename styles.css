@@ -452,8 +452,14 @@ settings:
 	overflow-y: auto;
 	overflow-x: hidden;
 	background-color: var(--bases-cms-view-background, transparent);
-	/* Padding so 2px selection ring isn’t clipped by overflow (top + left/right) */
-	padding: 8px 3px 0 3px;
+}
+
+/* Inner wrapper: top padding for selection ring; horizontal padding to match native Bases view spacing */
+.bases-cms-scroll-content {
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 100%;
+	padding: 8px var(--bases-view-padding, var(--size-4-3, 12px)) 0 var(--bases-view-padding, var(--size-4-3, 12px));
 }
 
 /* Gap so the top row’s selection ring isn’t covered by the bulk toolbar */
@@ -461,9 +467,11 @@ settings:
 	margin-top: 4px;
 }
 
-/* Match native Bases cards view padding (single source: .bases-view) */
+/* Override Bases .bases-view: no padding on view so scrollbar stays at edge; padding lives on scroll-content instead */
 .bases-view[data-view-type="cms"] {
 	--bases-view-padding: var(--size-4-3);
+	padding: 0;
+	scrollbar-gutter: auto;
 	--bases-embed-padding: var(--size-4-1) 1px;
 }
 

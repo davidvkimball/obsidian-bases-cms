@@ -389,8 +389,9 @@ export class BasesCMSView extends BasesView {
 		this.propertyObservers.forEach(obs => obs.disconnect());
 		this.propertyObservers = [];
 
-		// Create cards feed container
-		const feedEl = this.containerEl.createDiv('bases-cms-grid');
+		// Inner scroll content (padding for selection ring; scrollbar stays at view edge)
+		const scrollContentEl = this.containerEl.createDiv('bases-cms-scroll-content');
+		const feedEl = scrollContentEl.createDiv('bases-cms-grid');
 
 		// For virtual scrolling, add top spacer
 		if (useVirtualScroll && virtualRange && virtualRange.topPadding > 0) {
