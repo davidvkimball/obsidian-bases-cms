@@ -108,6 +108,8 @@ export interface CMSSettings {
 	showTextPreview: boolean;
 	fallbackToContent: boolean;
 	truncatePreviewProperty: boolean;
+	descriptionMaxLength: number;
+	descriptionMaxLines: number;
 	fallbackToEmbeds: boolean | 'always' | 'if-empty' | 'never';
 	propertyDisplay1: string;
 	propertyDisplay2: string;

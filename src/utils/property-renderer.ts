@@ -103,7 +103,7 @@ export class PropertyRenderer {
 			return null;
 		});
 
-		// Apply display length limit when set
+		// Apply display length limit when set (only for property rows; text preview/description uses descriptionMaxLength + truncatePreviewProperty)
 		const maxLen = settings.propertyDisplayMaxLength ?? 0;
 		const displayValues = maxLen > 0
 			? values.map(v => (v != null && v.length > maxLen ? v.slice(0, maxLen) + '\u2026' : v))

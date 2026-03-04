@@ -31,6 +31,7 @@ export class ScrollLayoutManager {
 	private configPollInterval: number | null = null;
 	private lastCardSize: number | null = null;
 	private lastImageAspectRatio: number | null = null;
+	private lastDescriptionMaxLines: number | null = null;
 
 	// Virtual scrolling state
 	private virtualScrollEnabled: boolean = false;
@@ -171,10 +172,13 @@ export class ScrollLayoutManager {
 			// Set CSS variables on container - CSS Grid auto-fill handles column snapping
 			this.containerEl.style.setProperty('--card-min-width', `${cardMinWidth}px`);
 			this.containerEl.style.setProperty('--bases-cms-image-aspect-ratio', String(imageAspectRatio));
+			const descriptionMaxLines = currentSettings.descriptionMaxLines ?? 5;
+			this.containerEl.style.setProperty('--bases-cms-text-preview-lines', String(descriptionMaxLines));
 			
 			// Track last values for polling
 			this.lastCardSize = cardMinWidth;
 			this.lastImageAspectRatio = imageAspectRatio;
+			this.lastDescriptionMaxLines = descriptionMaxLines;
 		};
 
 		// Set up ResizeObserver to call updateGrid when container resizes
@@ -197,16 +201,19 @@ export class ScrollLayoutManager {
 			);
 			const currentCardSize = currentSettings.cardSize;
 			const currentImageAspectRatio = currentSettings.imageAspectRatio;
+			const currentDescriptionMaxLines = currentSettings.descriptionMaxLines ?? 5;
 
-			// Check if cardSize or imageAspectRatio has changed
-			if (this.lastCardSize !== currentCardSize || this.lastImageAspectRatio !== currentImageAspectRatio) {
+			// Check if cardSize, imageAspectRatio, or descriptionMaxLines has changed
+			if (this.lastCardSize !== currentCardSize || this.lastImageAspectRatio !== currentImageAspectRatio || this.lastDescriptionMaxLines !== currentDescriptionMaxLines) {
 				// Update grid layout immediately when settings change
 				this.containerEl.style.setProperty('--card-min-width', `${currentCardSize}px`);
 				this.containerEl.style.setProperty('--bases-cms-image-aspect-ratio', String(currentImageAspectRatio));
+				this.containerEl.style.setProperty('--bases-cms-text-preview-lines', String(currentDescriptionMaxLines));
 				
 				// Update tracked values
 				this.lastCardSize = currentCardSize;
 				this.lastImageAspectRatio = currentImageAspectRatio;
+				this.lastDescriptionMaxLines = currentDescriptionMaxLines;
 			}
 		}, 100);
 		

@@ -149,6 +149,7 @@ export async function loadFilePreview(
 		fallbackToContent: boolean;
 		omitFirstLine: boolean;
 		truncatePreviewProperty?: boolean;
+		descriptionMaxLength?: number;
 	},
 	fileName?: string,
 	titleValue?: string
@@ -173,10 +174,11 @@ export async function loadFilePreview(
 	}
 
 	if (result) {
-		// Truncate if setting is enabled
+		// Truncate if setting is enabled (uses descriptionMaxLength when set, else 500)
 		if (settings.truncatePreviewProperty) {
-			const wasTruncated = result.length > 500;
-			result = result.substring(0, 500);
+			const maxLen = settings.descriptionMaxLength ?? 500;
+			const wasTruncated = maxLen > 0 && result.length > maxLen;
+			result = maxLen > 0 ? result.substring(0, maxLen) : result;
 			if (wasTruncated) {
 				result += '…';
 			}

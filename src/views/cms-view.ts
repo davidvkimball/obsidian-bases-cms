@@ -851,6 +851,7 @@ export class BasesCMSView extends BasesView {
 			showTextPreview: initialSettings.showTextPreview,
 			fallbackToContent: initialSettings.fallbackToContent,
 			truncatePreviewProperty: initialSettings.truncatePreviewProperty,
+			descriptionMaxLength: initialSettings.descriptionMaxLength,
 			imageProperty: initialSettings.imageProperty,
 			imageFormat: initialSettings.imageFormat,
 			fallbackToEmbeds: initialSettings.fallbackToEmbeds,
@@ -893,6 +894,7 @@ export class BasesCMSView extends BasesView {
 				this.lastSettings.showTextPreview !== currentSettings.showTextPreview ||
 				this.lastSettings.fallbackToContent !== currentSettings.fallbackToContent ||
 				this.lastSettings.truncatePreviewProperty !== currentSettings.truncatePreviewProperty ||
+				this.lastSettings.descriptionMaxLength !== currentSettings.descriptionMaxLength ||
 				this.lastSettings.imageProperty !== currentSettings.imageProperty ||
 				this.lastSettings.imageFormat !== currentSettings.imageFormat ||
 				this.lastSettings.fallbackToEmbeds !== currentSettings.fallbackToEmbeds ||
@@ -917,7 +919,8 @@ export class BasesCMSView extends BasesView {
 				if (this.lastSettings.descriptionProperty !== currentSettings.descriptionProperty ||
 					this.lastSettings.showTextPreview !== currentSettings.showTextPreview ||
 					this.lastSettings.fallbackToContent !== currentSettings.fallbackToContent ||
-					this.lastSettings.truncatePreviewProperty !== currentSettings.truncatePreviewProperty) {
+					this.lastSettings.truncatePreviewProperty !== currentSettings.truncatePreviewProperty ||
+					this.lastSettings.descriptionMaxLength !== currentSettings.descriptionMaxLength) {
 					// Clear snippet cache when text preview settings change
 					this.snippets = {};
 				}
@@ -936,6 +939,7 @@ export class BasesCMSView extends BasesView {
 					showTextPreview: currentSettings.showTextPreview,
 					fallbackToContent: currentSettings.fallbackToContent,
 					truncatePreviewProperty: currentSettings.truncatePreviewProperty,
+					descriptionMaxLength: currentSettings.descriptionMaxLength,
 					imageProperty: currentSettings.imageProperty,
 					imageFormat: currentSettings.imageFormat,
 					fallbackToEmbeds: currentSettings.fallbackToEmbeds,
@@ -1030,7 +1034,8 @@ export class BasesCMSView extends BasesView {
 					false,
 					this.app,
 					this.snippets,
-					settings.truncatePreviewProperty
+					settings.truncatePreviewProperty,
+					settings.descriptionMaxLength
 				);
 			}
 		}

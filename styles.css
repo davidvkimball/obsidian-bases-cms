@@ -1224,6 +1224,9 @@ body.bases-cms-property-color-custom .bases-cms .property-content {
 	line-height: 1;
 	white-space: nowrap;
 	display: inline-block;
+	max-width: 180px;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .bases-cms .card-tag:hover {

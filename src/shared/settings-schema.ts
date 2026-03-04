@@ -33,6 +33,8 @@ export function readCMSSettings(
 		showTextPreview: (getConfig('showTextPreview') as boolean) ?? true,
 		fallbackToContent: (getConfig('fallbackToContent') as boolean) ?? true,
 		truncatePreviewProperty: (getConfig('truncatePreviewProperty') as boolean) ?? false,
+		descriptionMaxLength: (getConfig('descriptionMaxLength') as number) ?? 500,
+		descriptionMaxLines: (getConfig('descriptionMaxLines') as number) ?? 5,
 		fallbackToEmbeds: (() => {
 			const value = getConfig('fallbackToEmbeds');
 			if (value === 'always' || value === 'if-empty' || value === 'never') {
@@ -146,6 +148,25 @@ export function getCMSViewOptions(): unknown[] {
 					displayName: 'Truncate preview property',
 					key: 'truncatePreviewProperty',
 					default: false
+				},
+				{
+					type: 'slider',
+					displayName: 'Description max length (when truncation is on)',
+					key: 'descriptionMaxLength',
+					min: 50,
+					max: 2000,
+					step: 50,
+					default: 500,
+					showWhen: { key: 'truncatePreviewProperty', value: true }
+				},
+				{
+					type: 'slider',
+					displayName: 'Description max lines',
+					key: 'descriptionMaxLines',
+					min: 1,
+					max: 20,
+					step: 1,
+					default: 5
 				}
 			]
 		},
