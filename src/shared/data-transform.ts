@@ -140,6 +140,7 @@ export interface CMSSettings {
 	imageFormat: 'none' | 'thumbnail' | 'cover';
 	imagePosition: 'left' | 'right' | 'top' | 'bottom';
 	propertyLabels: 'hide' | 'inline' | 'above';
+	propertyDisplayMaxLength: number;
 	showDraftStatus: boolean;
 	draftStatusProperty: string;
 	draftStatusReverse: boolean;

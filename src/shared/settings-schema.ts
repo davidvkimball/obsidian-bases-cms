@@ -72,6 +72,7 @@ export function readCMSSettings(
 		imageFormat: (getConfig('imageFormat') as 'none' | 'thumbnail' | 'cover') || 'thumbnail',
 		imagePosition: (getConfig('imagePosition') as 'left' | 'right' | 'top' | 'bottom') || 'right',
 		propertyLabels: (getConfig('propertyLabels') as 'hide' | 'inline' | 'above') || 'hide',
+		propertyDisplayMaxLength: (getConfig('propertyDisplayMaxLength') as number) ?? 0,
 		showDraftStatus: (getConfig('showDraftStatus') as boolean) ?? false,
 		draftStatusProperty: (getConfig('draftStatusProperty') as string) || '',
 		draftStatusReverse: (getConfig('draftStatusReverse') as boolean) ?? false,
@@ -304,6 +305,15 @@ export function getCMSViewOptions(): unknown[] {
 						'above': 'On top'
 					},
 					default: 'hide'
+				},
+				{
+					type: 'slider',
+					displayName: 'Max characters per property (0 = no limit)',
+					key: 'propertyDisplayMaxLength',
+					min: 0,
+					max: 500,
+					step: 10,
+					default: 0
 				}
 			]
 		},

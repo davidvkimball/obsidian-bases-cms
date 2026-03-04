@@ -103,23 +103,29 @@ export class PropertyRenderer {
 			return null;
 		});
 
+		// Apply display length limit when set
+		const maxLen = settings.propertyDisplayMaxLength ?? 0;
+		const displayValues = maxLen > 0
+			? values.map(v => (v != null && v.length > maxLen ? v.slice(0, maxLen) + '\u2026' : v))
+			: values;
+
 		// Define property groups
 		const propertyGroups = [
 			{
 				props: [effectiveProps[0], effectiveProps[1]],
-				values: [values[0], values[1]],
+				values: [displayValues[0], displayValues[1]],
 				sideBySide: settings.propertyLayout12SideBySide,
 				position: settings.propertyGroup1Position
 			},
 			{
 				props: [effectiveProps[2], effectiveProps[3]],
-				values: [values[2], values[3]],
+				values: [displayValues[2], displayValues[3]],
 				sideBySide: settings.propertyLayout34SideBySide,
 				position: settings.propertyGroup2Position
 			},
 			{
 				props: [effectiveProps[4], effectiveProps[5]],
-				values: [values[4], values[5]],
+				values: [displayValues[4], displayValues[5]],
 				sideBySide: settings.propertyLayout56SideBySide,
 				position: settings.propertyGroup3Position
 			},
@@ -131,19 +137,19 @@ export class PropertyRenderer {
 			},
 			{
 				props: [effectiveProps[8], effectiveProps[9]],
-				values: [values[8], values[9]],
+				values: [displayValues[8], displayValues[9]],
 				sideBySide: settings.propertyLayout910SideBySide,
 				position: settings.propertyGroup5Position
 			},
 			{
 				props: [effectiveProps[10], effectiveProps[11]],
-				values: [values[10], values[11]],
+				values: [displayValues[10], displayValues[11]],
 				sideBySide: settings.propertyLayout1112SideBySide,
 				position: settings.propertyGroup6Position
 			},
 			{
 				props: [effectiveProps[12], effectiveProps[13]],
-				values: [values[12], values[13]],
+				values: [displayValues[12], displayValues[13]],
 				sideBySide: settings.propertyLayout1314SideBySide,
 				position: settings.propertyGroup7Position
 			}

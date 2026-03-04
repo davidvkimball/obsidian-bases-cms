@@ -867,6 +867,7 @@ export class BasesCMSView extends BasesView {
 			propertyDisplay12: initialSettings.propertyDisplay12,
 			propertyDisplay13: initialSettings.propertyDisplay13,
 			propertyDisplay14: initialSettings.propertyDisplay14,
+			propertyDisplayMaxLength: initialSettings.propertyDisplayMaxLength,
 		};
 
 		// Poll every 100ms to check for settings changes
@@ -907,7 +908,8 @@ export class BasesCMSView extends BasesView {
 				this.lastSettings.propertyDisplay11 !== currentSettings.propertyDisplay11 ||
 				this.lastSettings.propertyDisplay12 !== currentSettings.propertyDisplay12 ||
 				this.lastSettings.propertyDisplay13 !== currentSettings.propertyDisplay13 ||
-				this.lastSettings.propertyDisplay14 !== currentSettings.propertyDisplay14;
+				this.lastSettings.propertyDisplay14 !== currentSettings.propertyDisplay14 ||
+				this.lastSettings.propertyDisplayMaxLength !== currentSettings.propertyDisplayMaxLength;
 
 			if (settingsChanged) {
 				// Clear caches when relevant settings change
@@ -950,6 +952,7 @@ export class BasesCMSView extends BasesView {
 					propertyDisplay12: currentSettings.propertyDisplay12,
 					propertyDisplay13: currentSettings.propertyDisplay13,
 					propertyDisplay14: currentSettings.propertyDisplay14,
+					propertyDisplayMaxLength: currentSettings.propertyDisplayMaxLength,
 				};
 
 				// Trigger view refresh

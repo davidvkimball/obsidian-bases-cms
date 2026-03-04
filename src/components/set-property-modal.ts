@@ -48,6 +48,7 @@ export class SetPropertyModal extends Modal {
 					.addOption('number', 'Number')
 					.addOption('checkbox', 'Checkbox')
 					.addOption('date', 'Date')
+					.addOption('list', 'List')
 					.setValue(this.propertyType)
 					.onChange(value => {
 						this.propertyType = value;
@@ -57,7 +58,7 @@ export class SetPropertyModal extends Modal {
 		// Property value
 		new Setting(contentEl)
 			.setName('Property value')
-			.setDesc('Enter the property value.')
+			.setDesc('Enter the property value. For List type, use comma- or newline-separated values.')
 			.addText(text => {
 				text
 					.setPlaceholder('Enter value')
@@ -79,7 +80,7 @@ export class SetPropertyModal extends Modal {
 		applyBtn.addClass('mod-cta');
 		applyBtn.addEventListener('click', () => {
 			void (async () => {
-				if (this.propertyName && this.propertyValue) {
+				if (this.propertyName && (this.propertyValue || this.propertyType === 'list')) {
 					await this.applyChanges();
 					this.close();
 				}
@@ -97,6 +98,11 @@ export class SetPropertyModal extends Modal {
 			value = this.propertyValue.toLowerCase() === 'true' || this.propertyValue === '1';
 		} else if (this.propertyType === 'date') {
 			value = this.propertyValue; // Keep as string for date
+		} else if (this.propertyType === 'list') {
+			value = this.propertyValue
+				.split(/[\n,]/)
+				.map(s => s.trim())
+				.filter(Boolean);
 		}
 
 		await this.bulkOps.setProperty(this.files, this.propertyName, value, this.propertyType);
