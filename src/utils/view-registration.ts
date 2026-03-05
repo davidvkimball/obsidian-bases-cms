@@ -1,6 +1,7 @@
 import { QueryController } from 'obsidian';
 import type BasesCMSPlugin from '../main';
 import { BasesCMSView, CMS_VIEW_TYPE } from '../views/cms-view';
+import { BasesTitlesView, TITLES_VIEW_TYPE } from '../views/titles-view';
 
 /**
  * Register the CMS view with the Bases plugin
@@ -74,6 +75,24 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- registerBasesView is monkey-patched onto the plugin instance by the Bases core plugin
 			basesPlugin.registerBasesView(CMS_VIEW_TYPE, viewConfig);
+
+			// Register titles view (list of note titles, optional secondary after dash)
+			const titlesViewConfig = {
+				name: 'Titles',
+				icon: 'lucide-type',
+				factory: (controller: QueryController, containerEl: HTMLElement) => new BasesTitlesView(controller, containerEl, plugin),
+				options: () => [
+					{
+						type: 'group' as const,
+						displayName: 'Title',
+						items: [
+							{ type: 'property' as const, displayName: 'Title property', key: 'titleProperty', placeholder: 'Select property', default: 'note.title' },
+							{ type: 'property' as const, displayName: 'Secondary property (after dash)', key: 'secondaryProperty', placeholder: 'Optional, e.g. date', default: '' }
+						]
+					}
+				]
+			};
+			basesPlugin.registerBasesView(TITLES_VIEW_TYPE, titlesViewConfig);
 		} else if (retries > 0) {
 			// Method not available yet, retry after a short delay (common on mobile)
 			// Clear any existing timeout before setting a new one

@@ -486,14 +486,14 @@ settings:
 	grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width, 300px), 1fr));
 }
 
-/* Ensure no extra padding in embedded view containers */
-.markdown-rendered .bases-view,
+/* Ensure no extra padding in embedded CMS view only (do not affect titles/cards views) */
+.markdown-rendered .bases-view[data-view-type="cms"],
 .markdown-rendered .bases-cms-container {
 	padding-right: 0 !important;
 }
 
-/* Remove reserved scrollbar gutter in embed so cards fill width (Bases may set scrollbar-gutter: stable on .bases-view) */
-.markdown-rendered .bases-view {
+/* Remove reserved scrollbar gutter in embedded CMS view only */
+.markdown-rendered .bases-view[data-view-type="cms"] {
 	scrollbar-gutter: auto;
 }
 
@@ -1562,4 +1562,9 @@ body.bases-cms-property-color-custom .bases-cms .property-content {
 /* Titles view: list only */
 .bases-titles-view {
 	min-height: 0;
+}
+
+/* Hide until first render to avoid empty-state flash (embedded bases) */
+.bases-titles-view.bases-titles-loading {
+	opacity: 0;
 }
