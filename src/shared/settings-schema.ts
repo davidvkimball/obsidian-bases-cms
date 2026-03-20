@@ -272,7 +272,7 @@ export function getCMSViewOptions(): unknown[] {
 				},
 				{
 					type: 'toggle',
-					displayName: 'Filename underscore prefix as draft indicator',
+					displayName: 'File name underscore prefix as draft indicator',
 					key: 'draftStatusUseFilenamePrefix',
 					default: false
 				}
