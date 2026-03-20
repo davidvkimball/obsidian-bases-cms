@@ -15,6 +15,16 @@ import { convertGifToStatic } from '../utils/image';
 import { getTagStyle, showTagHashPrefix } from '../utils/style-settings';
 import { getFileFrontmatter } from '../utils/frontmatter-helper';
 
+/**
+ * Resolve absolute image paths (e.g. /images/blog/1.jpg) via Vault CMS API if available.
+ * Returns a file:// resource URL or the original URL if resolution fails.
+ */
+function resolveImageUrl(app: App, url: string): string {
+	if (!url.startsWith('/') || url.startsWith('//')) return url;
+	const vaultCms = (app as unknown as { plugins?: { plugins?: Record<string, unknown> } }).plugins?.plugins?.['vault-cms'] as { resolvePublicPath?: (path: string) => string | null } | undefined;
+	return vaultCms?.resolvePublicPath?.(url) ?? url;
+}
+
 export class SharedCardRenderer {
 	protected basesConfig?: { get?: (key: string) => unknown };
 	protected basesController?: { getPropertyDisplayName?: (name: string) => string };
@@ -430,7 +440,7 @@ export class SharedCardRenderer {
 				if (imageUrls.length > 0) {
 					const imageEl = contentContainer.createDiv('card-thumbnail');
 					const imageEmbedContainer = imageEl.createDiv('image-embed');
-					const originalUrl = imageUrls[0];
+					const originalUrl = resolveImageUrl(this.app, imageUrls[0]);
 
 					// Convert GIF to static if setting is enabled
 					void (async () => {
@@ -532,7 +542,7 @@ export class SharedCardRenderer {
 					if (imageUrls.length > 0) {
 						const imageEl = contentContainer.createDiv('card-cover');
 						const imageEmbedContainer = imageEl.createDiv('image-embed');
-						const originalUrl = imageUrls[0];
+						const originalUrl = resolveImageUrl(this.app, imageUrls[0]);
 
 						// Convert GIF to static if setting is enabled
 						void (async () => {

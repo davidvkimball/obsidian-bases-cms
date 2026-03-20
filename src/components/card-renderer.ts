@@ -110,9 +110,20 @@ export class CardRenderer {
 				
 				// Resolve image path to resource URL
 				const imagePath = imageUrls[0];
-				
+
+				// Try Vault CMS public path resolution for absolute paths
+				let resolvedExternally = false;
+				if (imagePath.startsWith('/') && !imagePath.startsWith('//')) {
+					const vaultCms = (this.app as unknown as { plugins?: { plugins?: Record<string, unknown> } }).plugins?.plugins?.['vault-cms'] as { resolvePublicPath?: (path: string) => string | null } | undefined;
+					const resolved = vaultCms?.resolvePublicPath?.(imagePath);
+					if (resolved) {
+						img.src = resolved;
+						resolvedExternally = true;
+					}
+				}
+
 				// Try to resolve as internal file path
-				let imageFile = this.app.vault.getAbstractFileByPath(imagePath);
+				let imageFile = resolvedExternally ? null : this.app.vault.getAbstractFileByPath(imagePath);
 				
 				// If not found, try resolving relative to card's folder
 				if (!imageFile && card.folderPath) {
@@ -131,7 +142,9 @@ export class CardRenderer {
 					}
 				}
 				
-				if (imageFile instanceof TFile) {
+				if (resolvedExternally) {
+					// Already resolved via Vault CMS
+				} else if (imageFile instanceof TFile) {
 					img.src = this.app.vault.getResourcePath(imageFile);
 				} else if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
 					// External URL

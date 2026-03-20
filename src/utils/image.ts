@@ -119,6 +119,13 @@ export function resolveInternalImagePaths(
 		if (imageFile && validImageExtensions.includes(imageFile.extension)) {
 			const resourcePath = app.vault.getResourcePath(imageFile);
 			resourcePaths.push(resourcePath);
+		} else if (propPath.startsWith('/') && !propPath.startsWith('//')) {
+			// Try Vault CMS public path resolution for absolute paths
+			const vaultCms = (app as unknown as { plugins?: { plugins?: Record<string, unknown> } }).plugins?.plugins?.['vault-cms'] as { resolvePublicPath?: (path: string) => string | null } | undefined;
+			const resolved = vaultCms?.resolvePublicPath?.(propPath);
+			if (resolved) {
+				resourcePaths.push(resolved);
+			}
 		}
 	}
 
