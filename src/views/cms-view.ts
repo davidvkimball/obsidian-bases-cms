@@ -379,11 +379,19 @@ export class BasesCMSView extends BasesView {
 			(this.cardRenderer as { setMdxFrontmatterCache: (cache: Record<string, Record<string, unknown> | null>) => void }).setMdxFrontmatterCache(this.mdxFrontmatterCache);
 		}
 
+		// Preload MDX properties before rendering so draft badges work on .mdx files
+		this.mdxFrontmatterCache = {};
+		await this.preloadMdxFrontmatter(visibleEntries);
+
+		if (!isStillValid()) return;
+
+		// Update card renderer with preloaded MDX cache
+		if (this.cardRenderer && typeof (this.cardRenderer as { setMdxFrontmatterCache?: (cache: Record<string, Record<string, unknown> | null>) => void }).setMdxFrontmatterCache === 'function') {
+			(this.cardRenderer as { setMdxFrontmatterCache: (cache: Record<string, Record<string, unknown> | null>) => void }).setMdxFrontmatterCache(this.mdxFrontmatterCache);
+		}
+
 		// Clear and re-render after content is loaded
 		this.containerEl.empty();
-
-		// Clear MDX frontmatter cache when re-rendering
-		this.mdxFrontmatterCache = {};
 
 		// Disconnect old property observers before re-rendering
 		this.propertyObservers.forEach(obs => obs.disconnect());
