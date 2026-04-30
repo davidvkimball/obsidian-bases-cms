@@ -8,10 +8,19 @@ import type { App, BasesEntry } from 'obsidian';
 import { TFile } from 'obsidian';
 import { getFileFrontmatter } from './frontmatter-helper';
 
-/**
- * Get first non-empty property value from comma-separated list (Bases)
- * Supports MDX files via manual frontmatter parsing when Bases API fails
- */
+function getNestedProperty(obj: Record<string, unknown> | null | undefined, path: string): unknown {
+	if (!obj) return undefined;
+	if (!path.includes('.')) {
+		return obj[path] !== undefined ? obj[path] : obj[path.toLowerCase()];
+	}
+	const parts = path.split('.');
+	let current: any = obj;
+	for (const part of parts) {
+		if (current === undefined || current === null) return undefined;
+		current = current[part] !== undefined ? current[part] : current[part.toLowerCase()];
+	}
+	return current;
+}
 export async function getFirstBasesPropertyValue(
 	entry: BasesEntry, 
 	propertyString: string,
@@ -35,15 +44,16 @@ export async function getFirstBasesPropertyValue(
 			return value;
 		}
 
-		// For MDX files, fallback to manual frontmatter parsing if Bases API returned null
+		// Fallback to manual frontmatter parsing if Bases API returned null
+		// (Bases API does not support nested properties like image.src, so we check here)
 		if (!propertyExists && app) {
 			const file = app.vault.getAbstractFileByPath(entry.file.path);
-			if (file instanceof TFile && file.extension === 'mdx') {
+			if (file instanceof TFile && (file.extension === 'mdx' || file.extension === 'md')) {
 				const frontmatter = await getFileFrontmatter(app, file);
 				if (frontmatter) {
 					// Strip "note." prefix if present
 					const cleanProp = prop.startsWith('note.') ? prop.substring(5) : prop;
-					const frontmatterValue = frontmatter[cleanProp];
+					const frontmatterValue = getNestedProperty(frontmatter, cleanProp);
 					
 					if (frontmatterValue != null) {
 						// Return in Bases API format: { data: value }
@@ -82,14 +92,14 @@ export async function getAllBasesImagePropertyValues(
 	if (value && 'data' in value) {
 		data = value.data;
 	} else if (app) {
-		// For MDX files, fallback to manual frontmatter parsing
+		// Fallback to manual frontmatter parsing
 		const file = app.vault.getAbstractFileByPath(entry.file.path);
-		if (file instanceof TFile && file.extension === 'mdx') {
+		if (file instanceof TFile && (file.extension === 'mdx' || file.extension === 'md')) {
 			const frontmatter = await getFileFrontmatter(app, file);
 			if (frontmatter) {
 				// Strip "note." prefix if present
 				const cleanProp = prop.startsWith('note.') ? prop.substring(5) : prop;
-				data = frontmatter[cleanProp];
+				data = getNestedProperty(frontmatter, cleanProp);
 			}
 		}
 	}
@@ -196,8 +206,9 @@ export function resolveBasesProperty(
 
 		return null;
 	} catch {
-		// Fallback to card properties
-		const propValue = card.properties[propertyName];
+		// Fallback to card properties using nested helper
+		const cleanProp = propertyName.startsWith('note.') ? propertyName.substring(5) : propertyName;
+		const propValue = getNestedProperty(card.properties, cleanProp);
 		if (propValue !== undefined && propValue !== null) {
 			if (Array.isArray(propValue)) {
 				return propValue.map(String).join(', ');

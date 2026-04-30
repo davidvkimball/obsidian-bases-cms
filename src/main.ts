@@ -4,6 +4,7 @@ import { BasesCMSView, CMS_VIEW_TYPE } from './views/cms-view';
 import { BasesCMSSettings, DEFAULT_SETTINGS } from './types';
 import { registerBasesCMSView } from './utils/view-registration';
 import { migrateBasesCmsToCms } from './utils/migration';
+import { setupUIFixer } from './utils/ui-fixer';
 import { Notice } from 'obsidian';
 
 export default class BasesCMSPlugin extends Plugin {
@@ -46,6 +47,11 @@ export default class BasesCMSPlugin extends Plugin {
 		// Graceful degradation: if Base plugin not installed, this will simply do nothing
 		// On mobile, Bases plugin may not be loaded yet, so we wait a bit
 		registerBasesCMSView(this);
+
+		// Setup UI Fixer to fix obsidian-bases showWhen bugs
+		const cleanupUIFixer = setupUIFixer();
+		this.register(cleanupUIFixer);
+
 		// Register keyboard shortcuts for bulk operations
 		this.addCommand({
 			id: 'select-all',
