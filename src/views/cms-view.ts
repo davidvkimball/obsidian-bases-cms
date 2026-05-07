@@ -443,10 +443,78 @@ export class BasesCMSView extends BasesView {
 				// Render group header if key exists
 				if (processedGroup.group.hasKey()) {
 					const headerEl = groupEl.createDiv('bases-cms-group-heading');
-					const valueEl = headerEl.createDiv('bases-cms-group-value');
+					
+					// Try to get the property name
+					let groupProperty = '';
+					try {
+						const cfg = this.config as any;
+						
+						// Try to get group property from various possible locations in Bases config
+						let groupObj = null;
+						if (typeof cfg.get === 'function') {
+							groupObj = cfg.get('groupBy') || cfg.get('group');
+						}
+						
+						if (!groupObj) {
+							groupObj = cfg.groupBy || cfg.group;
+						}
+
+						// Parse the found object
+						if (groupObj) {
+							if (typeof groupObj === 'string') {
+								groupProperty = groupObj;
+							} else if (groupObj.property) {
+								groupProperty = groupObj.property;
+							} else if (Array.isArray(groupObj) && groupObj.length > 0) {
+								groupProperty = groupObj[0].property || (typeof groupObj[0] === 'string' ? groupObj[0] : '');
+							} else if (typeof groupObj === 'object' && Object.keys(groupObj).length > 0) {
+								groupProperty = Object.keys(groupObj)[0];
+							}
+						}
+						
+						// If still nothing, check if the group object itself has a property reference
+						if (!groupProperty && processedGroup.group) {
+							const grp = processedGroup.group as any;
+							if (grp.property) groupProperty = grp.property;
+							else if (grp.propertyId) groupProperty = grp.propertyId;
+						}
+
+						// Clean up and get display name
+						if (groupProperty && typeof groupProperty === 'string') {
+							if (typeof cfg.getDisplayName === 'function') {
+								const displayName = cfg.getDisplayName(groupProperty);
+								if (displayName && displayName !== groupProperty) {
+									groupProperty = displayName;
+								} else {
+									groupProperty = groupProperty.replace(/^[^.]+\./, ''); // remove 'note.' prefix
+								}
+							} else {
+								groupProperty = groupProperty.replace(/^[^.]+\./, ''); // remove 'note.' prefix
+							}
+						}
+					} catch (e) {
+						// ignore
+					}
+
+					if (groupProperty) {
+						// Format the property name just in case it wasn't a display name
+						let formattedProperty = groupProperty;
+						if (!groupProperty.includes(' ')) {
+							formattedProperty = groupProperty
+								.replace(/[-_]/g, ' ')
+								.replace(/([a-z])([A-Z])/g, '$1 $2')
+								.replace(/\b\w/g, l => l.toUpperCase());
+						}
+							
+						const propEl = headerEl.createSpan('bases-cms-group-property');
+						propEl.setText(formattedProperty + ' ');
+					}
+					
+					const valueEl = headerEl.createSpan('bases-cms-group-value');
 					const keyValue = processedGroup.group.key?.toString() || '';
 					valueEl.setText(keyValue);
 				}
+
 
 				// Render cards in this group
 				for (let i = 0; i < entriesToDisplay && cardIndex < cards.length; i++) {
@@ -759,27 +827,20 @@ export class BasesCMSView extends BasesView {
 						// Use IIFE to handle async sorting
 						void (async () => {
 							try {
-								// Flatten all entries from all groups
-								const allEntries: BasesEntry[] = [];
+								// Sort entries within each group, preserving the groups
+								let totalEntries = 0;
+
 								for (const processedGroup of processedGroups) {
-									allEntries.push(...processedGroup.entries);
+									// Sort entries within this group
+									const sortedEntries = await this.sortEntriesByProperty(processedGroup.entries, property, direction);
+									
+									// Update entries while preserving the original group object
+									processedGroup.entries = sortedEntries;
+									totalEntries += sortedEntries.length;
 								}
 
-								// Sort all entries by the property
-								const sortedEntries = await this.sortEntriesByProperty(allEntries, property, direction);
-
-								// Re-group entries (put all in a single group since we're overriding Bases' grouping)
-								const sortedProcessedGroups: Array<{ group: { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] }; entries: BasesEntry[] }> = [{
-									group: {
-										hasKey: () => false,
-										key: null,
-										entries: sortedEntries
-									},
-									entries: sortedEntries
-								}];
-
 								// Continue processing with sorted groups
-								await this.continueDataProcessing(sortedProcessedGroups, settings, allEntries.length, savedScrollTop, updateId);
+								await this.continueDataProcessing(processedGroups, settings, totalEntries, savedScrollTop, updateId);
 							} catch (error) {
 								console.error('Bases CMS: Error during custom sorting:', error);
 								// Fall back to original processing

@@ -523,11 +523,16 @@ body[style*="--bases-cms-min-grid-columns: '2'"] .bases-cms-grid {
 .bases-cms-group-heading {
 	grid-column: 1 / -1;
 	padding: var(--size-4-1) 0 0;
+	font-size: 0.9em;
+}
+
+.bases-cms-group-property {
+	color: var(--text-muted);
 }
 
 .bases-cms-group-value {
-	font-size: 0.9em;
-	color: var(--text-muted);
+	color: var(--text-normal);
+	font-weight: var(--font-bold);
 }
 
 /* ============================================
