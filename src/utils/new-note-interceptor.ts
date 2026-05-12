@@ -152,11 +152,11 @@ export function setupNewNoteInterceptor(
 	};
 
 	// Add event listener to document with capture phase to intercept before Bases
-	document.addEventListener('click', interceptNewButton as EventListener, true);
+	activeDocument.addEventListener('click', interceptNewButton as EventListener, true);
 	
 	// Also try to intercept on the button directly when it appears
 	const observer = new MutationObserver(() => {
-		const buttons = document.querySelectorAll('.bases-toolbar-new-item-menu, .bases-toolbar-new-item-menu .text-icon-button, [data-action="new-item"]');
+		const buttons = activeDocument.querySelectorAll('.bases-toolbar-new-item-menu, .bases-toolbar-new-item-menu .text-icon-button, [data-action="new-item"]');
 		buttons.forEach((buttonEl) => {
 			const buttonWithFlag = buttonEl as unknown as { __cmsIntercepted?: boolean };
 			if (!buttonWithFlag.__cmsIntercepted) {
@@ -166,10 +166,10 @@ export function setupNewNoteInterceptor(
 		});
 	});
 
-	observer.observe(document.body, { childList: true, subtree: true });
+	observer.observe(activeDocument.body, { childList: true, subtree: true });
 	
 	// Check immediately
-	const buttons = document.querySelectorAll('.bases-toolbar-new-item-menu, .bases-toolbar-new-item-menu .text-icon-button, [data-action="new-item"]');
+	const buttons = activeDocument.querySelectorAll('.bases-toolbar-new-item-menu, .bases-toolbar-new-item-menu .text-icon-button, [data-action="new-item"]');
 	buttons.forEach((buttonEl) => {
 		const buttonWithFlag = buttonEl as unknown as { __cmsIntercepted?: boolean };
 		if (!buttonWithFlag.__cmsIntercepted) {
@@ -180,7 +180,7 @@ export function setupNewNoteInterceptor(
 	
 	// Register cleanup
 	registerCleanup(() => {
-		document.removeEventListener('click', interceptNewButton as EventListener, true);
+		activeDocument.removeEventListener('click', interceptNewButton as EventListener, true);
 		observer.disconnect();
 	});
 }

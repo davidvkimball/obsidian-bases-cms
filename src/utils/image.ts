@@ -23,7 +23,7 @@ export function validateImageUrl(url: string): Promise<boolean> {
 		const img = new Image();
 		img.onload = () => resolve(true);
 		img.onerror = () => resolve(false);
-		setTimeout(() => resolve(false), 5000);
+		activeWindow.setTimeout(() => resolve(false), 5000);
 		img.src = url;
 	});
 }
@@ -240,7 +240,7 @@ export async function convertGifToStatic(
 		img.onload = () => {
 			try {
 				// Create canvas and draw first frame
-				const canvas = document.createElement('canvas');
+				const canvas = createEl('canvas');
 				canvas.width = img.width;
 				canvas.height = img.height;
 				const ctx = canvas.getContext('2d');
@@ -267,7 +267,7 @@ export async function convertGifToStatic(
 		};
 		
 		// Set timeout to prevent hanging
-		setTimeout(() => {
+		activeWindow.setTimeout(() => {
 			resolve(url);
 		}, 5000);
 		

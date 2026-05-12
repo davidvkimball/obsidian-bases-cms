@@ -56,7 +56,7 @@ export class BulkToolbar {
 
 	private createToolbar(): void {
 		// Create toolbar element matching Bases structure
-		this.toolbarEl = document.createElement('div');
+		this.toolbarEl = createDiv();
 		this.toolbarEl.className = 'bases-toolbar bases-cms-bulk-toolbar bases-cms-bulk-toolbar-hidden';
 		// Store reference to this instance on the element for cleanup checks
 		(this.toolbarEl as unknown as { __bulkToolbarInstance?: BulkToolbar }).__bulkToolbarInstance = this;
@@ -68,7 +68,7 @@ export class BulkToolbar {
 		this.positionToolbar();
 
 		// Also try positioning after a short delay in case DOM isn't ready yet
-		const timeoutId = window.setTimeout(() => this.positionToolbar(), 100);
+		const timeoutId = activeWindow.setTimeout(() => this.positionToolbar(), 100);
 		this.timeoutIds.push(timeoutId);
 	}
 
@@ -203,7 +203,7 @@ export class BulkToolbar {
 		if (!this.toolbarEl) return;
 
 		// Check initial state after a short delay to ensure toolbar is rendered
-		const timeoutId1 = window.setTimeout(() => {
+		const timeoutId1 = activeWindow.setTimeout(() => {
 			this.updateCollapsedState();
 		}, 100);
 		this.timeoutIds.push(timeoutId1);
@@ -222,7 +222,7 @@ export class BulkToolbar {
 			// Use a separate observer for container to catch window resize
 			const containerObserver = new ResizeObserver(() => {
 				// Small delay to let toolbar resize first
-				const timeoutId = window.setTimeout(() => {
+				const timeoutId = activeWindow.setTimeout(() => {
 					this.updateCollapsedState();
 				}, 10);
 				this.timeoutIds.push(timeoutId);
@@ -306,7 +306,7 @@ export class BulkToolbar {
 			void this.toolbarEl.offsetHeight;
 
 			// Animate in - use setTimeout instead of requestAnimationFrame for more reliability
-			const timeoutId = window.setTimeout(() => {
+			const timeoutId = activeWindow.setTimeout(() => {
 				if (this.toolbarEl) {
 					this.toolbarEl.removeClass('bases-cms-bulk-toolbar-animating-out');
 					this.toolbarEl.addClass('bases-cms-bulk-toolbar-animating-in');
@@ -324,7 +324,7 @@ export class BulkToolbar {
 			this.toolbarEl.removeClass('bases-cms-bulk-toolbar-animating-in');
 			this.toolbarEl.addClass('bases-cms-bulk-toolbar-animating-out');
 			// Wait for transition to complete before hiding
-			const timeoutId = window.setTimeout(() => {
+			const timeoutId = activeWindow.setTimeout(() => {
 				if (this.toolbarEl) {
 					this.toolbarEl.removeClass('bases-cms-bulk-toolbar-visible');
 					this.toolbarEl.addClass('bases-cms-bulk-toolbar-hidden');

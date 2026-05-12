@@ -32,8 +32,8 @@ export default class BasesCMSPlugin extends Plugin {
 
 		// Add manual migration command
 		this.addCommand({
-			id: 'run-bases-cms-migration',
-			name: 'Run Vault Migration (Convert bases-cms to cms)',
+			id: 'run-migration',
+			name: 'Run vault migration (convert bases-cms to cms)',
 			callback: async () => {
 				const migratedCount = await migrateBasesCmsToCms(this.app);
 				new Notice(`Bases CMS: Migration complete. ${migratedCount} files updated.`);
@@ -102,13 +102,13 @@ export default class BasesCMSPlugin extends Plugin {
 	onunload() {
 		// Clear any pending registration timeout
 		if (this.registrationTimeout !== null) {
-			window.clearTimeout(this.registrationTimeout);
+			activeWindow.clearTimeout(this.registrationTimeout);
 			this.registrationTimeout = null;
 		}
 
 		// Clear any pending embedded view refresh timeout
 		if (this.refreshEmbeddedViewsTimeout !== null) {
-			window.clearTimeout(this.refreshEmbeddedViewsTimeout);
+			activeWindow.clearTimeout(this.refreshEmbeddedViewsTimeout);
 			this.refreshEmbeddedViewsTimeout = null;
 		}
 
@@ -132,14 +132,15 @@ export default class BasesCMSPlugin extends Plugin {
 			if (obsidianActiveView && obsidianActiveView instanceof BasesCMSView) {
 				return obsidianActiveView;
 			}
-		} catch (e) {
+		} catch {
 			// Ignore errors from standard detection
 		}
 
 		// 2. Fallback: check all our tracked views
 		// This is necessary because Bases plugin might manage views in a way that
 		// getActiveViewOfType doesn't recognize (e.g., if it wraps the view)
-		const activeLeaf = this.app.workspace.activeLeaf;
+		const currentObsidianView = this.app.workspace.getActiveViewOfType(View);
+		const activeLeaf = currentObsidianView?.leaf;
 		if (!activeLeaf) return null;
 
 		for (const view of this.activeViews) {
@@ -154,7 +155,7 @@ export default class BasesCMSPlugin extends Plugin {
 						return view;
 					}
 				}
-			} catch (e) {
+			} catch {
 				// Skip if view is in a weird state
 			}
 		}
@@ -214,7 +215,7 @@ export default class BasesCMSPlugin extends Plugin {
 			window.clearTimeout(this.refreshEmbeddedViewsTimeout);
 		}
 
-		this.refreshEmbeddedViewsTimeout = window.setTimeout(() => {
+		this.refreshEmbeddedViewsTimeout = activeWindow.setTimeout(() => {
 			this.refreshEmbeddedViewsTimeout = null;
 
 			this.cleanupStaleViews();

@@ -7,7 +7,7 @@
  * Read a CSS variable value from the document body
  */
 function getCSSVariable(name: string, defaultValue: string): string {
-	const value = getComputedStyle(document.body).getPropertyValue(name).trim();
+	const value = getComputedStyle(activeDocument.body).getPropertyValue(name).trim();
 	return value || defaultValue;
 }
 
@@ -25,7 +25,7 @@ function getCSSVariableAsNumber(name: string, defaultValue: number): number {
  * Check if body has a specific class
  */
 function hasBodyClass(className: string): boolean {
-	return document.body.classList.contains(className);
+	return activeDocument.body.classList.contains(className);
 }
 
 /**
@@ -84,7 +84,7 @@ export function hasCardBackground(): boolean {
  */
 export function getListSeparator(): string {
 	// Read without trim to preserve whitespace
-	let value = getComputedStyle(document.body).getPropertyValue(
+	let value = getComputedStyle(activeDocument.body).getPropertyValue(
 		"--bases-cms-list-separator",
 	);
 
@@ -106,7 +106,7 @@ export function getListSeparator(): string {
  */
 export function getEmptyValueMarker(): string {
 	// Read without trim to preserve whitespace
-	let value = getComputedStyle(document.body).getPropertyValue(
+	let value = getComputedStyle(activeDocument.body).getPropertyValue(
 		"--bases-cms-empty-value-marker",
 	);
 

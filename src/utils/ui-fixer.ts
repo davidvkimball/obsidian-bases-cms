@@ -10,17 +10,17 @@ export function setupUIFixer(): () => void {
 			}
 		}
 		if (shouldApply) {
-			applyNestedPathFix(document.body);
+			applyNestedPathFix(activeDocument.body);
 		}
 	});
 
-	observer.observe(document.body, {
+	observer.observe(activeDocument.body, {
 		childList: true,
 		subtree: true
 	});
 
 	// Run once initially in case we missed it
-	applyNestedPathFix(document.body);
+	applyNestedPathFix(activeDocument.body);
 
 	return () => observer.disconnect();
 }
@@ -62,7 +62,7 @@ function applyNestedPathFix(container: HTMLElement) {
 						// Also listen for clicks on the label container just in case
 						const container = checkbox.closest('.checkbox-container');
 						if (container) {
-							container.addEventListener('click', () => setTimeout(updateVisibility, 50));
+							container.addEventListener('click', () => activeWindow.setTimeout(updateVisibility, 50));
 						}
 					}
 

@@ -292,7 +292,7 @@ export function setupQuickEditIcon(
 							// Use multiple animation frames and timeouts to ensure everything is settled
 							requestAnimationFrame(() => {
 								requestAnimationFrame(() => {
-									setTimeout(() => {
+									activeWindow.setTimeout(() => {
 										executeCommand();
 									}, 200);
 								});
@@ -300,7 +300,7 @@ export function setupQuickEditIcon(
 						} else if (attempts < maxAttempts) {
 							// Editor not ready yet or file not active, check again
 							attempts++;
-							setTimeout(checkEditorReady, 50);
+							activeWindow.setTimeout(checkEditorReady, 50);
 						}
 					};
 

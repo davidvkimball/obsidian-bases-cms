@@ -117,7 +117,7 @@ export class SelectionManager {
 		if (this.selectedFiles.size > 0) {
 			// Check if toolbar element already exists in DOM (from previous view switch)
 			// Remove any orphaned toolbar elements that might be left over
-			const orphanedToolbars = document.querySelectorAll('.bases-cms-bulk-toolbar');
+			const orphanedToolbars = activeDocument.querySelectorAll('.bases-cms-bulk-toolbar');
 			orphanedToolbars.forEach(toolbar => {
 				// Only remove if it's not our current toolbar
 				const toolbarInstance = (toolbar as unknown as { __bulkToolbarInstance?: BulkToolbar }).__bulkToolbarInstance;
@@ -196,7 +196,7 @@ export class SelectionManager {
 		
 		// Restore selection after refresh completes
 		// Use multiple timeouts to ensure it works even if the first one is too early
-		window.setTimeout(() => {
+		activeWindow.setTimeout(() => {
 			// Restore selection
 			selectedPaths.forEach(path => {
 				if (this.app.vault.getAbstractFileByPath(path)) {
@@ -215,7 +215,7 @@ export class SelectionManager {
 			}
 			
 			// Double-check after a bit more time
-			window.setTimeout(() => {
+			activeWindow.setTimeout(() => {
 				if (this.selectedFiles.size > 0 && this.bulkToolbar) {
 					this.bulkToolbar.show();
 					this.bulkToolbar.updateCount(this.selectedFiles.size);

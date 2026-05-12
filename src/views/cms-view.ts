@@ -54,8 +54,7 @@ export class BasesCMSView extends BasesView {
 		// We create a wrapper div inside the parent container to prevent our 
 		// `.empty()` calls from destroying UI elements added by the core Bases plugin
 		this.containerEl = parentContainerEl.createDiv('bases-cms-wrapper');
-		this.containerEl.style.height = '100%';
-		this.containerEl.style.width = '100%';
+		setCssProps(this.containerEl, { height: '100%', width: '100%' });
 
 		this.plugin = plugin;
 
@@ -687,7 +686,7 @@ export class BasesCMSView extends BasesView {
 						});
 					}
 					// Retry after a short delay
-					setTimeout(() => {
+					activeWindow.setTimeout(() => {
 						if (isStillValid() && this.data) {
 							this.onDataUpdated();
 						}
@@ -767,7 +766,7 @@ export class BasesCMSView extends BasesView {
 
 				// Ensure we have valid data structures
 				if (!this.data.groupedData || !this.data.data) {
-					setTimeout(() => {
+					activeWindow.setTimeout(() => {
 						if (isStillValid() && this.data && this.data.groupedData && this.data.data) {
 							this.onDataUpdated();
 						}
@@ -1422,7 +1421,7 @@ export class BasesCMSView extends BasesView {
 		if (this.selectedFiles.size > 0) {
 			// Check if toolbar element already exists in DOM (from previous view switch)
 			// Remove any orphaned toolbar elements that might be left over
-			const orphanedToolbars = document.querySelectorAll('.bases-cms-bulk-toolbar');
+			const orphanedToolbars = activeDocument.querySelectorAll('.bases-cms-bulk-toolbar');
 			orphanedToolbars.forEach(toolbar => {
 				// Only remove if it's not our current toolbar
 				const toolbarInstance = (toolbar as unknown as { __bulkToolbarInstance?: BulkToolbar }).__bulkToolbarInstance;
@@ -1463,7 +1462,7 @@ export class BasesCMSView extends BasesView {
 
 						// Restore selection after refresh completes
 						// Use multiple timeouts to ensure it works even if the first one is too early
-						window.setTimeout(() => {
+						activeWindow.setTimeout(() => {
 							// Restore selection
 							selectedPaths.forEach(path => {
 								if (this.app.vault.getAbstractFileByPath(path)) {
@@ -1482,7 +1481,7 @@ export class BasesCMSView extends BasesView {
 							}
 
 							// Double-check after a bit more time
-							window.setTimeout(() => {
+							activeWindow.setTimeout(() => {
 								if (this.selectedFiles.size > 0 && this.bulkToolbar) {
 									this.bulkToolbar.show();
 									this.bulkToolbar.updateCount(this.selectedFiles.size);
@@ -1538,7 +1537,7 @@ export class BasesCMSView extends BasesView {
 		// REMOVED: this.selectedFiles.clear(); 
 		// We want to persist selection in the plugin across view lifecycle
 
-		const orphanedToolbars = document.querySelectorAll('.bases-cms-bulk-toolbar');
+		const orphanedToolbars = activeDocument.querySelectorAll('.bases-cms-bulk-toolbar');
 		orphanedToolbars.forEach(toolbar => toolbar.remove());
 
 		// Remove from plugin tracking

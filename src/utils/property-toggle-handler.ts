@@ -92,7 +92,7 @@ export class PropertyToggleHandler {
 			if (shouldRefresh) {
 				// Wait for metadata cache to update, then refresh view
 				requestAnimationFrame(() => {
-					window.setTimeout(() => {
+					activeWindow.setTimeout(() => {
 						try {
 							this.onRefresh();
 						} catch (error) {

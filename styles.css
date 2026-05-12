@@ -1567,6 +1567,12 @@ body.bases-cms-property-color-custom .bases-cms .property-content {
 /* Titles view: list only */
 .bases-titles-view {
 	min-height: 0;
+	padding: var(--size-4-4);
+}
+
+.bases-titles-list li {
+	margin-bottom: var(--size-4-2);
+	line-height: var(--line-height-normal);
 }
 
 /* Hide until first render to avoid empty-state flash (embedded bases) */

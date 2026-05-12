@@ -112,7 +112,7 @@ export async function generateThumbnail(
 					}
 
 					// Create canvas and resize
-					const canvas = document.createElement('canvas');
+					const canvas = createEl('canvas');
 					canvas.width = width;
 					canvas.height = height;
 					const ctx = canvas.getContext('2d');
@@ -194,7 +194,7 @@ export async function generateThumbnailFromUrl(
 					}
 
 					// Create canvas and resize
-					const canvas = document.createElement('canvas');
+					const canvas = createEl('canvas');
 					canvas.width = width;
 					canvas.height = height;
 					const ctx = canvas.getContext('2d');

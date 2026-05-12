@@ -56,7 +56,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 								if (!hasData && retryCount < maxRetries) {
 									retryCount++;
 									const delay = baseDelay + (retryCount * 100); // 250ms, 350ms, 450ms, etc.
-									window.setTimeout(tryRefresh, delay);
+									activeWindow.setTimeout(tryRefresh, delay);
 								}
 							} catch (error) {
 								// Silently ignore errors during initial refresh
@@ -65,7 +65,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 						};
 
 						// Start the retry sequence after initial delay
-						window.setTimeout(tryRefresh, baseDelay);
+						activeWindow.setTimeout(tryRefresh, baseDelay);
 					}
 
 					return view;
@@ -101,7 +101,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 			if (registrationTimeout !== null && registrationTimeout !== undefined) {
 				window.clearTimeout(registrationTimeout);
 			}
-			pluginWithTimeout.registrationTimeout = window.setTimeout(() => {
+			pluginWithTimeout.registrationTimeout = activeWindow.setTimeout(() => {
 				pluginWithTimeout.registrationTimeout = null;
 				registerBasesCMSView(plugin, retries - 1);
 			}, 200);

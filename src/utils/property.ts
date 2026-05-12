@@ -11,13 +11,14 @@ import { getFileFrontmatter } from './frontmatter-helper';
 function getNestedProperty(obj: Record<string, unknown> | null | undefined, path: string): unknown {
 	if (!obj) return undefined;
 	if (!path.includes('.')) {
-		return obj[path] !== undefined ? obj[path] : obj[path.toLowerCase()];
+		return (obj as Record<string, unknown>)[path] !== undefined ? (obj as Record<string, unknown>)[path] : (obj as Record<string, unknown>)[path.toLowerCase()];
 	}
 	const parts = path.split('.');
-	let current: any = obj;
+	let current: unknown = obj;
 	for (const part of parts) {
 		if (current === undefined || current === null) return undefined;
-		current = current[part] !== undefined ? current[part] : current[part.toLowerCase()];
+		const curRec = current as Record<string, unknown>;
+		current = curRec[part] !== undefined ? curRec[part] : curRec[part.toLowerCase()];
 	}
 	return current;
 }

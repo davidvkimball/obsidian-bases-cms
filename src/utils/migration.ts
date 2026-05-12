@@ -1,4 +1,4 @@
-import { App, TFile, Notice } from 'obsidian';
+import { App } from 'obsidian';
 
 /**
  * Simplified, safe migration utility to convert legacy 'bases-cms' view types to 'cms'
@@ -8,7 +8,7 @@ export async function migrateBasesCmsToCms(app: App): Promise<number> {
     const files = app.vault.getFiles();
     let migratedCount = 0;
 
-    console.log(`Bases CMS: Starting safe vault scan for 'bases-cms' types...`);
+    console.debug(`Bases CMS: Starting safe vault scan for 'bases-cms' types...`);
 
     for (const file of files) {
         const ext = file.extension.toLowerCase();
@@ -27,7 +27,7 @@ export async function migrateBasesCmsToCms(app: App): Promise<number> {
                     if (newContent !== content) {
                         await app.vault.modify(file, newContent);
                         migratedCount++;
-                        console.log(`Bases CMS: Migrated ${file.path}`);
+                        console.debug(`Bases CMS: Migrated ${file.path}`);
                     }
                 }
             } catch (error) {
@@ -36,6 +36,6 @@ export async function migrateBasesCmsToCms(app: App): Promise<number> {
         }
     }
 
-    console.log(`Bases CMS Migration: Updated ${migratedCount} files.`);
+    console.debug(`Bases CMS Migration: Updated ${migratedCount} files.`);
     return migratedCount;
 }

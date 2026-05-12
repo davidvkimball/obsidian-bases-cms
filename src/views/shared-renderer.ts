@@ -233,8 +233,8 @@ export class SharedCardRenderer {
 				menu.showAtMouseEvent(e);
 
 				// Style Delete menu item as destructive (red/warning color)
-				setTimeout(() => {
-					const menuEl = document.querySelector('.menu');
+				activeWindow.setTimeout(() => {
+					const menuEl = activeDocument.querySelector('.menu');
 					if (!menuEl) return;
 
 					const menuItems = Array.from(menuEl.querySelectorAll('.menu-item'));
@@ -582,10 +582,10 @@ export class SharedCardRenderer {
 
 				// For cover format, render placeholder if image is expected but not loaded yet, or always
 				if (card.hasImageAvailable && !card.imageUrl) {
-					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
+					contentContainer.createDiv('card-cover-placeholder');
 				} else if (!card.imageUrl) {
 					// No image and not expected - create placeholder anyway for cover format
-					const placeholderEl = contentContainer.createDiv('card-cover-placeholder');
+					contentContainer.createDiv('card-cover-placeholder');
 				}
 			}
 		}

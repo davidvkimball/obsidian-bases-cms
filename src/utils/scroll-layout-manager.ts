@@ -129,7 +129,7 @@ export class ScrollLayoutManager {
 			}
 
 			// Start throttle cooldown
-			this.scrollThrottleTimeout = window.setTimeout(() => {
+			this.scrollThrottleTimeout = activeWindow.setTimeout(() => {
 				this.scrollThrottleTimeout = null;
 			}, 100);
 		};
@@ -386,7 +386,7 @@ export class ScrollLayoutManager {
 			}
 
 			// Throttle
-			this.scrollThrottleTimeout = window.setTimeout(() => {
+			this.scrollThrottleTimeout = activeWindow.setTimeout(() => {
 				this.scrollThrottleTimeout = null;
 			}, 16); // ~60fps
 		};

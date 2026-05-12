@@ -8,6 +8,7 @@
  */
 
 import { BasesView, BasesEntry, QueryController, BasesQueryResult } from 'obsidian';
+import { setCssProps } from '../utils/css-props';
 import type BasesCMSPlugin from '../main';
 
 export const TITLES_VIEW_TYPE = 'titles';
@@ -58,9 +59,11 @@ export class BasesTitlesView extends BasesView {
 		this.plugin = plugin;
 		// Match Dynamic Views: create content div inside the scroll container Bases provides
 		this.containerEl = parentContainerEl.createDiv('bases-titles-view bases-cms-wrapper bases-titles-loading');
-		this.containerEl.style.height = '100%';
-		this.containerEl.style.width = '100%';
-		this.containerEl.style.overflowY = 'auto';
+		setCssProps(this.containerEl, {
+			height: '100%',
+			width: '100%',
+			overflowY: 'auto'
+		});
 	}
 
 	onload(): void {
@@ -79,7 +82,7 @@ export class BasesTitlesView extends BasesView {
 
 		let entries: BasesEntry[] = [];
 		try {
-			const result = this.data as BasesQueryResult;
+			const result = this.data;
 			// Use direct .data first (API: ungrouped list). Avoid .groupedData getter which can throw.
 			if (Array.isArray(result.data)) {
 				entries = result.data;
@@ -107,23 +110,25 @@ export class BasesTitlesView extends BasesView {
 		}
 
 		// Build list in a fragment so we never show an empty container (avoids flash).
-		const fragment = document.createDocumentFragment();
-		const listEl = document.createElement('ul');
-		listEl.className = 'bases-titles-list';
-		listEl.style.listStyle = 'none';
-		listEl.style.margin = '0';
-		listEl.style.padding = '0';
+		const fragment = createFragment();
+		const listEl = fragment.createEl('ul', { cls: 'bases-titles-list' });
+		setCssProps(listEl, {
+			listStyle: 'none',
+			margin: '0',
+			padding: '0'
+		});
 
 		for (const entry of entries) {
 			const title = getTitleFromEntry(entry, titleProp) || entry.file.basename;
 			const secondary = secondaryProp ? getSecondaryFromEntry(entry, secondaryProp) : null;
 
-			const li = listEl.appendChild(document.createElement('li'));
-			const link = li.appendChild(document.createElement('a'));
-			link.href = entry.file.path;
-			link.className = 'internal-link';
+			const li = listEl.createEl('li');
+			const link = li.createEl('a', {
+				href: entry.file.path,
+				cls: 'internal-link',
+				text: title
+			});
 			link.setAttribute('data-href', entry.file.path);
-			link.textContent = title;
 			const path = entry.file.path;
 			this.registerDomEvent(link, 'click', (ev) => {
 				ev.preventDefault();
@@ -137,7 +142,7 @@ export class BasesTitlesView extends BasesView {
 				}
 			});
 			if (secondary) {
-				li.appendChild(document.createTextNode(' - ' + secondary));
+				li.appendText(' - ' + secondary);
 			}
 		}
 
@@ -149,5 +154,6 @@ export class BasesTitlesView extends BasesView {
 
 	async onClose(): Promise<void> {
 		this.containerEl?.empty();
+		await Promise.resolve();
 	}
 }
