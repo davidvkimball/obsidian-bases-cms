@@ -113,8 +113,8 @@ export class SharedCardRenderer {
 			renderDraftStatusBadge(cardEl, entry, card.path, settings, onPropertyToggle, this.app, this.mdxFrontmatterCache);
 		}
 
-		// Handle card click to open file (but not when clicking checkbox or property checkboxes)
-		cardEl.addEventListener('click', (e) => {
+		// Shared handler for opening links
+		const handleOpen = (e: MouseEvent, newLeaf: boolean) => {
 			const target = e.target as HTMLElement;
 			// Check if click is on quick edit icon or any of its children (like SVG)
 			const quickEditIcon = target.closest('.bases-cms-quick-edit-icon');
@@ -135,8 +135,8 @@ export class SharedCardRenderer {
 				return;
 			}
 
-			// Shift+Click: Toggle selection instead of opening
-			if (e.shiftKey) {
+			// Shift+Click: Toggle selection instead of opening (only for primary click)
+			if (e.shiftKey && e.button === 0) {
 				e.preventDefault();
 				e.stopPropagation();
 				e.stopImmediatePropagation();
@@ -147,8 +147,21 @@ export class SharedCardRenderer {
 				return;
 			}
 
-			const newLeaf = e.metaKey || e.ctrlKey;
 			void this.app.workspace.openLinkText(card.path, '', newLeaf);
+		};
+
+		// Handle card click to open file (but not when clicking checkbox or property checkboxes)
+		cardEl.addEventListener('click', (e) => {
+			handleOpen(e, e.metaKey || e.ctrlKey);
+		});
+
+		// Handle middle mouse click to open in another tab
+		// We use mousedown instead of auxclick to prevent the "scroll wheel" autoscroll icon
+		cardEl.addEventListener('mousedown', (e) => {
+			if (e.button === 1) { // Middle click
+				e.preventDefault();
+				handleOpen(e, true);
+			}
 		});
 
 		// Handle right-click to show context menu

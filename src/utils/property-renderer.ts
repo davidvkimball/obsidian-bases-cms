@@ -544,6 +544,13 @@ export class PropertyRenderer {
 				const newLeaf = e.metaKey || e.ctrlKey;
 				void this.app.workspace.openLinkText(trimmedValue, sourcePath, newLeaf);
 			});
+			linkEl.addEventListener('mousedown', (e: MouseEvent) => {
+				if (e.button === 1) { // Middle click
+					e.stopPropagation();
+					e.preventDefault();
+					void this.app.workspace.openLinkText(trimmedValue, sourcePath, true);
+				}
+			});
 			return;
 		}
 
@@ -597,6 +604,13 @@ export class PropertyRenderer {
 					const newLeaf = e.metaKey || e.ctrlKey;
 					void this.app.workspace.openLinkText(linkPath, sourcePath, newLeaf);
 				});
+				linkEl.addEventListener('mousedown', (e: MouseEvent) => {
+					if (e.button === 1) { // Middle click
+						e.stopPropagation();
+						e.preventDefault();
+						void this.app.workspace.openLinkText(linkPath, sourcePath, true);
+					}
+				});
 			} else if (type === 'markdown') {
 				const linkText = match[1];
 				const linkUrl = match[2];
@@ -626,6 +640,13 @@ export class PropertyRenderer {
 						e.preventDefault();
 						const newLeaf = e.metaKey || e.ctrlKey;
 						void this.app.workspace.openLinkText(linkUrl, sourcePath, newLeaf);
+					});
+					linkEl.addEventListener('mousedown', (e: MouseEvent) => {
+						if (e.button === 1) { // Middle click
+							e.stopPropagation();
+							e.preventDefault();
+							void this.app.workspace.openLinkText(linkUrl, sourcePath, true);
+						}
 					});
 				}
 			}

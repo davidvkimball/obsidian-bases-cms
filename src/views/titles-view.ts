@@ -127,7 +127,14 @@ export class BasesTitlesView extends BasesView {
 			const path = entry.file.path;
 			this.registerDomEvent(link, 'click', (ev) => {
 				ev.preventDefault();
-				void this.app.workspace.openLinkText(path, '', false);
+				const newLeaf = ev.metaKey || ev.ctrlKey;
+				void this.app.workspace.openLinkText(path, '', newLeaf);
+			});
+			this.registerDomEvent(link, 'mousedown', (ev) => {
+				if (ev.button === 1) { // Middle click
+					ev.preventDefault();
+					void this.app.workspace.openLinkText(path, '', true);
+				}
 			});
 			if (secondary) {
 				li.appendChild(document.createTextNode(' - ' + secondary));
