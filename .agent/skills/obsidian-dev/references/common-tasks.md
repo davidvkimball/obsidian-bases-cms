@@ -12,7 +12,7 @@ Update frequency: Check Obsidian Sample Plugin repo for updates
 - **common-tasks.md**: Quick snippets and basic patterns for common operations
 - **code-patterns.md**: Complete, production-ready examples with full context and error handling
 
-> **Note**: If user asks "what does the Obsidian API say about X?" or similar, check `.ref/obsidian-api/obsidian.d.ts` first. See [ref-instructions.md](ref-instructions.md) for when to check `.ref` setup.
+> **Note**: If user asks "what does the Obsidian API say about X?" or similar, check `.ref/obsidian-api/obsidian.d.ts` first. See [ref-instructions.md](../../obsidian-ref/references/ref-instructions.md) for when to check `.ref` setup.
 
 ## Organize code across multiple files
 
@@ -137,7 +137,7 @@ this.addSettingTab(new MySettingTab(this.app, this));
 - `addSearch(cb: (component: SearchComponent) => any)` - Add a search input at the beginning of the group (useful for filtering)
 - `addExtraButton(cb: (component: ExtraButtonComponent) => any)` - Add an extra button to the group
 
-**Backward Compatibility**: To support users on both Obsidian 1.11.0+ and older versions, use a compatibility utility. See [code-patterns.md](code-patterns.md) for the complete implementation with `createSettingsGroup()` utility. Alternatively, you can force `minAppVersion: "1.11.0"` in `manifest.json` if you don't need to support older versions.
+**Important**: You must set `minAppVersion: "1.11.0"` in your `manifest.json` to use these methods.
 
 ## Secret Storage
 
@@ -221,7 +221,7 @@ const value = this.app.secretStorage.getSecret("my-api-key");
 
 **Important**: Secret IDs must be lowercase alphanumeric with optional dashes (e.g., `my-plugin-api-key`). Invalid IDs will throw an error.
 
-See [security-privacy.md](security-privacy.md) for security best practices and [code-patterns.md](code-patterns.md) for comprehensive examples with error handling.
+See [security-privacy.md](../../obsidian-ops/references/security-privacy.md) for security best practices and [code-patterns.md](code-patterns.md) for comprehensive examples with error handling.
 
 ## Modal Patterns
 

@@ -51,10 +51,44 @@ If your theme requires any of the following, you **must** disclose it clearly in
 
 Themes are CSS-only and have minimal security surface area, but still follow privacy guidelines for any optional features.
 
+## Dependency Vulnerability Hygiene (Plugins)
+
+The community scorecard scans the lockfile and flags any package with a known advisory, even if the package is dev-only and never ships in `main.js`. Common offenders are transitives pulled in by `eslint`, `eslint-plugin-obsidianmd`, and `@typescript-eslint/*`: `minimatch`, `picomatch`, `brace-expansion`, `ajv`, `flatted`, `fast-uri`, `yaml`.
+
+Use `pnpm.overrides` in `package.json` to force patched versions of vulnerable transitives without changing direct dependencies. Major-version-scoped ranges avoid breaking consumers that depend on a specific major:
+
+```json
+{
+  "pnpm": {
+    "overrides": {
+      "minimatch@<3.1.3": "^3.1.3",
+      "minimatch@^4 || ^5 || ^6 || ^7 || ^8": "^8.0.5",
+      "minimatch@^9": "^9.0.6",
+      "picomatch@<2.3.2": "^2.3.2",
+      "picomatch@^3 || ^4": "^4.0.4",
+      "brace-expansion@<1.1.13": "^1.1.13",
+      "brace-expansion@^2": "^2.0.3",
+      "ajv@<6.14.0": "^6.14.0",
+      "ajv@^7 || ^8": "^8.18.0",
+      "flatted@<3.4.0": "^3.4.0",
+      "fast-uri@<3.1.1": "^3.1.1",
+      "yaml@<2.8.3": "^2.8.3"
+    }
+  }
+}
+```
+
+Verify with `pnpm install` then `pnpm why <pkg>` for each advisory. Every resolved version should be at or above the advisory's fix version.
+
+If a direct dependency (e.g. `eslint-plugin-obsidianmd`) has a newer release that already pulls in patched transitives, prefer bumping the direct dep before adding an override. Overrides are appropriate when no upstream release covers your case.
+
+See [scorecard-compliance.md](scorecard-compliance.md) for the full set of scorecard signals and their fixes.
+
 ## Related Documentation
 
 - [release-readiness.md](release-readiness.md) - Comprehensive release checklist including policy adherence
-- [manifest.md](manifest.md) - Manifest requirements (includes security-related fields)
+- [scorecard-compliance.md](scorecard-compliance.md) - Mapping of scorecard signals to concrete fixes
+- [manifest.md](../../obsidian-ref/references/manifest.md) - Manifest requirements (includes security-related fields)
 - [Developer Policies](https://docs.obsidian.md/Developer+policies) - Official Obsidian Developer Policies
 - [Theme Guidelines](https://docs.obsidian.md/Themes/Releasing/Theme+guidelines) - Official Theme Guidelines
 
