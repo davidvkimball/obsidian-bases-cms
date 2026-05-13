@@ -23,7 +23,7 @@ export function validateImageUrl(url: string): Promise<boolean> {
 		const img = new Image();
 		img.onload = () => resolve(true);
 		img.onerror = () => resolve(false);
-		activeWindow.setTimeout(() => resolve(false), 5000);
+		window.setTimeout(() => resolve(false), 5000);
 		img.src = url;
 	});
 }
@@ -267,7 +267,7 @@ export async function convertGifToStatic(
 		};
 		
 		// Set timeout to prevent hanging
-		activeWindow.setTimeout(() => {
+		window.setTimeout(() => {
 			resolve(url);
 		}, 5000);
 		

@@ -11,7 +11,7 @@ import { getFileFrontmatter } from './frontmatter-helper';
 function getNestedProperty(obj: Record<string, unknown> | null | undefined, path: string): unknown {
 	if (!obj) return undefined;
 	if (!path.includes('.')) {
-		return (obj as Record<string, unknown>)[path] !== undefined ? (obj as Record<string, unknown>)[path] : (obj as Record<string, unknown>)[path.toLowerCase()];
+		return obj[path] !== undefined ? obj[path] : obj[path.toLowerCase()];
 	}
 	const parts = path.split('.');
 	let current: unknown = obj;

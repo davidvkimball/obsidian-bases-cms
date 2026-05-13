@@ -91,8 +91,8 @@ export class PropertyToggleHandler {
 			// Only refresh if we actually made a change
 			if (shouldRefresh) {
 				// Wait for metadata cache to update, then refresh view
-				requestAnimationFrame(() => {
-					activeWindow.setTimeout(() => {
+				window.requestAnimationFrame(() => {
+					window.setTimeout(() => {
 						try {
 							this.onRefresh();
 						} catch (error) {

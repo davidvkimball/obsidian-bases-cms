@@ -12,7 +12,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 	try {
 		// Use the plugin instance itself for registration.
 		// The Bases plugin likely monkey-patches this onto the Plugin prototype.
-		const basesPlugin = plugin as any;
+		const basesPlugin = plugin as unknown as { registerBasesView?: (type: string, config: unknown) => void };
 
 		if (typeof basesPlugin.registerBasesView === 'function') {
 			const viewOptionsFn = getCMSViewOptions();
@@ -56,7 +56,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 								if (!hasData && retryCount < maxRetries) {
 									retryCount++;
 									const delay = baseDelay + (retryCount * 100); // 250ms, 350ms, 450ms, etc.
-									activeWindow.setTimeout(tryRefresh, delay);
+									window.setTimeout(tryRefresh, delay);
 								}
 							} catch (error) {
 								// Silently ignore errors during initial refresh
@@ -65,7 +65,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 						};
 
 						// Start the retry sequence after initial delay
-						activeWindow.setTimeout(tryRefresh, baseDelay);
+						window.setTimeout(tryRefresh, baseDelay);
 					}
 
 					return view;
@@ -73,8 +73,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 				options: () => viewOptionsFn(CMS_VIEW_TYPE)
 			};
 
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- registerBasesView is monkey-patched onto the plugin instance by the Bases core plugin
-			basesPlugin.registerBasesView(CMS_VIEW_TYPE, viewConfig);
+			if (basesPlugin.registerBasesView) basesPlugin.registerBasesView(CMS_VIEW_TYPE, viewConfig);
 
 			// Register titles view (list of note titles, optional secondary after dash)
 			const titlesViewConfig = {
@@ -92,7 +91,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 					}
 				]
 			};
-			basesPlugin.registerBasesView(TITLES_VIEW_TYPE, titlesViewConfig);
+			if (basesPlugin.registerBasesView) basesPlugin.registerBasesView(TITLES_VIEW_TYPE, titlesViewConfig);
 		} else if (retries > 0) {
 			// Method not available yet, retry after a short delay (common on mobile)
 			// Clear any existing timeout before setting a new one
@@ -101,7 +100,7 @@ export function registerBasesCMSView(plugin: BasesCMSPlugin, retries = 5): void 
 			if (registrationTimeout !== null && registrationTimeout !== undefined) {
 				window.clearTimeout(registrationTimeout);
 			}
-			pluginWithTimeout.registrationTimeout = activeWindow.setTimeout(() => {
+			pluginWithTimeout.registrationTimeout = window.setTimeout(() => {
 				pluginWithTimeout.registrationTimeout = null;
 				registerBasesCMSView(plugin, retries - 1);
 			}, 200);

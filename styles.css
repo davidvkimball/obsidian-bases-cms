@@ -463,7 +463,7 @@ settings:
 }
 
 /* Gap so the top row’s selection ring isn’t covered by the bulk toolbar */
-.bases-cms-bulk-toolbar + .bases-cms-container {
+.bases-cms-bulk-toolbar+.bases-cms-container {
 	margin-top: 4px;
 }
 
@@ -489,7 +489,7 @@ settings:
 /* Ensure no extra padding in embedded CMS view only (do not affect titles/cards views) */
 .markdown-rendered .bases-view[data-view-type="cms"],
 .markdown-rendered .bases-cms-container {
-	padding-right: 0 !important;
+	padding-right: 0;
 }
 
 /* Remove reserved scrollbar gutter in embedded CMS view only */
@@ -540,7 +540,7 @@ body[style*="--bases-cms-min-grid-columns: '2'"] .bases-cms-grid {
    ============================================ */
 
 .bases-cms-grid .card {
-	margin: 0 !important;
+	margin: 0;
 	display: flex;
 	flex-direction: column;
 	min-height: 100%;
@@ -557,22 +557,20 @@ body[style*="--bases-cms-min-grid-columns: '2'"] .bases-cms-grid {
 .bases-cms .card {
 	border: 1px solid var(--bases-cms-card-border-color, var(--background-modifier-border));
 	border-radius: var(--bases-cms-card-border-radius, 8px);
-	padding: var(--bases-cms-card-padding, 12px) !important;
+	padding: var(--bases-cms-card-padding, 12px);
 	margin: var(--bases-cms-card-spacing, 8px) 0;
 	background-color: var(--background-primary-alt);
-	break-inside: avoid;
-	page-break-inside: avoid;
 	transition: border-color 0.2s;
 	position: relative;
 }
 
 /* Card background styles */
 body.bases-cms-card-background-transparent .bases-cms .card {
-	background-color: transparent !important;
+	background-color: transparent;
 }
 
 body.bases-cms-card-background-custom .bases-cms .card {
-	background-color: var(--bases-cms-card-background-custom-color, var(--background-primary-alt)) !important;
+	background-color: var(--bases-cms-card-background-custom-color, var(--background-primary-alt));
 }
 
 
@@ -590,7 +588,7 @@ body.bases-cms-card-background-custom .bases-cms .card {
 @media (hover: hover) {
 	.bases-cms .card:hover {
 		--hover-color: var(--bases-cms-card-border-color-hover);
-		border-color: var(--hover-color, var(--text-faint)) !important;
+		border-color: var(--hover-color, var(--text-faint));
 	}
 }
 
@@ -624,7 +622,7 @@ body.bases-cms-card-background-custom .bases-cms .card {
 
 /* Hide checkboxes when Style Settings option is enabled */
 body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
-	display: none !important;
+	display: none;
 }
 
 .bases-cms-select-checkbox input[type="checkbox"] {
@@ -675,7 +673,7 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 .bases-cms-quick-edit-icon {
 	display: inline-flex;
 	align-items: center;
-	cursor: default !important;
+	cursor: default;
 	position: absolute;
 	right: 18px;
 	top: 0;
@@ -823,12 +821,8 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	padding-bottom: 12px;
 }
 
-.bases-cms .card.image-format-cover:has(.card-cover) .card-title {
-	margin-top: calc(var(--bases-cms-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
-}
-
-/* When placeholder exists, push title down similar to cover image */
-.bases-cms .card.image-format-cover:has(.card-cover-placeholder) .card-title {
+/* Apply margin to all cover format titles (since they either have image or placeholder) */
+.bases-cms .card.image-format-cover .card-title {
 	margin-top: calc(var(--bases-cms-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
 }
 
@@ -836,27 +830,24 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 
 .bases-cms .card.image-format-cover .card-cover {
 	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100% !important;
 	height: 0;
-	padding-top: calc(var(--bases-cms-image-aspect-ratio, 0.55) * 100%) !important;
+	padding-top: calc(var(--bases-cms-image-aspect-ratio, 0.55) * 100%);
 	border-radius: var(--bases-cms-card-border-radius, 8px) var(--bases-cms-card-border-radius, 8px) 0 0;
 	margin: 0;
 	overflow: visible;
 	/* Account for selected card's box-shadow */
 	top: -1px;
 	left: -1px;
-	width: calc(100% + 2px) !important;
+	width: calc(100% + 2px);
 }
 
 .bases-cms .card.image-format-cover .card-cover-placeholder {
 	position: absolute;
 	top: 0;
 	left: 0;
-	width: 100% !important;
+	width: 100%;
 	height: 0;
-	padding-top: calc(var(--bases-cms-image-aspect-ratio, 0.55) * 100%) !important;
+	padding-top: calc(var(--bases-cms-image-aspect-ratio, 0.55) * 100%);
 	border-radius: var(--bases-cms-card-border-radius, 8px) var(--bases-cms-card-border-radius, 8px) 0 0;
 	background-color: var(--background-modifier-border);
 	margin: 0;
@@ -884,22 +875,18 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 
 /* Cover crop alignment */
 body.bases-cms-cover-crop-top .bases-cms .card.image-format-cover .card-cover .image-embed {
-	background-position: center top !important;
+	background-position: center top;
 }
 
 body.bases-cms-cover-crop-bottom .bases-cms .card.image-format-cover .card-cover .image-embed {
-	background-position: center bottom !important;
+	background-position: center bottom;
 }
 
 body.bases-cms-cover-crop-center .bases-cms .card.image-format-cover .card-cover .image-embed,
 body:not(.bases-cms-cover-crop-top):not(.bases-cms-cover-crop-bottom) .bases-cms .card.image-format-cover .card-cover .image-embed {
-	background-position: center center !important;
+	background-position: center center;
 }
 
-/* Cover background */
-.bases-cms .card.image-format-cover .card-cover {
-	background-color: var(--background-modifier-border);
-}
 
 /* ============================================
    CARD DATE STYLING
@@ -914,23 +901,23 @@ body:not(.bases-cms-cover-crop-top):not(.bases-cms-cover-crop-bottom) .bases-cms
 
 /* Date color presets */
 body.bases-cms-date-color-faint .bases-cms .card-date {
-	color: var(--text-faint) !important;
+	color: var(--text-faint);
 }
 
 body.bases-cms-date-color-muted .bases-cms .card-date {
-	color: var(--text-muted) !important;
+	color: var(--text-muted);
 }
 
 body.bases-cms-date-color-normal .bases-cms .card-date {
-	color: var(--text-normal) !important;
+	color: var(--text-normal);
 }
 
 body.bases-cms-date-color-accent .bases-cms .card-date {
-	color: var(--text-accent) !important;
+	color: var(--text-accent);
 }
 
 body.bases-cms-date-color-custom .bases-cms .card-date {
-	color: var(--bases-cms-date-color-custom, var(--text-muted)) !important;
+	color: var(--bases-cms-date-color-custom, var(--text-muted));
 }
 
 /* Only add padding for cover format */
@@ -944,12 +931,9 @@ body.bases-cms-date-color-custom .bases-cms .card-date {
    ============================================ */
 
 .bases-cms .card-status-badge {
-	padding: 2px 6px;
-	border-radius: 10px;
-	font-size: 0.65em;
 	font-weight: 500;
 	text-transform: uppercase;
-	cursor: default !important;
+	cursor: default;
 	letter-spacing: 0.2px;
 	line-height: 1.2;
 	height: 18px;
@@ -978,14 +962,14 @@ body.bases-cms-date-color-custom .bases-cms .card-date {
 	z-index: 11;
 	margin: 0;
 	/* Ensure badge is always visible */
-	display: inline-flex !important;
-	visibility: visible !important;
-	opacity: 1 !important;
+	display: inline-flex;
+	visibility: visible;
+	opacity: 1;
 	width: auto;
 }
 
 /* Add top margin to title when badge is present so it appears below the badge */
-.bases-cms .card:not(.image-format-cover):has(.card-status-badge) .card-title {
+.bases-cms .card:not(.image-format-cover) .card-status-badge~.card-title {
 	margin-top: 32px;
 }
 
@@ -993,32 +977,32 @@ body.bases-cms-date-color-custom .bases-cms .card-date {
 /* Default style - uses the standard green/yellow colors */
 body.bases-cms-badge-style-default .bases-cms .card-status-badge.status-draft,
 body:not(.bases-cms-badge-style-minimal):not(.bases-cms-badge-style-custom) .bases-cms .card-status-badge.status-draft {
-	background-color: rgba(255, 193, 7, 0.95) !important;
+	background-color: rgba(255, 193, 7, 0.95);
 	color: rgba(0, 0, 0, 0.9);
 }
 
 body.bases-cms-badge-style-default .bases-cms .card-status-badge.status-published,
 body:not(.bases-cms-badge-style-minimal):not(.bases-cms-badge-style-custom) .bases-cms .card-status-badge.status-published {
-	background-color: rgba(46, 125, 50, 0.95) !important;
+	background-color: rgba(46, 125, 50, 0.95);
 	color: rgba(255, 255, 255, 1);
 }
 
 /* Minimal style */
 body.bases-cms-badge-style-minimal .bases-cms .card-status-badge {
-	background-color: transparent !important;
-	border: 1px solid var(--text-muted) !important;
-	color: var(--text-muted) !important;
-	box-shadow: none !important;
+	background-color: transparent;
+	border: 1px solid var(--text-muted);
+	color: var(--text-muted);
+	box-shadow: none;
 }
 
 /* Custom colors style */
 body.bases-cms-badge-style-custom .bases-cms .card-status-badge.status-draft {
-	background-color: var(--bases-cms-badge-draft-color, rgba(255, 193, 7, 0.95)) !important;
+	background-color: var(--bases-cms-badge-draft-color, rgba(255, 193, 7, 0.95));
 	color: rgba(0, 0, 0, 0.9);
 }
 
 body.bases-cms-badge-style-custom .bases-cms .card-status-badge.status-published {
-	background-color: var(--bases-cms-badge-published-color, rgba(46, 125, 50, 0.95)) !important;
+	background-color: var(--bases-cms-badge-published-color, rgba(46, 125, 50, 0.95));
 	color: rgba(255, 255, 255, 1);
 }
 
@@ -1091,8 +1075,8 @@ body.bases-cms-badge-style-custom .bases-cms .card-status-badge.status-published
 }
 
 .bases-cms .property-content {
-	font-family: var(--bases-cms-property-master-font, inherit) !important;
-	font-size: var(--bases-cms-property-master-font-size, 0.9em) !important;
+	font-family: var(--bases-cms-property-master-font, inherit);
+	font-size: var(--bases-cms-property-master-font-size, 0.9em);
 	color: var(--bases-cms-property-master-color, var(--text-muted));
 	word-break: break-word;
 	overflow-wrap: break-word;
@@ -1101,55 +1085,55 @@ body.bases-cms-badge-style-custom .bases-cms .card-status-badge.status-published
 
 /* Property color presets */
 body.bases-cms-property-color-faint .bases-cms .property-content {
-	color: var(--text-faint) !important;
+	color: var(--text-faint);
 }
 
 body.bases-cms-property-color-muted .bases-cms .property-content {
-	color: var(--text-muted) !important;
+	color: var(--text-muted);
 }
 
 body.bases-cms-property-color-normal .bases-cms .property-content {
-	color: var(--text-normal) !important;
+	color: var(--text-normal);
 }
 
 body.bases-cms-property-color-accent .bases-cms .property-content {
-	color: var(--text-accent) !important;
+	color: var(--text-accent);
 }
 
 body.bases-cms-property-color-red .bases-cms .property-content {
-	color: var(--text-error) !important;
+	color: var(--text-error);
 }
 
 body.bases-cms-property-color-orange .bases-cms .property-content {
-	color: var(--color-orange, #ff9800) !important;
+	color: var(--color-orange, #ff9800);
 }
 
 body.bases-cms-property-color-yellow .bases-cms .property-content {
-	color: var(--color-yellow, #fdd835) !important;
+	color: var(--color-yellow, #fdd835);
 }
 
 body.bases-cms-property-color-green .bases-cms .property-content {
-	color: var(--color-green, #4caf50) !important;
+	color: var(--color-green, #4caf50);
 }
 
 body.bases-cms-property-color-cyan .bases-cms .property-content {
-	color: var(--color-cyan, #00bcd4) !important;
+	color: var(--color-cyan, #00bcd4);
 }
 
 body.bases-cms-property-color-blue .bases-cms .property-content {
-	color: var(--color-blue, #2196f3) !important;
+	color: var(--color-blue, #2196f3);
 }
 
 body.bases-cms-property-color-purple .bases-cms .property-content {
-	color: var(--color-purple, #9c27b0) !important;
+	color: var(--color-purple, #9c27b0);
 }
 
 body.bases-cms-property-color-pink .bases-cms .property-content {
-	color: var(--color-pink, #e91e63) !important;
+	color: var(--color-pink, #e91e63);
 }
 
 body.bases-cms-property-color-custom .bases-cms .property-content {
-	color: var(--bases-cms-property-color-custom, var(--text-muted)) !important;
+	color: var(--bases-cms-property-color-custom, var(--text-muted));
 }
 
 /* Fade empty marker - dimmed by default (works without Style Settings) */
@@ -1280,7 +1264,7 @@ body.bases-cms-property-color-custom .bases-cms .property-content {
 }
 
 /* Checkbox properties - Native Obsidian styling */
-.bases-cms .property-content:has(input[type="checkbox"]) {
+.bases-cms .property-content.is-checkbox-prop {
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -1373,7 +1357,7 @@ body.bases-cms-property-color-custom .bases-cms .property-content {
 
 /* Selected count styling */
 .bases-cms-selected-count {
-	margin-left: 0.75rem !important;
+	margin-left: 0.75rem;
 }
 
 .bases-cms-selected-count .text-button-label {
@@ -1384,7 +1368,7 @@ body.bases-cms-property-color-custom .bases-cms .property-content {
 }
 
 .bases-cms-selected-count:hover {
-	background: transparent !important;
+	background: transparent;
 }
 
 /* Use Bases' existing text-icon-button styles, but ensure cursor is default */
@@ -1403,8 +1387,8 @@ body.bases-cms-property-color-custom .bases-cms .property-content {
 }
 
 .bases-cms-bulk-toolbar .text-icon-button.destructive .text-button-icon svg {
-	color: var(--text-error) !important;
-	stroke: var(--text-error) !important;
+	color: var(--text-error);
+	stroke: var(--text-error);
 }
 
 .bases-cms-bulk-toolbar .text-icon-button.destructive:hover {
@@ -1429,24 +1413,24 @@ body.bases-cms-property-color-custom .bases-cms .property-content {
 /* Bulk toolbar visibility states */
 
 .bases-cms-bulk-toolbar-hidden {
-	display: none !important;
+	display: none;
 }
 
 .bases-cms-bulk-toolbar-visible {
-	display: flex !important;
-	visibility: visible !important;
-	opacity: 1 !important;
-	transform: translateY(0) !important;
+	display: flex;
+	visibility: visible;
+	opacity: 1;
+	transform: translateY(0);
 }
 
 .bases-cms-bulk-toolbar-animating-in {
-	opacity: 1 !important;
-	transform: translateY(0) !important;
+	opacity: 1;
+	transform: translateY(0);
 }
 
 .bases-cms-bulk-toolbar-animating-out {
-	opacity: 0 !important;
-	transform: translateY(-10px) !important;
+	opacity: 0;
+	transform: translateY(-10px);
 }
 
 .bases-cms-properties-hidden {
@@ -1472,7 +1456,7 @@ body.bases-cms-property-color-custom .bases-cms .property-content {
 
 /* Always keep the selected count text visible */
 .bases-cms-bulk-toolbar.collapsed .bases-cms-selected-count .text-button-label {
-	display: block !important;
+	display: block;
 }
 
 /* When collapsed, reduce padding on buttons to save space */

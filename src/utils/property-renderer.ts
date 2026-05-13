@@ -455,6 +455,7 @@ export class PropertyRenderer {
 				(entryValue && 'data' in entryValue && typeof entryValue.data === 'boolean');
 
 			if (isCheckbox && onPropertyToggle) {
+				metaContent.addClass('is-checkbox-prop');
 				// Render as native Obsidian checkbox - simple input checkbox
 				const checkbox = metaContent.createEl('input', { type: 'checkbox' });
 				checkbox.checked = entryValue && 'data' in entryValue ? Boolean(entryValue.data) : false;

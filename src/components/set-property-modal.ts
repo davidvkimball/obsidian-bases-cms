@@ -58,7 +58,7 @@ export class SetPropertyModal extends Modal {
 		// Property value
 		new Setting(contentEl)
 			.setName('Property value')
-			.setDesc('Enter the property value. For List type, use comma- or newline-separated values.')
+			.setDesc('Enter the property value. For list type, use comma- or newline-separated values.')
 			.addText(text => {
 				text
 					.setPlaceholder('Enter value')

@@ -233,7 +233,7 @@ export class SharedCardRenderer {
 				menu.showAtMouseEvent(e);
 
 				// Style Delete menu item as destructive (red/warning color)
-				activeWindow.setTimeout(() => {
+				window.setTimeout(() => {
 					const menuEl = activeDocument.querySelector('.menu');
 					if (!menuEl) return;
 
@@ -348,8 +348,8 @@ export class SharedCardRenderer {
 								// Always try to render the date, even if cardEl might not be connected yet
 								// The date element will be created/updated when the card is rendered
 								if (date) {
-									// Use requestAnimationFrame to ensure DOM is ready
-									requestAnimationFrame(() => {
+									// Use window.requestAnimationFrame to ensure DOM is ready
+									window.requestAnimationFrame(() => {
 										if (cardEl.isConnected) {
 											// Format date based on settings
 											let dateString: string;

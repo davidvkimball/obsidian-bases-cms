@@ -33,7 +33,7 @@ export class ManageTagsModal extends Modal {
 			.addText(text => {
 				text
 					// False positive: Placeholder text with code examples, not UI text
-					.setPlaceholder('tag1, tag2, tag3')
+					.setPlaceholder('Tag1, tag2, tag3')
 					.onChange(value => {
 						this.tagsToAdd = value;
 					});

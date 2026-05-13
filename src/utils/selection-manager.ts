@@ -196,7 +196,7 @@ export class SelectionManager {
 		
 		// Restore selection after refresh completes
 		// Use multiple timeouts to ensure it works even if the first one is too early
-		activeWindow.setTimeout(() => {
+		window.setTimeout(() => {
 			// Restore selection
 			selectedPaths.forEach(path => {
 				if (this.app.vault.getAbstractFileByPath(path)) {
@@ -215,7 +215,7 @@ export class SelectionManager {
 			}
 			
 			// Double-check after a bit more time
-			activeWindow.setTimeout(() => {
+			window.setTimeout(() => {
 				if (this.selectedFiles.size > 0 && this.bulkToolbar) {
 					this.bulkToolbar.show();
 					this.bulkToolbar.updateCount(this.selectedFiles.size);

@@ -4,6 +4,8 @@ import { CommandPickerModal } from './components/command-picker-modal';
 import { IconPickerModal } from './components/icon-picker-modal';
 
 
+
+
 export class BasesCMSSettingTab extends PluginSettingTab {
 	plugin: Plugin & { settings: BasesCMSSettings };
 	public icon = 'lucide-blocks';
@@ -48,7 +50,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show select all button')
-				.setDesc('Display the select all button in the CMS toolbar.')
+				.setDesc('Display the select all button in the toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarSelectAll);
 					toggle.onChange(async value => {
@@ -62,7 +64,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show clear button')
-				.setDesc('Display the clear selection button in the CMS toolbar.')
+				.setDesc('Display the clear selection button in the toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarClear);
 					toggle.onChange(async value => {
@@ -76,7 +78,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show publish button')
-				.setDesc('Display the publish button in the CMS toolbar.')
+				.setDesc('Display the publish button in the toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarPublish);
 					toggle.onChange(async value => {
@@ -90,7 +92,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show draft button')
-				.setDesc('Display the draft button in the CMS toolbar.')
+				.setDesc('Display the draft button in the toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarDraft);
 					toggle.onChange(async value => {
@@ -104,7 +106,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show tags button')
-				.setDesc('Display the tags button in the CMS toolbar.')
+				.setDesc('Display the tags button in the toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarTags);
 					toggle.onChange(async value => {
@@ -118,7 +120,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show set button')
-				.setDesc('Display the set property button in the CMS toolbar.')
+				.setDesc('Display the set property button in the toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarSet);
 					toggle.onChange(async value => {
@@ -132,7 +134,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show remove button')
-				.setDesc('Display the remove property button in the CMS toolbar.')
+				.setDesc('Display the remove property button in the toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarRemove);
 					toggle.onChange(async value => {
@@ -146,7 +148,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		toolbarButtonsGroup.addSetting(setting => {
 			setting
 				.setName('Show delete button')
-				.setDesc('Display the delete button in the CMS toolbar.')
+				.setDesc('Display the delete button in the toolbar.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.showToolbarDelete);
 					toggle.onChange(async value => {
@@ -178,7 +180,7 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 				.setName('Folder deletion file name')
 				.setDesc('File name that triggers parent folder deletion.')
 				.addText(text => {
-					text.setPlaceholder('index');
+					text.setPlaceholder('Index');
 					text.setValue(this.plugin.settings.deleteParentFolderFilename);
 					text.onChange(async value => {
 						this.plugin.settings.deleteParentFolderFilename = value;
@@ -219,8 +221,8 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		appearanceGroup.addSetting(setting => {
 			setting
-				.setName('Use home icon for CMS view')
-				.setDesc('Use the home icon instead of blocks icon for the CMS view in the Bases view selector. Restart Obsidian for this change to take effect.')
+				.setName('Use home icon for the plugin view')
+				.setDesc('Use the home icon instead of blocks icon for the plugin view in the view selector. Restart Obsidian for this change to take effect.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.useHomeIcon);
 					toggle.onChange(async value => {
@@ -232,8 +234,8 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 
 		appearanceGroup.addSetting(setting => {
 			setting
-				.setName('Force static image for animated GIFs')
-				.setDesc('When enabled, animated GIFs will display only the first frame when used as card covers or thumbnails.')
+				.setName('Force static image for animated gifs')
+				.setDesc('When enabled, animated gifs will display only the first frame when used as card covers or thumbnails.')
 				.addToggle(toggle => {
 					toggle.setValue(this.plugin.settings.forceStaticGifImages);
 					toggle.onChange(async value => {

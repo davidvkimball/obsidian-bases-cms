@@ -62,7 +62,7 @@ function applyNestedPathFix(container: HTMLElement) {
 						// Also listen for clicks on the label container just in case
 						const container = checkbox.closest('.checkbox-container');
 						if (container) {
-							container.addEventListener('click', () => activeWindow.setTimeout(updateVisibility, 50));
+							container.addEventListener('click', () => window.setTimeout(updateVisibility, 50));
 						}
 					}
 

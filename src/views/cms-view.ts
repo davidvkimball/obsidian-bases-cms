@@ -446,10 +446,10 @@ export class BasesCMSView extends BasesView {
 					// Try to get the property name
 					let groupProperty = '';
 					try {
-						const cfg = this.config as any;
+						const cfg = this.config as { get?: (key: string) => unknown; groupBy?: unknown; group?: unknown; getDisplayName?: (key: string) => unknown; };
 						
 						// Try to get group property from various possible locations in Bases config
-						let groupObj = null;
+						let groupObj: unknown = null;
 						if (typeof cfg.get === 'function') {
 							groupObj = cfg.get('groupBy') || cfg.get('group');
 						}
@@ -462,18 +462,22 @@ export class BasesCMSView extends BasesView {
 						if (groupObj) {
 							if (typeof groupObj === 'string') {
 								groupProperty = groupObj;
-							} else if (groupObj.property) {
-								groupProperty = groupObj.property;
-							} else if (Array.isArray(groupObj) && groupObj.length > 0) {
-								groupProperty = groupObj[0].property || (typeof groupObj[0] === 'string' ? groupObj[0] : '');
-							} else if (typeof groupObj === 'object' && Object.keys(groupObj).length > 0) {
-								groupProperty = Object.keys(groupObj)[0];
+							} else if (typeof groupObj === 'object') {
+								const gObj = groupObj as { property?: string };
+								if (gObj.property) {
+									groupProperty = gObj.property;
+								} else if (Array.isArray(groupObj) && groupObj.length > 0) {
+									const first = groupObj[0] as { property?: string } | string;
+									groupProperty = typeof first === 'string' ? first : (first.property || '');
+								} else {
+									groupProperty = Object.keys(groupObj)[0];
+								}
 							}
 						}
 						
 						// If still nothing, check if the group object itself has a property reference
 						if (!groupProperty && processedGroup.group) {
-							const grp = processedGroup.group as any;
+							const grp = processedGroup.group as { property?: string; propertyId?: string };
 							if (grp.property) groupProperty = grp.property;
 							else if (grp.propertyId) groupProperty = grp.propertyId;
 						}
@@ -482,7 +486,7 @@ export class BasesCMSView extends BasesView {
 						if (groupProperty && typeof groupProperty === 'string') {
 							if (typeof cfg.getDisplayName === 'function') {
 								const displayName = cfg.getDisplayName(groupProperty);
-								if (displayName && displayName !== groupProperty) {
+								if (typeof displayName === 'string' && displayName && displayName !== groupProperty) {
 									groupProperty = displayName;
 								} else {
 									groupProperty = groupProperty.replace(/^[^.]+\./, ''); // remove 'note.' prefix
@@ -491,7 +495,7 @@ export class BasesCMSView extends BasesView {
 								groupProperty = groupProperty.replace(/^[^.]+\./, ''); // remove 'note.' prefix
 							}
 						}
-					} catch (e) {
+					} catch {
 						// ignore
 					}
 
@@ -563,7 +567,7 @@ export class BasesCMSView extends BasesView {
 			const firstCard = feedEl.querySelector('.bases-cms-card') as HTMLElement;
 			if (firstCard) {
 				// Measure actual card height after render
-				requestAnimationFrame(() => {
+				window.requestAnimationFrame(() => {
 					const cardHeight = firstCard.offsetHeight;
 					const containerWidth = this.containerEl.clientWidth;
 					const cardMinWidth = settings.cardSize || 280;
@@ -686,7 +690,7 @@ export class BasesCMSView extends BasesView {
 						});
 					}
 					// Retry after a short delay
-					activeWindow.setTimeout(() => {
+					window.setTimeout(() => {
 						if (isStillValid() && this.data) {
 							this.onDataUpdated();
 						}
@@ -766,7 +770,7 @@ export class BasesCMSView extends BasesView {
 
 				// Ensure we have valid data structures
 				if (!this.data.groupedData || !this.data.data) {
-					activeWindow.setTimeout(() => {
+					window.setTimeout(() => {
 						if (isStillValid() && this.data && this.data.groupedData && this.data.data) {
 							this.onDataUpdated();
 						}
@@ -1462,7 +1466,7 @@ export class BasesCMSView extends BasesView {
 
 						// Restore selection after refresh completes
 						// Use multiple timeouts to ensure it works even if the first one is too early
-						activeWindow.setTimeout(() => {
+						window.setTimeout(() => {
 							// Restore selection
 							selectedPaths.forEach(path => {
 								if (this.app.vault.getAbstractFileByPath(path)) {
@@ -1481,7 +1485,7 @@ export class BasesCMSView extends BasesView {
 							}
 
 							// Double-check after a bit more time
-							activeWindow.setTimeout(() => {
+							window.setTimeout(() => {
 								if (this.selectedFiles.size > 0 && this.bulkToolbar) {
 									this.bulkToolbar.show();
 									this.bulkToolbar.updateCount(this.selectedFiles.size);
@@ -1519,7 +1523,7 @@ export class BasesCMSView extends BasesView {
 		}
 	}
 
-	async onClose(): Promise<void> {
+	onClose(): Promise<void> {
 		this.scrollLayoutManager.cleanup();
 		if (this.viewSwitchListener) {
 			this.viewSwitchListener.cleanup();
@@ -1545,6 +1549,8 @@ export class BasesCMSView extends BasesView {
 		if (pluginWithMethod && typeof pluginWithMethod.removeView === 'function') {
 			pluginWithMethod.removeView(this);
 		}
+
+		return Promise.resolve();
 	}
 
 	/**

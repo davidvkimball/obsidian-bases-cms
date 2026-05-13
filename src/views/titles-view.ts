@@ -7,7 +7,7 @@
  * so Obsidian has set config and data before we read them.
  */
 
-import { BasesView, BasesEntry, QueryController, BasesQueryResult } from 'obsidian';
+import { BasesView, BasesEntry, QueryController } from 'obsidian';
 import { setCssProps } from '../utils/css-props';
 import type BasesCMSPlugin from '../main';
 
@@ -20,7 +20,7 @@ function getTitleFromEntry(entry: BasesEntry, titleProperty: string): string {
 		const d = value.data;
 		if (typeof d === 'string' || typeof d === 'number') return String(d).trim() || entry.file.basename;
 		if (Array.isArray(d)) {
-			const first = d[0];
+			const first = (d as unknown[])[0];
 			if (first != null && typeof first === 'object' && 'data' in first) return String((first as { data: unknown }).data).trim() || entry.file.basename;
 		}
 	}
@@ -41,7 +41,7 @@ function getSecondaryFromEntry(entry: BasesEntry, propertyKey: string): string |
 		if (typeof d === 'boolean') return String(d);
 		if (d instanceof Date) return d.toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' });
 		if (Array.isArray(d) && d.length > 0) {
-			const first = d[0];
+			const first = (d as unknown[])[0];
 			if (first != null && typeof first === 'object' && 'data' in first) return String((first as { data: unknown }).data);
 			return String(first);
 		}

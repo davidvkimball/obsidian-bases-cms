@@ -102,13 +102,13 @@ export default class BasesCMSPlugin extends Plugin {
 	onunload() {
 		// Clear any pending registration timeout
 		if (this.registrationTimeout !== null) {
-			activeWindow.clearTimeout(this.registrationTimeout);
+			window.clearTimeout(this.registrationTimeout);
 			this.registrationTimeout = null;
 		}
 
 		// Clear any pending embedded view refresh timeout
 		if (this.refreshEmbeddedViewsTimeout !== null) {
-			activeWindow.clearTimeout(this.refreshEmbeddedViewsTimeout);
+			window.clearTimeout(this.refreshEmbeddedViewsTimeout);
 			this.refreshEmbeddedViewsTimeout = null;
 		}
 
@@ -215,7 +215,7 @@ export default class BasesCMSPlugin extends Plugin {
 			window.clearTimeout(this.refreshEmbeddedViewsTimeout);
 		}
 
-		this.refreshEmbeddedViewsTimeout = activeWindow.setTimeout(() => {
+		this.refreshEmbeddedViewsTimeout = window.setTimeout(() => {
 			this.refreshEmbeddedViewsTimeout = null;
 
 			this.cleanupStaleViews();
