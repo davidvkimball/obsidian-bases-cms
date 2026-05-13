@@ -154,7 +154,7 @@ export class BulkToolbar {
 		// Left side: Selected count (not a button, just text)
 		const countItem = leftContainer.createDiv('bases-toolbar-item bases-cms-selected-count');
 		this.countEl = countItem.createSpan('text-button-label');
-		this.countEl.setText('0 selected');
+		this.countEl.setText('0 Selected');
 
 		// Right side container (all action buttons)
 		const rightContainer = this.toolbarEl.createDiv('bases-cms-bulk-toolbar-right');
@@ -270,7 +270,7 @@ export class BulkToolbar {
 
 	updateCount(count: number): void {
 		if (this.countEl) {
-			this.countEl.setText(`${count} selected`);
+			this.countEl.setText(`${count} Selected`);
 		}
 		// Count change might affect width/threshold
 		this.updateCollapsedState();

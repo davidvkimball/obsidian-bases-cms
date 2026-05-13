@@ -95,7 +95,7 @@ export class BasesCMSView extends BasesView {
 		try {
 			this.propertyToggleHandler = new PropertyToggleHandler(
 				this.app,
-				this.config as { get: (key: string) => unknown },
+				this.config,
 				this.plugin.settings,
 				() => this.onDataUpdated()
 			);
@@ -134,7 +134,7 @@ export class BasesCMSView extends BasesView {
 			this.viewSwitchListener = new ViewSwitchListener(
 				this.containerEl,
 				this.plugin,
-				this.config as { getName?: () => string; name?: string },
+				this.config,
 				(this as unknown as { controller?: { getBaseName?: () => string; baseName?: string } }).controller,
 				this.data as { baseName?: string } | undefined,
 				this.selectedFiles,
@@ -230,7 +230,7 @@ export class BasesCMSView extends BasesView {
 		// Extract data from Bases API format
 		let data: unknown = value;
 		if (typeof value === 'object' && 'data' in value) {
-			data = (value as { data: unknown }).data;
+			data = (value).data;
 		}
 
 		if (!data) return null;
@@ -291,7 +291,7 @@ export class BasesCMSView extends BasesView {
 		// Extract data from Bases API format
 		let data: unknown = value;
 		if (typeof value === 'object' && 'data' in value) {
-			data = (value as { data: unknown }).data;
+			data = (value).data;
 		}
 
 		if (typeof data === 'string') {
@@ -798,7 +798,7 @@ export class BasesCMSView extends BasesView {
 				// Update config reference in scroll layout manager if it's now available
 				if (this.config && typeof (this.config as { get?: (key: string) => unknown }).get === 'function') {
 					try {
-						this.scrollLayoutManager.updateConfig(this.config as { get: (key: string) => unknown });
+						this.scrollLayoutManager.updateConfig(this.config);
 					} catch {
 						// Ignore - config update is optional
 					}
@@ -815,7 +815,7 @@ export class BasesCMSView extends BasesView {
 
 				// Process groups and apply custom sorting for properties
 				let processedGroups: Array<{ group: { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] }; entries: BasesEntry[] }> = groupedData.map(group => ({
-					group: group as { hasKey: () => boolean; key?: unknown; entries: BasesEntry[] },
+					group: group,
 					entries: [...group.entries]
 				}));
 
@@ -1123,7 +1123,7 @@ export class BasesCMSView extends BasesView {
 					return {
 						path: entry.file.path,
 						file,
-						imagePropertyValues: imagePropertyValues as unknown[]
+						imagePropertyValues: imagePropertyValues
 					};
 				});
 			const imageEntries = (await Promise.all(imageEntriesPromises))

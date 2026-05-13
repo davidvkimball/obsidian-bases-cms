@@ -162,7 +162,7 @@ export async function loadFilePreview(
 			// Join array items into a string
 			const items = propertyValue.map((item: unknown) => {
 				if (item && typeof item === 'object' && 'data' in item) {
-					return String((item as { data: unknown }).data);
+					return String((item).data);
 				}
 				return String(item);
 			}).filter((s: string) => s.trim().length > 0);

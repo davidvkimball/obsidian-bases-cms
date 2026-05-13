@@ -21,7 +21,7 @@ function getTitleFromEntry(entry: BasesEntry, titleProperty: string): string {
 		if (typeof d === 'string' || typeof d === 'number') return String(d).trim() || entry.file.basename;
 		if (Array.isArray(d)) {
 			const first = (d as unknown[])[0];
-			if (first != null && typeof first === 'object' && 'data' in first) return String((first as { data: unknown }).data).trim() || entry.file.basename;
+			if (first != null && typeof first === 'object' && 'data' in first) return String((first).data).trim() || entry.file.basename;
 		}
 	}
 	return entry.file.basename || entry.file.name;
@@ -42,7 +42,7 @@ function getSecondaryFromEntry(entry: BasesEntry, propertyKey: string): string |
 		if (d instanceof Date) return d.toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' });
 		if (Array.isArray(d) && d.length > 0) {
 			const first = (d as unknown[])[0];
-			if (first != null && typeof first === 'object' && 'data' in first) return String((first as { data: unknown }).data);
+			if (first != null && typeof first === 'object' && 'data' in first) return String((first).data);
 			return String(first);
 		}
 	}

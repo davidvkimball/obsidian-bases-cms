@@ -205,7 +205,7 @@ export async function basesEntryToCardData(
 			// Join array items into a string
 			const items = titleData.map((item: unknown) => {
 				if (item && typeof item === 'object' && 'data' in item) {
-					return String((item as { data: unknown }).data);
+					return String((item).data);
 				}
 				return String(item);
 			}).filter((s: string) => s.trim().length > 0);
@@ -267,7 +267,7 @@ export async function basesEntryToCardData(
 		const rawTags = Array.isArray(tagData)
 			? tagData.map((t: unknown) => {
 				if (t && typeof t === 'object' && 'data' in t) {
-					return String((t as { data: unknown }).data);
+					return String((t).data);
 				}
 				return (typeof t === 'string' || typeof t === 'number') ? String(t) : '';
 			}).filter(t => t)
@@ -284,7 +284,7 @@ export async function basesEntryToCardData(
 			const rawTags = Array.isArray(tagData)
 				? tagData.map((t: unknown) => {
 					if (t && typeof t === 'object' && t !== null && 'data' in t) {
-						const itemData = (t as { data: unknown }).data;
+						const itemData = (t).data;
 						if (itemData && typeof itemData === 'object' && itemData !== null) {
 							return JSON.stringify(itemData);
 						}
@@ -325,7 +325,7 @@ export async function basesEntryToCardData(
 			if (Array.isArray(tagData)) {
 				displayTags = tagData.map((t: unknown) => {
 					if (t && typeof t === 'object' && 'data' in t) {
-						return String((t as { data: unknown }).data);
+						return String((t).data);
 					}
 					return (typeof t === 'string' || typeof t === 'number') ? String(t) : '';
 				}).filter((t): t is string => typeof t === 'string' && t.length > 0);
@@ -550,7 +550,7 @@ export async function resolveBasesPropertyAsync(
 				const itemData = (item as { data: unknown }).data;
 				// Handle nested data structures - if data itself is an object with data, extract recursively
 				if (itemData && typeof itemData === 'object' && !Array.isArray(itemData) && 'data' in itemData) {
-					str = String((itemData as { data: unknown }).data);
+					str = String((itemData).data);
 				} else {
 					str = String(itemData);
 				}

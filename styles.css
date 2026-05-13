@@ -802,10 +802,10 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	padding-right: 12px;
 }
 
-/* Ensure cover view title has enough padding for the quick edit icon */
+/* Cover view title: padding-right for the quick edit icon, margin-top to clear the cover image */
 .bases-cms .card.image-format-cover .card-title {
 	padding-right: 42px;
-	/* Override the 12px above to make room for icon */
+	margin-top: calc(var(--bases-cms-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
 }
 
 .bases-cms .card.image-format-cover>.card-title:first-child,
@@ -821,11 +821,6 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	padding-bottom: 12px;
 }
 
-/* Apply margin to all cover format titles (since they either have image or placeholder) */
-.bases-cms .card.image-format-cover .card-title {
-	margin-top: calc(var(--bases-cms-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
-}
-
 /* Title is always shown - no special handling needed for missing titles */
 
 .bases-cms .card.image-format-cover .card-cover {
@@ -839,6 +834,8 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	top: -1px;
 	left: -1px;
 	width: calc(100% + 2px);
+	/* Background visible when image has transparency or doesn't fill the area in contain mode */
+	background-color: var(--background-modifier-border);
 }
 
 .bases-cms .card.image-format-cover .card-cover-placeholder {
@@ -865,12 +862,6 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	background-position: center center;
 	background-repeat: no-repeat;
 	filter: blur(0.5px);
-}
-
-/* Cover background styles apply to the cover container, visible when image doesn't fill (contain mode) */
-/* For cover mode, background is only visible if image has transparency or doesn't fill the area */
-.bases-cms .card.image-format-cover .card-cover {
-	background-color: var(--background-modifier-border);
 }
 
 /* Cover crop alignment */

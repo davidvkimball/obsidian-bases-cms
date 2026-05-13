@@ -8,12 +8,16 @@ export default defineConfig([
   {
     ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "scripts/**", ".ref/**"]
   },
-  ...obsidianmd.configs.recommended,
+  // obsidianmd recommended rules require type info, so only apply to TS files
+  ...obsidianmd.configs.recommended.map((config) => ({
+    ...config,
+    files: config.files ?? ["**/*.ts"],
+  })),
   {
     files: ["**/*.ts"],
     languageOptions: {
       parser: tsparser,
-      parserOptions: { 
+      parserOptions: {
         project: "./tsconfig.json",
         sourceType: "module"
       },
