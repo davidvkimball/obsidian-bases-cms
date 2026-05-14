@@ -31,6 +31,7 @@ on:
   push:
     tags:
       - "*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -49,6 +50,8 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      - id: version
+        run: echo "version=$(jq -r .version manifest.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
@@ -57,13 +60,19 @@ jobs:
             manifest.json
       - env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "$TAG" \
-            --title="$TAG" \
-            --generate-notes \
-            main.js styles.css manifest.json
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            gh release upload "$VERSION" main.js styles.css manifest.json --clobber
+          else
+            gh release create "$VERSION" \
+              --title="$VERSION" \
+              --generate-notes \
+              main.js styles.css manifest.json
+          fi
 ```
+
+**Why read the version from `manifest.json`**: the workflow runs from either a tag push (where `github.ref_name` is the tag) or a `workflow_dispatch` from a branch (where `github.ref_name` is the branch name, e.g. `master`). Using `github.ref_name` directly would title a manually-triggered release after the branch. Reading from `manifest.json` is consistent across both triggers and matches what Obsidian's plugin loader actually reads.
 
 Cut releases by pushing a tag (`git tag 0.1.0 && git push origin 0.1.0`). The workflow attaches the three required assets and registers the attestation. The scorecard's "Build verified" signal also fires once the workflow has run, because the attested artifacts can be reproduced byte-for-byte from source.
 

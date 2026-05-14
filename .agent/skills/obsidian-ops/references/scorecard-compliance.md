@@ -92,6 +92,7 @@ on:
   push:
     tags:
       - "*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -110,6 +111,8 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      - id: version
+        run: echo "version=$(jq -r .version manifest.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
@@ -118,10 +121,10 @@ jobs:
             manifest.json
       - env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "$TAG" \
-            --title="$TAG" \
+          gh release create "$VERSION" \
+            --title="$VERSION" \
             --generate-notes \
             main.js styles.css manifest.json
 ```
