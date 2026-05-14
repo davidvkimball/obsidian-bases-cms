@@ -69,6 +69,42 @@ Cut releases by pushing a tag (`git tag 0.1.0 && git push origin 0.1.0`). The wo
 
 For the full set of scorecard signals and their fixes, see [scorecard-compliance.md](scorecard-compliance.md).
 
+### Pushing tags so the workflow actually fires
+
+Push order matters. Push commits to the default branch **first**, in a separate command, then push the tag. If you push both in a single batch (`git push --tags --follow-tags` or some GUIs), GitHub occasionally processes the tag webhook before indexing the workflow file at that ref, and the trigger silently drops.
+
+```bash
+git push origin master           # commits first
+# pause a few seconds
+git push origin 0.1.0            # tag in a separate command
+```
+
+If the workflow does not fire on a tag push, diagnose with:
+
+```bash
+gh api repos/:owner/:repo/actions/runs --jq '.workflow_runs[0:5] | .[] | {id, event, status, conclusion, head_branch, created_at}'
+gh workflow list
+gh api repos/:owner/:repo/actions/permissions/workflow
+```
+
+If `gh api .../runs` is empty for the tag, the trigger was dropped. Recovery options:
+
+- **Add `workflow_dispatch:` to the trigger** so you can re-run from the Actions tab without a re-push.
+- **Re-push the tag**: `git push origin :refs/tags/0.1.0 && git push origin 0.1.0`.
+- **Manually create the release** in the GitHub UI. The release will exist but it will not have the build provenance attestation, which costs scorecard points until the next release.
+
+### Recovery trigger
+
+It is worth adding a manual trigger alongside the tag-push trigger so future "the workflow didn't fire" situations have a one-click fix:
+
+```yaml
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+```
+
 > [!NOTE]
 > Themes and plugins have different asset requirements and submission paths. Ensure you follow the correct flow for your project type.
 

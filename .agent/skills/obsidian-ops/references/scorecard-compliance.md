@@ -134,6 +134,62 @@ Then cut releases by pushing a tag (e.g. `git tag 0.1.0 && git push origin 0.1.0
 
 **Fix**: merge the two rule blocks. If they target the same selector and have non-overlapping properties, combine into one block. If they target the same selector and one is meant to override the other (e.g. inside a media query), wrap the override in a more specific selector or use a CSS variable.
 
+### `!important` declarations
+
+> Avoid `!important`. Override styles by increasing selector specificity or using CSS variables instead.
+
+The fix is almost never to keep `!important` and hope the scorecard ignores it. Instead, scope the rule with a parent class so it wins the cascade naturally.
+
+```css
+/* Wrong: leans on !important to beat Obsidian's defaults */
+.my-plugin-btn {
+  border: none !important;
+  background: none !important;
+}
+
+/* Right: parent class boosts specificity, no !important needed */
+.my-plugin-panel .my-plugin-btn {
+  border: none;
+  background: none;
+}
+```
+
+The parent class is whatever wrapper the plugin's UI lives inside (e.g. the panel root, settings container). For toggle classes that need to beat an element's natural display, chain the toggle class with the base class for the same specificity boost: `.my-plugin-panel .my-toggle-hidden { display: none; }`.
+
+### `:has()` selector
+
+> Avoid `:has()`. It can cause significant performance issues due to broad selector invalidation.
+
+Most uses of `:has()` are stylistic preferences that can be rewritten as descendant selectors targeting the child element directly.
+
+```css
+/* Wrong: re-styles the parent based on a descendant */
+.result:has(a[href*="http"]) {
+  word-break: break-all;
+}
+
+/* Right: targets the child directly */
+.result a[href*="http"] {
+  word-break: break-all;
+}
+```
+
+If the rule genuinely needs to style a parent based on a child's presence, fall back to adding a marker class via TypeScript when the child is appended (e.g. `parentEl.addClass('has-external-link')`).
+
+### Don't override global Obsidian UI selectors
+
+A plugin's `styles.css` is loaded globally. Rules targeting Obsidian's built-in classes affect every other plugin and Obsidian itself, not just yours.
+
+```css
+/* Wrong: forces flex layout on every menu in Obsidian, not just this plugin's */
+.menu .menu-item {
+  display: flex !important;
+  justify-content: space-between !important;
+}
+```
+
+**Fix**: either remove the rule and accept Obsidian's default styling, or scope it. Menus appended outside your plugin's panel (via `new Menu()`) can't be scoped via parent class, so the rule has to be removed, or a marker class added when the menu is opened. The scorecard does not specifically flag this leak, but it's a hygiene rule that prevents conflicts with other plugins.
+
 ### `obsidianmd` ESLint rules (Warnings and Risks)
 
 `eslint-plugin-obsidianmd` enforces Obsidian-idiomatic patterns. Common signals and fixes:
@@ -153,6 +209,18 @@ this.countEl.setText('0 Selected');
 ```
 
 **Never disable this rule.** The scorecard explicitly flags `eslint-disable-next-line obsidianmd/ui/sentence-case` as a Risk and counts each occurrence. If a string genuinely cannot be sentence case (e.g. it embeds a proper noun or product name), fix the casing instead of disabling.
+
+**Configure the rule for domain-specific acronyms.** The rule accepts `acronyms`, `brands`, `ignoreWords`, and `ignoreRegex` options. Use these when your plugin legitimately uses acronyms or quoted button names that the rule otherwise rejects.
+
+```js
+// eslint.config.mjs
+"obsidianmd/ui/sentence-case": ["error", {
+  acronyms: ["SEO", "MDX", "URL", "CSV", "H1", "H2", "H3", "H4", "H5", "H6"],
+  ignoreRegex: ['"[^"]+"'],  // ignore content inside double quotes (referenced button/control names)
+}]
+```
+
+This is the right answer when the autofix expected output is something like `'Open seo audit panel'` (downcased acronym) but the string genuinely should read `'Open SEO audit panel'`. Configuring the rule is preferred over per-line disables, which are forbidden, or awkward rephrasing.
 
 #### `obsidianmd/prefer-create-el-shorthand` (Warning)
 
