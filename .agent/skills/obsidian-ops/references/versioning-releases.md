@@ -43,6 +43,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -65,14 +67,24 @@ jobs:
           if gh release view "$VERSION" >/dev/null 2>&1; then
             gh release upload "$VERSION" main.js styles.css manifest.json --clobber
           else
+            COMMIT_NOTES=$(git log -1 --pretty=format:%B)
+            PREV_TAG=$(git tag --sort=-creatordate --merged HEAD | grep -v "^${VERSION}$" | head -n 1 || true)
+            if [ -n "$PREV_TAG" ]; then
+              COMPARE="**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${VERSION}"
+            else
+              COMPARE="**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/commits/${VERSION}"
+            fi
+            NOTES=$(printf "%s\n\n---\n\n%s\n" "$COMMIT_NOTES" "$COMPARE")
             gh release create "$VERSION" \
               --title="$VERSION" \
-              --generate-notes \
+              --notes "$NOTES" \
               main.js styles.css manifest.json
           fi
 ```
 
 **Why read the version from `manifest.json`**: the workflow runs from either a tag push (where `github.ref_name` is the tag) or a `workflow_dispatch` from a branch (where `github.ref_name` is the branch name, e.g. `master`). Using `github.ref_name` directly would title a manually-triggered release after the branch. Reading from `manifest.json` is consistent across both triggers and matches what Obsidian's plugin loader actually reads.
+
+**Why build the release notes manually instead of `--generate-notes`**: `--generate-notes` produces an auto-changelog headed by a "What's Changed" PR list and a "Full Changelog" compare link. For plugins maintained by a single person without a PR workflow, that auto-generated body is usually just the compare link with no context. Reading the latest commit message gives the reader the actual "what changed and why" up front. The compare link is still appended underneath for the full diff. `fetch-depth: 0` is required so `git tag --merged HEAD` has the tag history to find the previous version.
 
 Cut releases by pushing a tag (`git tag 0.1.0 && git push origin 0.1.0`). The workflow attaches the three required assets and registers the attestation. The scorecard's "Build verified" signal also fires once the workflow has run, because the attested artifacts can be reproduced byte-for-byte from source.
 
