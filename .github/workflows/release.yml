@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - "*"
+  # Manual trigger as a recovery path. Useful if a tag push fails to fire the
+  # workflow (e.g. when commits and tags are pushed together and GitHub
+  # processes the tag webhook before indexing the workflow file). The job will
+  # build whatever ref you select from the Actions tab.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -32,6 +37,16 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # manifest.json is the source of truth for the plugin's version, so the
+      # release tag/title always matches what Obsidian's plugin loader sees.
+      # This makes the workflow behave identically whether triggered by a tag
+      # push (github.ref_name == the tag) or workflow_dispatch from a branch
+      # (github.ref_name == the branch, which would otherwise title the
+      # release after the branch name).
+      - name: Read version from manifest
+        id: version
+        run: echo "version=$(jq -r .version manifest.json)" >> "$GITHUB_OUTPUT"
+
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v2
         with:
@@ -40,12 +55,17 @@ jobs:
             styles.css
             manifest.json
 
-      - name: Create release
+      - name: Create or update release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "$TAG" \
-            --title="$TAG" \
-            --generate-notes \
-            main.js styles.css manifest.json
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists; re-uploading assets"
+            gh release upload "$VERSION" main.js styles.css manifest.json --clobber
+          else
+            gh release create "$VERSION" \
+              --title="$VERSION" \
+              --generate-notes \
+              main.js styles.css manifest.json
+          fi
