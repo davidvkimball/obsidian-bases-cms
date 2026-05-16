@@ -29,6 +29,15 @@ const entryPoint = hasSrcMain ? "src/main.ts" : "main.ts";
 // Always build to root for simplicity
 const outfile = "main.js";
 
+// Production builds must be reproducible. An inline sourcemap embeds the
+// build machine's absolute file paths into main.js, so CI and the Obsidian
+// scorecard's reproducer produce byte-different output and the "build
+// verification" check fails. Ship production with no sourcemap; keep the
+// inline sourcemap only for the dev/watch build for local debugging.
+const isProduction =
+	process.argv.slice(2).includes("build") ||
+	process.argv.slice(2).includes("production");
+
 const context = await esbuild.context({
 	banner: {
 		js: banner,
@@ -53,7 +62,7 @@ const context = await esbuild.context({
 	format: "cjs",
 	target: "es2018",
 	logLevel: "info",
-	sourcemap: "inline",
+	sourcemap: isProduction ? false : "inline",
 	treeShaking: true,
 	outfile: outfile,
 	minify: false,
