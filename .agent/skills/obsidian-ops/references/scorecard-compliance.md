@@ -141,6 +141,50 @@ jobs:
 
 Then cut releases by pushing a tag (e.g. `git tag 0.1.0 && git push origin 0.1.0`) instead of uploading files manually. The workflow attaches the assets and registers the attestation, which the scorecard checks against the source repo for byte-for-byte reproducibility.
 
+### Build verification failed (non-reproducible build)
+
+> Build verification failed: the `main.js` built from source does not match the release artifact.
+
+This appears even when attestation passes — attestation proves CI built the
+asset; build verification proves the asset can be **reproduced** byte-for-byte
+from the tagged source. The single most common cause is an **inline sourcemap**
+in the production build.
+
+`sourcemap: "inline"` in `esbuild.config.mjs` base64-embeds the build machine's
+**absolute file paths** into `main.js`. GitHub Actions builds at
+`/home/runner/work/<repo>/...`; the scorecard's reproducer builds at a
+different path. Same source, byte-different `main.js` → verification fails. (It
+also bloats the shipped file and leaks build paths.)
+
+**Fix**: gate the sourcemap on build mode so production ships without one.
+Compute the flag before `esbuild.context(...)` and reference it on the
+`sourcemap` field:
+
+```js
+// Production builds must be reproducible. An inline sourcemap embeds the
+// build machine's absolute file paths into main.js, so CI and the scorecard
+// reproducer produce byte-different output. Ship production with no
+// sourcemap; keep the inline sourcemap only for the dev/watch build.
+const isProduction =
+	process.argv.slice(2).includes("build") ||
+	process.argv.slice(2).includes("production");
+
+const context = await esbuild.context({
+	// ...
+	sourcemap: isProduction ? false : "inline",
+	// ...
+});
+```
+
+(`pnpm build` runs `node esbuild.config.mjs production`; `pnpm dev` runs it
+with no args, so dev/watch keeps the inline sourcemap for local debugging.)
+
+Other reproducibility killers to rule out if the sourcemap is already gated:
+commit `pnpm-lock.yaml` and use `pnpm install --frozen-lockfile` in CI (so the
+dependency tree is identical), pin the CI Node version, and never hand-edit
+`main.js` after building or upload a locally built asset — let the workflow
+build and attach it.
+
 ### Duplicate CSS selectors
 
 > Unexpected duplicate selector ".foo .bar", first used at line N.
