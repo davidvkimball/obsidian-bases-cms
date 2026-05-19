@@ -3,7 +3,7 @@
  * Based on Dynamic Views but with CMS-specific features
  */
 
-import { App, BasesEntry, TFile, Menu } from 'obsidian';
+import { App, BasesEntry, TFile, Menu, Component, MarkdownRenderer } from 'obsidian';
 import { setCssProps } from '../utils/css-props';
 import type BasesCMSPlugin from '../main';
 import type { CardData } from '../shared/data-transform';
@@ -25,11 +25,34 @@ function resolveImageUrl(app: App, url: string): string {
 	return vaultCms?.resolvePublicPath?.(url) ?? url;
 }
 
+/**
+ * MarkdownRenderer.render doesn't emit the `.code-block-flair` language tag
+ * that real reading view shows in the top-right of fenced code blocks — that's
+ * added by an editor-side extension that doesn't run in detached contexts. We
+ * walk the rendered tree and add it ourselves for every `<code>` that has a
+ * `language-*` class. Safe to call repeatedly: skips blocks that already have
+ * a flair element.
+ */
+function addCodeBlockFlair(root: HTMLElement): void {
+	const codeEls = root.querySelectorAll('pre > code[class*="language-"]');
+	codeEls.forEach((codeEl) => {
+		const langClass = Array.from(codeEl.classList).find(c => c.startsWith('language-'));
+		if (!langClass) return;
+		const lang = langClass.substring('language-'.length);
+		if (!lang) return;
+		const pre = codeEl.parentElement;
+		if (!pre || pre.querySelector(':scope > .code-block-flair')) return;
+		pre.createSpan({ cls: 'code-block-flair', text: lang });
+	});
+}
+
 export class SharedCardRenderer {
 	protected basesConfig?: { get?: (key: string) => unknown };
 	protected basesController?: { getPropertyDisplayName?: (name: string) => string };
 	private propertyRenderer: PropertyRenderer;
 	protected mdxFrontmatterCache?: Record<string, Record<string, unknown> | null>;
+	/** Components backing rich Markdown previews; unloaded on re-render/close. */
+	private markdownComponents: Component[] = [];
 
 	constructor(
 		protected app: App,
@@ -53,6 +76,58 @@ export class SharedCardRenderer {
 	 */
 	setMdxFrontmatterCache(cache: Record<string, Record<string, unknown> | null>): void {
 		this.mdxFrontmatterCache = cache;
+	}
+
+	/**
+	 * Unload all rich-preview Markdown components, releasing their Dataview/
+	 * embed child contexts. Called by the view before re-render and on close.
+	 * Mutates the array in place so the reference stays valid.
+	 */
+	clearMarkdownComponents(): void {
+		this.markdownComponents.forEach(c => c.unload());
+		this.markdownComponents.length = 0;
+	}
+
+	/**
+	 * Renders the card text preview. Rich Markdown rendering (with the visual
+	 * treatment) is reserved for the note-content fallback path: a description
+	 * property always renders as plain text, even with rich mode on, so short
+	 * one-line previews don't get the clamp/fade treatment.
+	 */
+	private renderPreviewContent(el: HTMLElement, card: CardData, settings: CMSSettings): void {
+		if (!card.snippet) return;
+		const isRichContent = settings.richContentPreview && card.snippetSource === 'content';
+		if (isRichContent) {
+			// `markdown-rendered` opts the element into Obsidian's reading-view
+			// styling so code blocks, callouts, and lists look native.
+			el.addClass('card-text-preview-rich', 'markdown-rendered');
+			const component = new Component();
+			component.load();
+			this.markdownComponents.push(component);
+
+			// Re-evaluate overflow whenever the rendered content reflows (images
+			// loading, Dataview blocks resolving, etc.). The `has-overflow`
+			// class drives the CSS fade so it only appears when there's
+			// actually more content below the clamp.
+			const updateOverflow = () => {
+				if (el.scrollHeight > el.clientHeight + 1) {
+					el.addClass('has-overflow');
+				} else {
+					el.removeClass('has-overflow');
+				}
+			};
+			const observer = new ResizeObserver(updateOverflow);
+			observer.observe(el);
+			component.register(() => observer.disconnect());
+
+			void MarkdownRenderer.render(this.app, card.snippet, el, card.path, component)
+				.then(() => {
+					addCodeBlockFlair(el);
+					updateOverflow();
+				});
+		} else {
+			el.setText(card.snippet);
+		}
 	}
 
 	/**
@@ -479,9 +554,7 @@ export class SharedCardRenderer {
 				// Text preview - always create if showTextPreview is enabled, even if snippet isn't loaded yet
 				if (settings.showTextPreview) {
 					const textPreviewEl = textWrapper.createDiv('card-text-preview');
-					if (card.snippet) {
-						textPreviewEl.setText(card.snippet);
-					}
+					this.renderPreviewContent(textPreviewEl, card, settings);
 					// Store reference to update later when snippet loads
 					(cardEl as { __textPreviewEl?: HTMLElement; __cardPath?: string }).__textPreviewEl = textPreviewEl;
 					(cardEl as { __textPreviewEl?: HTMLElement; __cardPath?: string }).__cardPath = card.path;
@@ -514,9 +587,7 @@ export class SharedCardRenderer {
 				// Text preview - always create if showTextPreview is enabled, even if snippet isn't loaded yet
 				if (settings.showTextPreview) {
 					const textPreviewEl = contentContainer.createDiv('card-text-preview');
-					if (card.snippet) {
-						textPreviewEl.setText(card.snippet);
-					}
+					this.renderPreviewContent(textPreviewEl, card, settings);
 					// Store reference to update later when snippet loads
 					(cardEl as { __textPreviewEl?: HTMLElement; __cardPath?: string }).__textPreviewEl = textPreviewEl;
 					(cardEl as { __textPreviewEl?: HTMLElement; __cardPath?: string }).__cardPath = card.path;

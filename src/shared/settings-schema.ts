@@ -41,6 +41,7 @@ export function readCMSSettings(
 		dateIncludeTime: (getConfig('dateIncludeTime') as boolean) ?? false,
 		showTextPreview: (getConfig('showTextPreview') as boolean) ?? true,
 		fallbackToContent: (getConfig('fallbackToContent') as boolean) ?? true,
+		richContentPreview: (getConfig('richContentPreview') as boolean) ?? false,
 		truncatePreviewProperty: (getConfig('truncatePreviewProperty') as boolean) ?? false,
 		descriptionMaxLength: (getConfig('descriptionMaxLength') as number) ?? 500,
 		descriptionMaxLines: (getConfig('descriptionMaxLines') as number) ?? 5,
@@ -147,6 +148,7 @@ export function getCMSViewOptions(): unknown[] {
 				{ type: 'toggle', displayName: 'Show text preview', key: 'showTextPreview', default: true },
 				...getPropItems('Text preview property', 'descriptionProperty'),
 				{ type: 'toggle', displayName: 'Use note content if text preview property unavailable', key: 'fallbackToContent', default: true },
+				{ type: 'toggle', displayName: 'Render preview as Markdown', key: 'richContentPreview', default: false },
 				{ type: 'toggle', displayName: 'Truncate preview property', key: 'truncatePreviewProperty', default: false },
 				{ type: 'slider', displayName: 'Description max length (when truncation is on)', key: 'descriptionMaxLength', min: 50, max: 2000, step: 50, default: 500, showWhen: { key: 'truncatePreviewProperty', value: true } },
 				{ type: 'slider', displayName: 'Description max lines', key: 'descriptionMaxLines', min: 1, max: 20, step: 1, default: 5 }

@@ -754,6 +754,104 @@ body.bases-cms-hide-checkboxes .bases-cms .bases-cms-select-checkbox {
 	overflow-wrap: break-word;
 }
 
+/* Rich Markdown preview: block layout so Obsidian's reading-view styling
+   (callouts, lists, headings) renders natively. Height is clamped from the
+   "Description max lines" setting. Applied only when the snippet came from
+   the note-content fallback (a description property always renders as plain
+   text — see SharedCardRenderer.renderPreviewContent). */
+.bases-cms .card-text-preview.card-text-preview-rich {
+	display: block;
+	-webkit-line-clamp: none;
+	line-clamp: none;
+	max-height: calc(var(--bases-cms-text-preview-lines, 5) * 1.9em + 0.5em);
+	overflow: hidden;
+}
+
+/* Soft fade at the clamp — but only when there's actually more content
+   below. The renderer toggles `.has-overflow` based on a ResizeObserver so
+   short notes don't get a fade applied to their own visible content. */
+.bases-cms .card-text-preview-rich.has-overflow {
+	-webkit-mask-image: linear-gradient(to bottom, black calc(100% - 1.5em), transparent);
+	mask-image: linear-gradient(to bottom, black calc(100% - 1.5em), transparent);
+}
+
+.bases-cms .card-text-preview-rich > :first-child {
+	margin-top: 0;
+}
+
+.bases-cms .card-text-preview-rich > :last-child {
+	margin-bottom: 0;
+}
+
+/* Hide the interactive code-block chrome (copy + edit buttons) — they belong
+   in a real reading view, not a card. The language flair stays visible so
+   you can see at a glance what language a code block is in. */
+.bases-cms .card-text-preview-rich .copy-code-button,
+.bases-cms .card-text-preview-rich .edit-block-button {
+	display: none;
+}
+
+/* Explicit code-block styling using Obsidian's theme variables. We can't
+   rely on .markdown-rendered's defaults reaching us inside a card context,
+   so we set background/padding/border ourselves to get the elegant outlined
+   block that matches reading mode across themes. */
+.bases-cms .card-text-preview-rich pre {
+	max-width: 100%;
+	overflow-x: hidden;
+	white-space: pre-wrap;
+	word-break: break-word;
+	background-color: var(--code-background, var(--background-secondary));
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s, 4px);
+	padding: var(--code-block-padding-y, 0.6em) var(--code-block-padding-x, 0.8em);
+	margin: 0.5em 0;
+	/* Anchor for the absolutely-positioned .code-block-flair language tag
+	   that Obsidian's syntax-highlight post-processor adds. */
+	position: relative;
+}
+
+/* Language flair (e.g. "JSON" in the top-right corner of a code block). */
+.bases-cms .card-text-preview-rich .code-block-flair {
+	position: absolute;
+	top: 0.3em;
+	right: 0.5em;
+	font-size: 0.75em;
+	color: var(--text-faint);
+	background: transparent;
+	pointer-events: none;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.bases-cms .card-text-preview-rich pre > code {
+	background: transparent;
+	border: none;
+	padding: 0;
+	font-family: var(--font-monospace, monospace);
+	font-size: var(--code-size, 0.85em);
+	color: var(--code-normal, var(--text-normal));
+}
+
+/* Inline code (not inside a <pre>) gets its own small pill so it stands out
+   from surrounding prose. */
+.bases-cms .card-text-preview-rich :not(pre) > code {
+	background-color: var(--code-background, var(--background-secondary));
+	border-radius: 3px;
+	padding: 0.1em 0.35em;
+	font-family: var(--font-monospace, monospace);
+	font-size: 0.9em;
+	color: var(--code-normal, var(--text-normal));
+}
+
+.bases-cms .card-text-preview-rich img,
+.bases-cms .card-text-preview-rich table {
+	max-width: 100%;
+}
+
+.bases-cms .card-text-preview-rich img {
+	height: auto;
+}
+
 
 /* ============================================
    THUMBNAIL STYLING

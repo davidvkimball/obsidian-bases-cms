@@ -141,6 +141,41 @@ export function sanitizeForPreview(
 	return preview;
 }
 
+/**
+ * Prepares raw Markdown for a rich preview: strips properties (frontmatter)
+ * and optionally drops a redundant first line (matching the filename/title).
+ * The body is returned intact — no character capping — so code fences, lists,
+ * and other block syntax are never split. Visible height is bounded by CSS
+ * (.card-text-preview-rich), the same way the plain preview is clamped.
+ */
+export function prepareMarkdownPreview(
+	content: string,
+	omitFirstLine: boolean,
+	filename?: string,
+	titleValue?: string
+): string {
+	let body = content.replace(/^---[\s\S]*?---/, '').trim();
+	const firstLineEnd = body.indexOf('\n');
+	const firstLineRaw = firstLineEnd !== -1 ? body.substring(0, firstLineEnd) : body;
+	const firstLineText = firstLineRaw.replace(/^#{1,6}\s+/, '').trim();
+	if (omitFirstLine ||
+		(filename && firstLineText === filename) ||
+		(titleValue && firstLineText === titleValue)) {
+		body = firstLineEnd !== -1 ? body.substring(firstLineEnd + 1).trim() : '';
+	}
+	return body;
+}
+
+export type PreviewSource = 'property' | 'content' | 'empty';
+
+export interface PreviewResult {
+	/** The string to display (sanitized plain text or raw Markdown). */
+	text: string;
+	/** Which input produced `text`. Used by the renderer to decide whether
+	 *  Markdown rendering applies (only for `content` in rich mode). */
+	source: PreviewSource;
+}
+
 export async function loadFilePreview(
 	file: TFile,
 	app: App,
@@ -148,15 +183,16 @@ export async function loadFilePreview(
 	settings: {
 		fallbackToContent: boolean;
 		omitFirstLine: boolean;
+		richContentPreview?: boolean;
 		truncatePreviewProperty?: boolean;
 		descriptionMaxLength?: number;
 	},
 	fileName?: string,
 	titleValue?: string
-): Promise<string> {
+): Promise<PreviewResult> {
 	// Handle arrays (e.g., aliases, tags) by joining them
 	let result: string | null = null;
-	
+
 	if (propertyValue != null) {
 		if (Array.isArray(propertyValue)) {
 			// Join array items into a string
@@ -174,7 +210,10 @@ export async function loadFilePreview(
 	}
 
 	if (result) {
-		// Truncate if setting is enabled (uses descriptionMaxLength when set, else 500)
+		// Properties are always returned as plain text: even when rich mode is
+		// on, the renderer reserves Markdown rendering (and the rich visual
+		// treatment) for the note-content fallback path so short/plain property
+		// previews stay clean.
 		if (settings.truncatePreviewProperty) {
 			const maxLen = settings.descriptionMaxLength ?? 500;
 			const wasTruncated = maxLen > 0 && result.length > maxLen;
@@ -183,19 +222,23 @@ export async function loadFilePreview(
 				result += '…';
 			}
 		}
-		return result;
+		return { text: result, source: 'property' };
 	}
 
 	if (settings.fallbackToContent) {
 		const content = await app.vault.cachedRead(file);
-		return sanitizeForPreview(
-			content,
-			settings.omitFirstLine,
-			fileName,
-			titleValue
-		);
+		if (settings.richContentPreview) {
+			return {
+				text: prepareMarkdownPreview(content, settings.omitFirstLine, fileName, titleValue),
+				source: 'content',
+			};
+		}
+		return {
+			text: sanitizeForPreview(content, settings.omitFirstLine, fileName, titleValue),
+			source: 'content',
+		};
 	}
 
-	return '';
+	return { text: '', source: 'empty' };
 }
 

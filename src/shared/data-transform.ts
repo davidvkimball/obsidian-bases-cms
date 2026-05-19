@@ -9,6 +9,7 @@ import { TFile } from 'obsidian';
 import { getFirstBasesPropertyValue } from '../utils/property';
 import { getListSeparator } from '../utils/style-settings';
 import { getFileFrontmatter } from '../utils/frontmatter-helper';
+import type { PreviewResult } from '../utils/preview';
 
 /**
  * Remove duplication from a string (e.g., "valuevalue" -> "value")
@@ -64,6 +65,10 @@ export interface CardData {
 	mtime: number;
 	folderPath: string;
 	snippet?: string;
+	/** Whether `snippet` originated from the description property or the
+	 *  note-content fallback. Drives whether the renderer treats the snippet
+	 *  as Markdown (rich mode + 'content' only). */
+	snippetSource?: 'property' | 'content' | 'empty';
 	imageUrl?: string | string[];
 	hasImageAvailable?: boolean;
 	displayTags?: string[];
@@ -107,6 +112,7 @@ export interface CMSSettings {
 	dateIncludeTime: boolean;
 	showTextPreview: boolean;
 	fallbackToContent: boolean;
+	richContentPreview: boolean;
 	truncatePreviewProperty: boolean;
 	descriptionMaxLength: number;
 	descriptionMaxLines: number;
@@ -166,7 +172,7 @@ export async function basesEntryToCardData(
 	settings: CMSSettings,
 	sortMethod: string,
 	isShuffled: boolean,
-	snippet?: string,
+	snippetData?: PreviewResult,
 	imageUrl?: string | string[],
 	hasImageAvailable?: boolean,
 	app?: App,
@@ -345,7 +351,8 @@ export async function basesEntryToCardData(
 		ctime,
 		mtime,
 		folderPath,
-		snippet,
+		snippet: snippetData?.text,
+		snippetSource: snippetData?.source,
 		imageUrl,
 		hasImageAvailable: hasImageAvailable || false,
 		displayTags: displayTags.length > 0 ? displayTags : undefined
@@ -423,7 +430,7 @@ export async function transformBasesEntries(
 	settings: CMSSettings,
 	sortMethod: string,
 	isShuffled: boolean,
-	snippets: Record<string, string>,
+	snippets: Record<string, PreviewResult>,
 	images: Record<string, string | string[]>,
 	hasImageAvailable: Record<string, boolean>,
 	app?: App,

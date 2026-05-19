@@ -6,7 +6,7 @@
 
 import type { App, TFile } from 'obsidian';
 import { processImagePaths, resolveInternalImagePaths, extractEmbedImages } from '../utils/image';
-import { loadFilePreview } from '../utils/preview';
+import { loadFilePreview, type PreviewResult } from '../utils/preview';
 
 /**
  * Loads images for an entry
@@ -212,9 +212,10 @@ export async function loadSnippetsForEntries(
 	fallbackToContent: boolean,
 	omitFirstLine: boolean,
 	app: App,
-	snippetCache: Record<string, string>,
+	snippetCache: Record<string, PreviewResult>,
 	truncatePreviewProperty?: boolean,
-	descriptionMaxLength?: number
+	descriptionMaxLength?: number,
+	richContentPreview?: boolean
 ): Promise<void> {
 	await Promise.all(
 		entries.map(async (entry) => {
@@ -232,6 +233,7 @@ export async function loadSnippetsForEntries(
 						{
 							fallbackToContent,
 							omitFirstLine,
+							richContentPreview,
 							truncatePreviewProperty,
 							descriptionMaxLength
 						},
@@ -239,11 +241,11 @@ export async function loadSnippetsForEntries(
 						entry.titleString
 					);
 				} else {
-					snippetCache[entry.path] = '';
+					snippetCache[entry.path] = { text: '', source: 'empty' };
 				}
 			} catch (error) {
 				console.error(`Failed to load snippet for ${entry.path}:`, error);
-				snippetCache[entry.path] = '';
+				snippetCache[entry.path] = { text: '', source: 'empty' };
 			}
 		})
 	);

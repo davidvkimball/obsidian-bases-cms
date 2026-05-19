@@ -6,6 +6,7 @@ import { BasesView, BasesEntry, QueryController, TFile } from 'obsidian';
 import { setCssProps } from '../utils/css-props';
 import type BasesCMSPlugin from '../main';
 import { transformBasesEntries, type CardData, type CMSSettings } from '../shared/data-transform';
+import type { PreviewResult } from '../utils/preview';
 import { readCMSSettings } from '../shared/settings-schema';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
 import { loadSnippetsForEntries, loadImagesForEntries } from '../shared/content-loader';
@@ -26,7 +27,7 @@ export class BasesCMSView extends BasesView {
 	private containerEl: HTMLElement;
 	private plugin: BasesCMSPlugin;
 	public selectedFiles: Set<string> = new Set();
-	private snippets: Record<string, string> = {};
+	private snippets: Record<string, PreviewResult> = {};
 	private images: Record<string, string | string[]> = {};
 	private hasImageAvailable: Record<string, boolean> = {};
 	private mdxFrontmatterCache: Record<string, Record<string, unknown> | null> = {};
@@ -388,6 +389,10 @@ export class BasesCMSView extends BasesView {
 		if (this.cardRenderer && typeof (this.cardRenderer as { setMdxFrontmatterCache?: (cache: Record<string, Record<string, unknown> | null>) => void }).setMdxFrontmatterCache === 'function') {
 			(this.cardRenderer as { setMdxFrontmatterCache: (cache: Record<string, Record<string, unknown> | null>) => void }).setMdxFrontmatterCache(this.mdxFrontmatterCache);
 		}
+
+		// Unload Markdown preview components before wiping the DOM so their
+		// Dataview/embed child contexts are released
+		this.cardRenderer.clearMarkdownComponents();
 
 		// Clear and re-render after content is loaded
 		this.containerEl.empty();
@@ -922,6 +927,7 @@ export class BasesCMSView extends BasesView {
 			descriptionProperty: initialSettings.descriptionProperty,
 			showTextPreview: initialSettings.showTextPreview,
 			fallbackToContent: initialSettings.fallbackToContent,
+			richContentPreview: initialSettings.richContentPreview,
 			truncatePreviewProperty: initialSettings.truncatePreviewProperty,
 			descriptionMaxLength: initialSettings.descriptionMaxLength,
 			imageProperty: initialSettings.imageProperty,
@@ -965,6 +971,7 @@ export class BasesCMSView extends BasesView {
 				this.lastSettings.descriptionProperty !== currentSettings.descriptionProperty ||
 				this.lastSettings.showTextPreview !== currentSettings.showTextPreview ||
 				this.lastSettings.fallbackToContent !== currentSettings.fallbackToContent ||
+				this.lastSettings.richContentPreview !== currentSettings.richContentPreview ||
 				this.lastSettings.truncatePreviewProperty !== currentSettings.truncatePreviewProperty ||
 				this.lastSettings.descriptionMaxLength !== currentSettings.descriptionMaxLength ||
 				this.lastSettings.imageProperty !== currentSettings.imageProperty ||
@@ -991,6 +998,7 @@ export class BasesCMSView extends BasesView {
 				if (this.lastSettings.descriptionProperty !== currentSettings.descriptionProperty ||
 					this.lastSettings.showTextPreview !== currentSettings.showTextPreview ||
 					this.lastSettings.fallbackToContent !== currentSettings.fallbackToContent ||
+					this.lastSettings.richContentPreview !== currentSettings.richContentPreview ||
 					this.lastSettings.truncatePreviewProperty !== currentSettings.truncatePreviewProperty ||
 					this.lastSettings.descriptionMaxLength !== currentSettings.descriptionMaxLength) {
 					// Clear snippet cache when text preview settings change
@@ -1010,6 +1018,7 @@ export class BasesCMSView extends BasesView {
 					descriptionProperty: currentSettings.descriptionProperty,
 					showTextPreview: currentSettings.showTextPreview,
 					fallbackToContent: currentSettings.fallbackToContent,
+					richContentPreview: currentSettings.richContentPreview,
 					truncatePreviewProperty: currentSettings.truncatePreviewProperty,
 					descriptionMaxLength: currentSettings.descriptionMaxLength,
 					imageProperty: currentSettings.imageProperty,
@@ -1107,7 +1116,8 @@ export class BasesCMSView extends BasesView {
 					this.app,
 					this.snippets,
 					settings.truncatePreviewProperty,
-					settings.descriptionMaxLength
+					settings.descriptionMaxLength,
+					settings.richContentPreview
 				);
 			}
 		}
@@ -1534,6 +1544,7 @@ export class BasesCMSView extends BasesView {
 		}
 		this.propertyObservers.forEach(obs => obs.disconnect());
 		this.propertyObservers = [];
+		this.cardRenderer.clearMarkdownComponents();
 		if (this.bulkToolbar) {
 			this.bulkToolbar.destroy();
 		}
