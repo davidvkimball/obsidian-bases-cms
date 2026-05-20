@@ -101,6 +101,11 @@ export class SharedCardRenderer {
 			// `markdown-rendered` opts the element into Obsidian's reading-view
 			// styling so code blocks, callouts, and lists look native.
 			el.addClass('card-text-preview-rich', 'markdown-rendered');
+			if (settings.richContentPreviewScroll) {
+				// Switches the clamp from overflow:hidden+fade to overflow:auto,
+				// so users can scroll within the preview to see all content.
+				el.addClass('card-text-preview-rich-scroll');
+			}
 			const component = new Component();
 			component.load();
 			this.markdownComponents.push(component);

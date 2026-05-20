@@ -113,6 +113,7 @@ export interface CMSSettings {
 	showTextPreview: boolean;
 	fallbackToContent: boolean;
 	richContentPreview: boolean;
+	richContentPreviewScroll: boolean;
 	truncatePreviewProperty: boolean;
 	descriptionMaxLength: number;
 	descriptionMaxLines: number;
