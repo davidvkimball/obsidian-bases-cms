@@ -12,290 +12,43 @@ Comprehensive code patterns for common Obsidian plugin development tasks. **Alwa
 - **code-patterns.md**: Complete, production-ready examples with full context, error handling, and best practices
 - **common-tasks.md**: Quick snippets and basic patterns for simple operations
 
-## Complete Settings Tab
+## Settings tabs
 
-**Source**: Based on `.ref/obsidian-sample-plugin/main.ts`, `.ref/obsidian-plugin-docs/docs/guides/settings.md`, and `.ref/obsidian-api/obsidian.d.ts`
+Settings tabs are covered by the dedicated **`settings` skill** — use it for authoring or migrating any `PluginSettingTab`. It is the authoritative reference for the declarative `getSettingDefinitions()` API (Obsidian 1.13+), the control/render/validate/visible patterns, mutable lists, sub-pages, and the optional `display()` fallback for older app versions.
 
-**Note**: `SettingGroup` is available in the API since 1.11.0 but may not be documented in plugin docs yet. Always check the API first.
+`SettingGroup` is always available at these projects' `minAppVersion` (1.11+) — use it directly, with no `requireApiVersion()` guards or pre-1.11 fallbacks. Sentence case for all UI text (names, descriptions, headings).
 
-```ts
-import { App, PluginSettingTab, Setting } from "obsidian";
+## Multi-window: target the app window, not `activeDocument`
 
-interface MyPluginSettings {
-  textSetting: string;
-  toggleSetting: boolean;
-  dropdownSetting: string;
-  sliderValue: number;
-}
+**Source**: Obsidian 1.13 changelog ("Settings now open in a new window") + `Workspace.containerEl` in `.ref/obsidian-api/obsidian.d.ts`
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-  textSetting: "default",
-  toggleSetting: true,
-  dropdownSetting: "option1",
-  sliderValue: 50,
-};
+Obsidian renders across multiple OS windows: pop-out leaves, and — since **1.13** — the Settings window. The globals `activeDocument` / `activeWindow` track **whichever window currently has focus**. During a settings `onChange` (or any handler that runs while a pop-out is focused) they point at the *other* window.
 
-class MySettingTab extends PluginSettingTab {
-  plugin: MyPlugin;
+So any code that applies persistent UI to the **main app window** — toggling `<body>` classes, setting CSS variables, injecting a `<style>` into `<head>`, or inserting/replacing a ribbon/toolbar button — must NOT use `activeDocument`. On 1.13 the change lands in the Settings window and the user sees nothing change until restart. (This was a real fleet-wide bug: settings appeared to "not apply in real time".)
 
-  constructor(app: App, plugin: MyPlugin) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
-
-  display(): void {
-    const { containerEl } = this;
-    containerEl.empty();
-
-    // Text input
-    new Setting(containerEl)
-      .setName("Text setting")
-      .setDesc("Description of text setting")
-      .addText((text) =>
-        text
-          .setPlaceholder("Enter text")
-          .setValue(this.plugin.settings.textSetting)
-          .onChange(async (value) => {
-            this.plugin.settings.textSetting = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    // Toggle
-    new Setting(containerEl)
-      .setName("Toggle setting")
-      .setDesc("Enable or disable feature")
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.plugin.settings.toggleSetting)
-          .onChange(async (value) => {
-            this.plugin.settings.toggleSetting = value;
-            await this.plugin.saveSettings();
-            this.display(); // Re-render if toggle affects other settings
-          })
-      );
-
-    // Dropdown
-    new Setting(containerEl)
-      .setName("Dropdown setting")
-      .setDesc("Select an option")
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption("option1", "Option 1")
-          .addOption("option2", "Option 2")
-          .addOption("option3", "Option 3")
-          .setValue(this.plugin.settings.dropdownSetting)
-          .onChange(async (value) => {
-            this.plugin.settings.dropdownSetting = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    // Slider
-    new Setting(containerEl)
-      .setName("Slider setting")
-      .setDesc(`Value: ${this.plugin.settings.sliderValue}`)
-      .addSlider((slider) =>
-        slider
-          .setLimits(0, 100, 1)
-          .setValue(this.plugin.settings.sliderValue)
-          .setDynamicTooltip()
-          .onChange(async (value) => {
-            this.plugin.settings.sliderValue = value;
-            await this.plugin.saveSettings();
-            this.display(); // Update description
-          })
-      );
-
-    // Setting with extra button
-    new Setting(containerEl)
-      .setName("Setting with reset")
-      .addText((text) =>
-        text.setValue(this.plugin.settings.textSetting)
-      )
-      .addExtraButton((btn) =>
-        btn
-          .setIcon("reset")
-          .setTooltip("Reset to default")
-          .onClick(async () => {
-            this.plugin.settings.textSetting = DEFAULT_SETTINGS.textSetting;
-            await this.plugin.saveSettings();
-            this.display();
-          })
-      );
-  }
-}
-
-// In main plugin class:
-this.addSettingTab(new MySettingTab(this.app, this));
-```
-
-## Settings with Groups
-
-**Source**: Based on `.ref/obsidian-api/obsidian.d.ts` (API is authoritative) - `SettingGroup` requires API 1.11.0+
-
-**Use this when**: You want to visually group related settings together.
-
-**Important**: You must set `minAppVersion: "1.11.0"` in your `manifest.json` to use `SettingGroup`.
+Use the workspace container's owner document, which always lives in the main window:
 
 ```ts
-import { App, PluginSettingTab, Setting, SettingGroup } from "obsidian";
-
-interface MyPluginSettings {
-  generalEnabled: boolean;
-  generalTimeout: number;
-  advancedDebug: boolean;
-  advancedLogLevel: string;
-}
-
-const DEFAULT_SETTINGS: MyPluginSettings = {
-  generalEnabled: true,
-  generalTimeout: 5000,
-  advancedDebug: false,
-  advancedLogLevel: "info",
-};
-
-class MySettingTab extends PluginSettingTab {
-  plugin: MyPlugin;
-
-  constructor(app: App, plugin: MyPlugin) {
-    super(app, plugin);
-    this.plugin = plugin;
+export default class MyPlugin extends Plugin {
+  // The main app window's document — stable for the app's lifetime, and
+  // unaffected by which window (Settings, pop-out) currently has focus.
+  private get doc(): Document {
+    return this.app.workspace.containerEl.ownerDocument;
   }
 
-  display(): void {
-    const { containerEl } = this;
-    containerEl.empty();
-
-    // General Settings Group
-    const generalGroup = new SettingGroup(containerEl).setHeading("General Settings");
-    
-    generalGroup.addSetting((setting) => {
-      setting
-        .setName("Enable feature")
-        .setDesc("Enable or disable the main feature")
-        .addToggle((toggle) => {
-          toggle
-            .setValue(this.plugin.settings.generalEnabled)
-            .onChange(async (value) => {
-              this.plugin.settings.generalEnabled = value;
-              await this.plugin.saveSettings();
-            });
-        });
-    });
-
-    generalGroup.addSetting((setting) => {
-      setting
-        .setName("Timeout")
-        .setDesc("Timeout in milliseconds")
-        .addSlider((slider) => {
-          slider
-            .setLimits(1000, 10000, 500)
-            .setValue(this.plugin.settings.generalTimeout)
-            .setDynamicTooltip()
-            .onChange(async (value) => {
-              this.plugin.settings.generalTimeout = value;
-              await this.plugin.saveSettings();
-            });
-        });
-    });
-
-    // Advanced Settings Group
-    const advancedGroup = new SettingGroup(containerEl).setHeading("Advanced Settings");
-    
-    advancedGroup.addSetting((setting) => {
-      setting
-        .setName("Debug mode")
-        .setDesc("Enable debug logging")
-        .addToggle((toggle) => {
-          toggle
-            .setValue(this.plugin.settings.advancedDebug)
-            .onChange(async (value) => {
-              this.plugin.settings.advancedDebug = value;
-              await this.plugin.saveSettings();
-            });
-        });
-    });
-
-    advancedGroup.addSetting((setting) => {
-      setting
-        .setName("Log level")
-        .setDesc("Set the logging level")
-        .addDropdown((dropdown) => {
-          dropdown
-            .addOption("info", "Info")
-            .addOption("warn", "Warning")
-            .addOption("error", "Error")
-            .setValue(this.plugin.settings.advancedLogLevel)
-            .onChange(async (value) => {
-              this.plugin.settings.advancedLogLevel = value;
-              await this.plugin.saveSettings();
-            });
-        });
-    });
+  applyStyles() {
+    this.doc.body.classList.toggle("my-feature-on", this.settings.featureOn);
   }
 }
-
-// In main plugin class:
-this.addSettingTab(new MySettingTab(this.app, this));
 ```
 
-### Common Pitfalls
+In a manager/service class that holds a plugin reference, expose the same getter via `this.plugin.app.workspace.containerEl.ownerDocument`. For a standalone utility, accept an optional `getDoc?: () => Document` and fall back to `activeDocument` when omitted.
 
-#### Pitfall 1: Missing Closing Parentheses
-
-**Problem**: Arrow functions with method chaining need proper closing parentheses and semicolons.
-
-**Solution**: Always include the closing parenthesis and semicolon:
-
-```ts
-// ❌ WRONG - Missing closing parenthesis
-generalGroup.addSetting((setting) =>
-  setting
-    .setName("Enable feature")
-    .addToggle((toggle) =>
-      toggle.setValue(this.plugin.settings.enabled)
-    )
-// Missing closing parenthesis here!
-
-// ✅ CORRECT - Proper closing
-generalGroup.addSetting((setting) =>
-  setting
-    .setName("Enable feature")
-    .addToggle((toggle) =>
-      toggle.setValue(this.plugin.settings.enabled)
-    )
-); // Closing parenthesis and semicolon required
-```
-
-#### Pitfall 2: Storing Setting References
-
-**Problem**: If you need to reference a `Setting` object later (e.g., for visibility toggling), you must use block syntax `{ }` instead of expression syntax.
-
-**Solution**: Use block syntax when you need to store references:
-
-```ts
-// ❌ WRONG - Can't store reference with expression syntax
-let mySetting: Setting;
-generalGroup.addSetting((setting) =>
-  setting.setName("My Setting")
-  // Can't assign: mySetting = setting; (syntax error)
-);
-
-// ✅ CORRECT - Use block syntax to store reference
-let mySetting: Setting;
-generalGroup.addSetting((setting) => {
-  mySetting = setting; // Now we can store the reference
-  setting
-    .setName("My Setting")
-    .addToggle((toggle) =>
-      toggle.setValue(this.plugin.settings.enabled)
-    );
-});
-
-// Later, you can use mySetting to toggle visibility:
-mySetting.settingEl.style.display = this.plugin.settings.enabled ? "" : "none";
-```
+**Do / Don't**
+- ✅ `this.app.workspace.containerEl.ownerDocument` for body classes, CSS vars, `<style>` injection, and button swaps that must affect the editing window.
+- ✅ `activeDocument` is still correct for things that belong to the focused window: modal/suggest DOM you're building, reading a context menu the user just opened, transient measurement nodes.
+- ❌ `activeDocument.body.classList.add(...)` / `activeDocument.head.appendChild(styleEl)` reached from a settings `onChange` — lands in the Settings window on 1.13+.
+- ⚠️ Observers (`observer.observe(activeDocument.body, …)`) set up once at `onload` are fine (the main window is focused then), but re-creating them from a settings change can attach to the wrong window — prefer the `doc` getter there too.
 
 ## Modal with Form Input
 

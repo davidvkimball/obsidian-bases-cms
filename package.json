@@ -1,6 +1,6 @@
 {
 	"name": "bases-cms",
-	"version": "0.5.8",
+	"version": "0.5.9",
 	"description": "Manage your notes in bases like a content management system.",
 	"main": "main.js",
 	"type": "module",
@@ -25,7 +25,7 @@
 		"eslint-plugin-obsidianmd": "^0.3.0",
 		"globals": "14.0.0",
 		"obsidian": "^1.11.0",
-		"obsidian-dev-skills": "^1.0.3",
+		"@davidvkimball/obsidian-dev-skills": "^1.3.0",
 		"tslib": "2.4.0",
 		"typescript": "5.8.3",
 		"typescript-eslint": "^8.50.1"

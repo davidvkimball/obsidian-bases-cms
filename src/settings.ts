@@ -15,6 +15,363 @@ export class BasesCMSSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	// 1.13.0+: framework calls this and skips display().
+	// Pre-1.13.0: this method is not invoked; display() below runs as before.
+	// See https://docs.obsidian.md/plugins/guides/migrate-declarative-settings
+	getSettingDefinitions() {
+		return [
+			{
+				name: 'Confirm bulk operations',
+				desc: 'Show confirmation dialogs before performing bulk operations.',
+				control: { type: 'toggle' as const, key: 'confirmBulkOperations' },
+			},
+			{
+				type: 'group' as const,
+				heading: 'Toolbar buttons',
+				items: [
+					{
+						name: 'Show select all button',
+						desc: 'Display the select all button in the toolbar.',
+						// Render: changing this value has a side effect (toolbar refresh).
+						render: (setting: Setting) => {
+							setting.addToggle(toggle => {
+								toggle.setValue(this.plugin.settings.showToolbarSelectAll);
+								toggle.onChange(async value => {
+									this.plugin.settings.showToolbarSelectAll = value;
+									await this.plugin.saveData(this.plugin.settings);
+									this.refreshActiveToolbars();
+								});
+							});
+						},
+					},
+					{
+						name: 'Show clear button',
+						desc: 'Display the clear selection button in the toolbar.',
+						// Render: changing this value has a side effect (toolbar refresh).
+						render: (setting: Setting) => {
+							setting.addToggle(toggle => {
+								toggle.setValue(this.plugin.settings.showToolbarClear);
+								toggle.onChange(async value => {
+									this.plugin.settings.showToolbarClear = value;
+									await this.plugin.saveData(this.plugin.settings);
+									this.refreshActiveToolbars();
+								});
+							});
+						},
+					},
+					{
+						name: 'Show publish button',
+						desc: 'Display the publish button in the toolbar.',
+						// Render: changing this value has a side effect (toolbar refresh).
+						render: (setting: Setting) => {
+							setting.addToggle(toggle => {
+								toggle.setValue(this.plugin.settings.showToolbarPublish);
+								toggle.onChange(async value => {
+									this.plugin.settings.showToolbarPublish = value;
+									await this.plugin.saveData(this.plugin.settings);
+									this.refreshActiveToolbars();
+								});
+							});
+						},
+					},
+					{
+						name: 'Show draft button',
+						desc: 'Display the draft button in the toolbar.',
+						// Render: changing this value has a side effect (toolbar refresh).
+						render: (setting: Setting) => {
+							setting.addToggle(toggle => {
+								toggle.setValue(this.plugin.settings.showToolbarDraft);
+								toggle.onChange(async value => {
+									this.plugin.settings.showToolbarDraft = value;
+									await this.plugin.saveData(this.plugin.settings);
+									this.refreshActiveToolbars();
+								});
+							});
+						},
+					},
+					{
+						name: 'Show tags button',
+						desc: 'Display the tags button in the toolbar.',
+						// Render: changing this value has a side effect (toolbar refresh).
+						render: (setting: Setting) => {
+							setting.addToggle(toggle => {
+								toggle.setValue(this.plugin.settings.showToolbarTags);
+								toggle.onChange(async value => {
+									this.plugin.settings.showToolbarTags = value;
+									await this.plugin.saveData(this.plugin.settings);
+									this.refreshActiveToolbars();
+								});
+							});
+						},
+					},
+					{
+						name: 'Show set button',
+						desc: 'Display the set property button in the toolbar.',
+						// Render: changing this value has a side effect (toolbar refresh).
+						render: (setting: Setting) => {
+							setting.addToggle(toggle => {
+								toggle.setValue(this.plugin.settings.showToolbarSet);
+								toggle.onChange(async value => {
+									this.plugin.settings.showToolbarSet = value;
+									await this.plugin.saveData(this.plugin.settings);
+									this.refreshActiveToolbars();
+								});
+							});
+						},
+					},
+					{
+						name: 'Show remove button',
+						desc: 'Display the remove property button in the toolbar.',
+						// Render: changing this value has a side effect (toolbar refresh).
+						render: (setting: Setting) => {
+							setting.addToggle(toggle => {
+								toggle.setValue(this.plugin.settings.showToolbarRemove);
+								toggle.onChange(async value => {
+									this.plugin.settings.showToolbarRemove = value;
+									await this.plugin.saveData(this.plugin.settings);
+									this.refreshActiveToolbars();
+								});
+							});
+						},
+					},
+					{
+						name: 'Show delete button',
+						desc: 'Display the delete button in the toolbar.',
+						// Render: changing this value has a side effect (toolbar refresh).
+						render: (setting: Setting) => {
+							setting.addToggle(toggle => {
+								toggle.setValue(this.plugin.settings.showToolbarDelete);
+								toggle.onChange(async value => {
+									this.plugin.settings.showToolbarDelete = value;
+									await this.plugin.saveData(this.plugin.settings);
+									this.refreshActiveToolbars();
+								});
+							});
+						},
+					},
+				],
+			},
+			{
+				type: 'group' as const,
+				heading: 'Deletions',
+				items: [
+					{
+						name: 'Delete parent folder for specific file name',
+						desc: 'When enabled, deleting a note will delete its parent folder and all its contents if the note file name matches the specified name.',
+						control: { type: 'toggle' as const, key: 'deleteParentFolder' },
+					},
+					{
+						name: 'Folder deletion file name',
+						desc: 'File name that triggers parent folder deletion.',
+						// Disabled until the parent folder deletion toggle above is enabled.
+						control: {
+							type: 'text' as const,
+							key: 'deleteParentFolderFilename',
+							placeholder: 'Index',
+							disabled: () => !this.plugin.settings.deleteParentFolder,
+						},
+					},
+					{
+						name: 'Delete associated unique attachments',
+						desc: 'When deleting a note, automatically delete attachments that are only used by that note. Attachments used by other notes will be preserved.',
+						control: { type: 'toggle' as const, key: 'deleteUniqueAttachments' },
+					},
+					{
+						name: 'Confirm deletions',
+						desc: 'Show confirmation dialog before deleting files.',
+						control: { type: 'toggle' as const, key: 'confirmDeletions' },
+					},
+				],
+			},
+			{
+				type: 'group' as const,
+				heading: 'Appearance',
+				items: [
+					{
+						name: 'Use home icon for the plugin view',
+						desc: 'Use the home icon instead of blocks icon for the plugin view in the view selector. Restart Obsidian for this change to take effect.',
+						control: { type: 'toggle' as const, key: 'useHomeIcon' },
+					},
+					{
+						name: 'Force static image for animated gifs',
+						desc: 'When enabled, animated gifs will display only the first frame when used as card covers or thumbnails.',
+						// Render: changing this value has a side effect (active views refresh).
+						render: (setting: Setting) => {
+							setting.addToggle(toggle => {
+								toggle.setValue(this.plugin.settings.forceStaticGifImages);
+								toggle.onChange(async value => {
+									this.plugin.settings.forceStaticGifImages = value;
+									await this.plugin.saveData(this.plugin.settings);
+									// Refresh all active views to apply the change
+									const pluginWithMethod = this.plugin as { activeViews?: Set<{ onDataUpdated?: () => void }> };
+									if (pluginWithMethod.activeViews) {
+										pluginWithMethod.activeViews.forEach(view => {
+											if (view.onDataUpdated) {
+												view.onDataUpdated();
+											}
+										});
+									}
+								});
+							});
+						},
+					},
+				],
+			},
+			{
+				type: 'group' as const,
+				heading: 'Performance',
+				items: [
+					{
+						name: 'Embedded view refresh debounce (ms)',
+						desc: 'Delay in milliseconds before refreshing embedded views when switching files. Higher values reduce CPU usage but may make views feel less responsive. Range: 50-500ms.',
+						control: { type: 'slider' as const, key: 'embeddedViewRefreshDebounceMs', min: 50, max: 500, step: 25 },
+					},
+					{
+						name: 'Virtual scrolling threshold',
+						desc: 'Number of cards above which virtual scrolling is enabled. Virtual scrolling only renders cards in the viewport, improving performance for large collections. Set to 0 to always enable, or a high value to disable.',
+						control: { type: 'slider' as const, key: 'virtualScrollThreshold', min: 0, max: 500, step: 25 },
+					},
+					{
+						name: 'Virtual scroll buffer',
+						desc: 'Number of cards to render above and below the visible viewport when virtual scrolling is active. Higher values reduce visual glitches when scrolling fast but use more memory.',
+						control: { type: 'slider' as const, key: 'virtualScrollBuffer', min: 5, max: 50, step: 5 },
+					},
+				],
+			},
+			{
+				type: 'group' as const,
+				heading: 'Quick edit',
+				items: [
+					{
+						name: 'Enable quick edit',
+						desc: 'Show an icon on card titles that launches a command when clicked.',
+						// Render: toggling this shows or hides the three rows below, so refresh the
+						// DOM state to re-evaluate their visible predicates. refreshDomState exists on
+						// Obsidian 1.13.0+, which is the only version that calls getSettingDefinitions.
+						render: (setting: Setting) => {
+							setting.addToggle(toggle => toggle
+								.setValue(this.plugin.settings.enableQuickEdit)
+								.onChange(async value => {
+									this.plugin.settings.enableQuickEdit = value;
+									await this.plugin.saveData(this.plugin.settings);
+									const refresh = (this as unknown as { refreshDomState?: () => void }).refreshDomState;
+									if (refresh) refresh.call(this);
+								}));
+						},
+					},
+					{
+						name: 'Quick edit command',
+						desc: 'The command to execute when clicking the quick edit icon on a card title.',
+						// Shown only when quick edit is enabled.
+						visible: () => this.plugin.settings.enableQuickEdit,
+						// Render: opens a command picker modal and stores the selection (action, not a value bind).
+						render: (setting: Setting) => {
+							setting.addButton(button => {
+								const currentCommandName = this.plugin.settings.quickEditCommandName ||
+									(this.plugin.settings.quickEditCommand ? 'Select command...' : 'No command selected');
+								button.setButtonText(currentCommandName)
+									.onClick(() => {
+										const modal = new CommandPickerModal(this.app, (commandId: string) => {
+											void (async () => {
+												// Get command name by looking it up
+												const commandRegistry = (this.app as { commands?: { listCommands?: () => Array<{ id: string; name: string }>; commands?: Record<string, { name?: string }> } }).commands;
+												let commandName = '';
+
+												// Try to find the command name
+												if (commandRegistry) {
+													// Try listCommands()
+													if (typeof commandRegistry.listCommands === 'function') {
+														const commands = commandRegistry.listCommands();
+														const command = commands.find((cmd) => cmd.id === commandId);
+														if (command) {
+															commandName = command.name;
+														}
+													}
+
+													// Fallback: try direct registry access
+													if (!commandName) {
+														const registry = commandRegistry.commands;
+														if (registry && registry[commandId]) {
+															commandName = registry[commandId].name || '';
+														}
+													}
+												}
+
+												this.plugin.settings.quickEditCommand = commandId;
+												this.plugin.settings.quickEditCommandName = commandName;
+												await this.plugin.saveData(this.plugin.settings);
+
+												// Rebuild to refresh the button label. update() exists on
+												// Obsidian 1.13.0+, which is the only version that calls
+												// getSettingDefinitions in the first place.
+												const update = (this as unknown as { update?: () => void }).update;
+												if (update) update.call(this);
+											})();
+										});
+										modal.open();
+									});
+
+								// Add a clear button if a command is selected
+								if (this.plugin.settings.quickEditCommand) {
+									const clearButton = button.buttonEl.parentElement?.createEl('button', {
+										text: 'Clear',
+										attr: { style: 'margin-left: 8px;' }
+									});
+									clearButton?.addEventListener('click', () => {
+										void (async () => {
+											this.plugin.settings.quickEditCommand = '';
+											this.plugin.settings.quickEditCommandName = '';
+											await this.plugin.saveData(this.plugin.settings);
+											// Rebuild to refresh the button label. update() exists on
+											// Obsidian 1.13.0+, which is the only version that calls
+											// getSettingDefinitions in the first place.
+											const update = (this as unknown as { update?: () => void }).update;
+											if (update) update.call(this);
+										})();
+									});
+								}
+							});
+						},
+					},
+					{
+						name: 'Quick edit icon',
+						desc: 'Select the icon to display for the quick edit button on card titles.',
+						// Shown only when quick edit is enabled.
+						visible: () => this.plugin.settings.enableQuickEdit,
+						// Render: opens an icon picker modal and stores the selection (action, not a value bind).
+						render: (setting: Setting) => {
+							setting.addButton(button => {
+								const iconName = this.getIconName(this.plugin.settings.quickEditIcon || 'pencil-line');
+								button.setButtonText(iconName || 'Select icon...')
+									.onClick(() => {
+										const modal = new IconPickerModal(this.app, (iconId) => {
+											void (async () => {
+												this.plugin.settings.quickEditIcon = iconId;
+												await this.plugin.saveData(this.plugin.settings);
+												// Rebuild to show the updated icon name. update() exists on
+												// Obsidian 1.13.0+, which is the only version that calls
+												// getSettingDefinitions in the first place.
+												const update = (this as unknown as { update?: () => void }).update;
+												if (update) update.call(this);
+											})();
+										});
+										modal.open();
+									});
+							});
+						},
+					},
+					{
+						name: 'Attempt to open file and execute quick edit command',
+						desc: 'For commands that don\'t have special handling, attempt to open the file and execute the command. Some commands may not work properly this way.',
+						// Shown only when quick edit is enabled.
+						visible: () => this.plugin.settings.enableQuickEdit,
+						control: { type: 'toggle' as const, key: 'quickEditOpenFile' },
+					},
+				],
+			},
+		];
+	}
+
 	/**
 	 * Refresh toolbars in all active CMS views when settings change
 	 */

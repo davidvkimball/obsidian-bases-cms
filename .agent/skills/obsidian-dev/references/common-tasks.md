@@ -89,55 +89,9 @@ this.registerDomEvent(window, "resize", () => { /* ... */ });
 this.registerInterval(window.setInterval(() => { /* ... */ }, 1000));
 ```
 
-## Settings Tab Implementation
+## Settings tab implementation
 
-**Source**: Based on `.ref/obsidian-sample-plugin/main.ts` and `.ref/obsidian-api/obsidian.d.ts` (API is authoritative for SettingGroup - available since 1.11.0)
-
-Basic settings tab:
-
-```ts
-import { App, PluginSettingTab, Setting } from "obsidian";
-
-class MySettingTab extends PluginSettingTab {
-  plugin: MyPlugin;
-
-  constructor(app: App, plugin: MyPlugin) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
-
-  display(): void {
-    const { containerEl } = this;
-    containerEl.empty();
-
-    new Setting(containerEl)
-      .setName("Setting name")
-      .setDesc("Setting description")
-      .addText((text) =>
-        text
-          .setPlaceholder("Enter value")
-          .setValue(this.plugin.settings.mySetting)
-          .onChange(async (value) => {
-            this.plugin.settings.mySetting = value;
-            await this.plugin.saveSettings();
-          })
-      );
-  }
-}
-
-// In main plugin class:
-this.addSettingTab(new MySettingTab(this.app, this));
-```
-
-**Note**: For settings groups (available since API 1.11.0), use `SettingGroup` from the API. Plugin docs may not yet document this feature - always check `.ref/obsidian-api/obsidian.d.ts` for the latest API.
-
-**SettingGroup Methods** (available since 1.11.0):
-- `setHeading(heading: string)` - Set the group heading
-- `addSetting(cb: (setting: Setting) => void)` - Add a setting to the group
-- `addSearch(cb: (component: SearchComponent) => any)` - Add a search input at the beginning of the group (useful for filtering)
-- `addExtraButton(cb: (component: ExtraButtonComponent) => any)` - Add an extra button to the group
-
-**Important**: You must set `minAppVersion: "1.11.0"` in your `manifest.json` to use these methods.
+For settings tabs, use the dedicated **`settings` skill** — it covers the declarative `getSettingDefinitions()` API (Obsidian 1.13+) and the optional `display()` fallback. `SettingGroup` is always available (`minAppVersion` 1.11+); use it directly with no version guards.
 
 ## Secret Storage
 

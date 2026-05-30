@@ -22,6 +22,9 @@ importers:
 
   .:
     devDependencies:
+      '@davidvkimball/obsidian-dev-skills':
+        specifier: ^1.3.0
+        version: 1.3.0
       '@eslint/js':
         specifier: ^9.30.1
         version: 9.39.2
@@ -52,9 +55,6 @@ importers:
       obsidian:
         specifier: ^1.11.0
         version: 1.11.0(@codemirror/state@6.5.0)(@codemirror/view@6.38.6)
-      obsidian-dev-skills:
-        specifier: ^1.0.3
-        version: 1.0.3
       tslib:
         specifier: 2.4.0
         version: 2.4.0
@@ -72,6 +72,11 @@ packages:
 
   '@codemirror/view@6.38.6':
     resolution: {integrity: sha512-qiS0z1bKs5WOvHIAC0Cybmv4AJSkAXgX5aD6Mqd2epSLlVJsQl8NG23jCVouIgkh4All/mrbdsf2UOLFnJw0tw==}
+
+  '@davidvkimball/obsidian-dev-skills@1.3.0':
+    resolution: {integrity: sha512-C9HQ+PRYhZ2QFUdoFYjudXxrGD5SfXQtQl0Lxk61Bq1oD+/LV/57t8EeGSvWIL9/J67V08/MFOMvOf4/WgML9g==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
 
   '@esbuild/aix-ppc64@0.25.5':
     resolution: {integrity: sha512-9o3TMmpmftaCMepOdA5k/yDw8SfInyzWWTjYTFCX3kPSDJMROQTb8jg+h9Cnwnmm1vOzvxN7gIfB5V2ewpjtGA==}
@@ -1165,11 +1170,6 @@ packages:
     resolution: {integrity: sha512-gXah6aZrcUxjWg2zR2MwouP2eHlCBzdV4pygudehaKXSGW4v2AsRQUK+lwwXhii6KFZcunEnmSUoYp5CXibxtA==}
     engines: {node: '>= 0.4'}
 
-  obsidian-dev-skills@1.0.3:
-    resolution: {integrity: sha512-vkld8CA0d+M8dUOGu7vl8KHOS8sVwYLAggVr3YW/ikwSi7QUaJnaSIzyQIR6M+lAa6VSWyoPD/a5DDF/sLDf7g==}
-    engines: {node: '>=16.0.0'}
-    hasBin: true
-
   obsidian@1.11.0:
     resolution: {integrity: sha512-lVqN9AmDWHzhNATi2tDnjqVgI6WUYKeT+lIsAycAyLt4XCC6zRsWzb+tFCiB7Rn3PpttefjoovilhYwvS4Iqxw==}
     peerDependencies:
@@ -1518,6 +1518,8 @@ snapshots:
       crelt: 1.0.6
       style-mod: 4.1.3
       w3c-keyname: 2.2.8
+
+  '@davidvkimball/obsidian-dev-skills@1.3.0': {}
 
   '@esbuild/aix-ppc64@0.25.5':
     optional: true
@@ -2871,8 +2873,6 @@ snapshots:
       call-bound: 1.0.4
       define-properties: 1.2.1
       es-object-atoms: 1.1.1
-
-  obsidian-dev-skills@1.0.3: {}
 
   obsidian@1.11.0(@codemirror/state@6.5.0)(@codemirror/view@6.38.6):
     dependencies:
