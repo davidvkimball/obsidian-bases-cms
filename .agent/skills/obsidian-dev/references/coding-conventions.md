@@ -61,6 +61,20 @@ element.addClass('my-plugin-container');
 
 When plugins use inline styles, theme developers are forced to use `!important` overrides, which is poor practice for everyone.
 
+**Runtime-computed values** (a measured height, a zoom factor, a drag offset) cannot live in a static CSS class. Do NOT fall back to assigning `element.style.*` directly for these; that trips the `obsidianmd/no-static-styles-assignment` rule, which forbids both `element.style.foo = ...` and `element.style.setProperty(...)` and must never be disabled. Use Obsidian's element helpers instead:
+
+```typescript
+// Avoid - trips no-static-styles-assignment (do not "fix" it with a disable comment)
+el.style.transform = `scale(${zoom})`;
+el.style.setProperty('--drag-x', `${offsetX}px`);
+
+// Right - Obsidian helpers, no lint disable needed
+el.setCssStyles({ transform: `scale(${zoom})` });   // camelCase standard properties
+el.setCssProps({ '--drag-x': `${offsetX}px` });     // custom properties + kebab-case (uses setProperty)
+```
+
+Rule of thumb: static value → CSS class; genuinely runtime value → `setCssStyles` / `setCssProps`. There is no case that legitimately requires `element.style.* =`.
+
 ### Prefix Your Classes
 Prefix CSS classes with your plugin name to avoid conflicts:
 

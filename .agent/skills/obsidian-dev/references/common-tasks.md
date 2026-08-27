@@ -91,7 +91,7 @@ this.registerInterval(window.setInterval(() => { /* ... */ }, 1000));
 
 ## Settings tab implementation
 
-For settings tabs, use the dedicated **`settings` skill** — it covers the declarative `getSettingDefinitions()` API (Obsidian 1.13+) and the optional `display()` fallback. `SettingGroup` is always available (`minAppVersion` 1.11+); use it directly with no version guards.
+For settings tabs, use the dedicated **`settings` skill**; it covers the declarative `getSettingDefinitions()` API (Obsidian 1.13+) and the optional `display()` fallback. `SettingGroup` is always available (`minAppVersion` 1.11+); use it directly with no version guards.
 
 ## Secret Storage
 

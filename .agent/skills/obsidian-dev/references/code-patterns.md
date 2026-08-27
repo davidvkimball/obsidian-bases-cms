@@ -14,23 +14,23 @@ Comprehensive code patterns for common Obsidian plugin development tasks. **Alwa
 
 ## Settings tabs
 
-Settings tabs are covered by the dedicated **`settings` skill** — use it for authoring or migrating any `PluginSettingTab`. It is the authoritative reference for the declarative `getSettingDefinitions()` API (Obsidian 1.13+), the control/render/validate/visible patterns, mutable lists, sub-pages, and the optional `display()` fallback for older app versions.
+Settings tabs are covered by the dedicated **`settings` skill**; use it for authoring or migrating any `PluginSettingTab`. It is the authoritative reference for the declarative `getSettingDefinitions()` API (Obsidian 1.13+), the control/render/validate/visible patterns, mutable lists, sub-pages, and the optional `display()` fallback for older app versions.
 
-`SettingGroup` is always available at these projects' `minAppVersion` (1.11+) — use it directly, with no `requireApiVersion()` guards or pre-1.11 fallbacks. Sentence case for all UI text (names, descriptions, headings).
+`SettingGroup` is always available at these projects' `minAppVersion` (1.11+); use it directly, with no `requireApiVersion()` guards or pre-1.11 fallbacks. Sentence case for all UI text (names, descriptions, headings).
 
 ## Multi-window: target the app window, not `activeDocument`
 
 **Source**: Obsidian 1.13 changelog ("Settings now open in a new window") + `Workspace.containerEl` in `.ref/obsidian-api/obsidian.d.ts`
 
-Obsidian renders across multiple OS windows: pop-out leaves, and — since **1.13** — the Settings window. The globals `activeDocument` / `activeWindow` track **whichever window currently has focus**. During a settings `onChange` (or any handler that runs while a pop-out is focused) they point at the *other* window.
+Obsidian renders across multiple OS windows: pop-out leaves, and (since **1.13**) the Settings window. The globals `activeDocument` / `activeWindow` track **whichever window currently has focus**. During a settings `onChange` (or any handler that runs while a pop-out is focused) they point at the *other* window.
 
-So any code that applies persistent UI to the **main app window** — toggling `<body>` classes, setting CSS variables, injecting a `<style>` into `<head>`, or inserting/replacing a ribbon/toolbar button — must NOT use `activeDocument`. On 1.13 the change lands in the Settings window and the user sees nothing change until restart. (This was a real fleet-wide bug: settings appeared to "not apply in real time".)
+So any code that applies persistent UI to the **main app window** (toggling `<body>` classes, setting CSS variables, injecting a `<style>` into `<head>`, or inserting/replacing a ribbon/toolbar button) must NOT use `activeDocument`. On 1.13 the change lands in the Settings window and the user sees nothing change until restart. (This was a real fleet-wide bug: settings appeared to "not apply in real time".)
 
 Use the workspace container's owner document, which always lives in the main window:
 
 ```ts
 export default class MyPlugin extends Plugin {
-  // The main app window's document — stable for the app's lifetime, and
+  // The main app window's document, stable for the app's lifetime, and
   // unaffected by which window (Settings, pop-out) currently has focus.
   private get doc(): Document {
     return this.app.workspace.containerEl.ownerDocument;
@@ -47,8 +47,8 @@ In a manager/service class that holds a plugin reference, expose the same getter
 **Do / Don't**
 - ✅ `this.app.workspace.containerEl.ownerDocument` for body classes, CSS vars, `<style>` injection, and button swaps that must affect the editing window.
 - ✅ `activeDocument` is still correct for things that belong to the focused window: modal/suggest DOM you're building, reading a context menu the user just opened, transient measurement nodes.
-- ❌ `activeDocument.body.classList.add(...)` / `activeDocument.head.appendChild(styleEl)` reached from a settings `onChange` — lands in the Settings window on 1.13+.
-- ⚠️ Observers (`observer.observe(activeDocument.body, …)`) set up once at `onload` are fine (the main window is focused then), but re-creating them from a settings change can attach to the wrong window — prefer the `doc` getter there too.
+- ❌ `activeDocument.body.classList.add(...)` / `activeDocument.head.appendChild(styleEl)` reached from a settings `onChange`; lands in the Settings window on 1.13+.
+- ⚠️ Observers (`observer.observe(activeDocument.body, …)`) set up once at `onload` are fine (the main window is focused then), but re-creating them from a settings change can attach to the wrong window; prefer the `doc` getter there too.
 
 ## Modal with Form Input
 

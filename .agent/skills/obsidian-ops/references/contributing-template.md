@@ -26,7 +26,7 @@ Change the template only when:
 - The plugin has additional scripts the contributor needs to run (e.g. a separate test command).
 - The license is not MIT (update the License section).
 
-Do not customize the issue link — the relative `../../issues` form resolves correctly on any GitHub repo.
+Do not customize the issue link; the relative `../../issues` form resolves correctly on any GitHub repo.
 
 ## Template
 
@@ -91,6 +91,6 @@ By contributing, you agree that your contributions will be licensed under the [M
 
 ## Related Documentation
 
-- [scorecard-compliance.md](scorecard-compliance.md) — covers every scorecard signal, not just the contributing guide.
-- [release-readiness.md](release-readiness.md) — broader pre-release checklist.
-- [versioning-releases.md](versioning-releases.md) — release workflow setup.
+- [scorecard-compliance.md](scorecard-compliance.md): covers every scorecard signal, not just the contributing guide.
+- [release-readiness.md](release-readiness.md): broader pre-release checklist.
+- [versioning-releases.md](versioning-releases.md): release workflow setup.

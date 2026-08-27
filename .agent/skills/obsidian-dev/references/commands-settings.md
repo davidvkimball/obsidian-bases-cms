@@ -16,7 +16,7 @@ Applicability: Plugin
 
 ## Settings tabs
 
-These projects target `minAppVersion: "1.11.0"` or later, so `SettingGroup` is always available — use it directly, with no `requireApiVersion()` guards or pre-1.11 fallbacks.
+These projects target `minAppVersion: "1.11.0"` or later, so `SettingGroup` is always available; use it directly, with no `requireApiVersion()` guards or pre-1.11 fallbacks.
 
 For authoring or migrating a `PluginSettingTab`, use the **`settings` skill**. It is the authoritative reference for the declarative `getSettingDefinitions()` API (Obsidian 1.13+) and the optional `display()` fallback for supporting older app versions. Do not hand-roll settings guidance here.
 

@@ -36,11 +36,11 @@ The Review section is where most score improvement happens. Issues are grouped i
 
 Disclosures are not deductions, they are informational. Common ones for plugins:
 
-- **Vault Enumeration** — uses `vault.getFiles()`, `getMarkdownFiles()`, etc.
-- **Vault Read** — uses `vault.read()` or `vault.cachedRead()`.
-- **Vault Write** — uses `vault.modify()`, `vault.create()`, etc.
-- **Clipboard Access** — reads or writes the system clipboard.
-- **Malware scan not available** / **Vulnerable dependencies scan not available** — scanner-side limitations.
+- **Vault Enumeration**: uses `vault.getFiles()`, `getMarkdownFiles()`, etc.
+- **Vault Read**: uses `vault.read()` or `vault.cachedRead()`.
+- **Vault Write**: uses `vault.modify()`, `vault.create()`, etc.
+- **Clipboard Access**: reads or writes the system clipboard.
+- **Malware scan not available** / **Vulnerable dependencies scan not available**: scanner-side limitations.
 
 Do not try to remove these. They reflect the plugin's actual API surface and the user should understand them when installing.
 
@@ -52,30 +52,26 @@ The scanner reports advisories like:
 
 These are almost always **dev-only transitives** pulled in through `eslint`, `eslint-plugin-obsidianmd`, and `@typescript-eslint/*`. They never ship in `main.js`, but the scorecard still counts them.
 
-**Fix**: add a `pnpm.overrides` block to `package.json` that forces patched versions. Major-version-scoped ranges keep API compatibility while bumping the patch:
+**Fix**: add an `overrides` block to `pnpm-workspace.yaml` (create the file at the repo root if it does not exist) that forces patched versions. Recent pnpm (v10.x and later) reads `overrides` from `pnpm-workspace.yaml`, not the old `pnpm.overrides` field in `package.json`; newer pnpm ignores the old location and prints a deprecation warning ("the pnpm field in package.json is no longer read"). Major-version-scoped ranges keep API compatibility while bumping the patch:
 
-```json
-{
-  "pnpm": {
-    "overrides": {
-      "minimatch@<3.1.3": "^3.1.3",
-      "minimatch@^4 || ^5 || ^6 || ^7 || ^8": "^8.0.5",
-      "minimatch@^9": "^9.0.6",
-      "picomatch@<2.3.2": "^2.3.2",
-      "picomatch@^3 || ^4": "^4.0.4",
-      "brace-expansion@<1.1.13": "^1.1.13",
-      "brace-expansion@^2": "^2.0.3",
-      "ajv@<6.14.0": "^6.14.0",
-      "ajv@^7 || ^8": "^8.18.0",
-      "flatted@<3.4.0": "^3.4.0",
-      "fast-uri@<3.1.1": "^3.1.1",
-      "yaml@<2.8.3": "^2.8.3"
-    }
-  }
-}
+```yaml
+# pnpm-workspace.yaml
+overrides:
+  "minimatch@<3.1.3": "^3.1.3"
+  "minimatch@^4 || ^5 || ^6 || ^7 || ^8": "^8.0.5"
+  "minimatch@^9": "^9.0.6"
+  "picomatch@<2.3.2": "^2.3.2"
+  "picomatch@^3 || ^4": "^4.0.4"
+  "brace-expansion@<1.1.13": "^1.1.13"
+  "brace-expansion@^2": "^2.0.3"
+  "ajv@<6.14.0": "^6.14.0"
+  "ajv@^7 || ^8": "^8.18.0"
+  "flatted@<3.4.0": "^3.4.0"
+  "fast-uri@<3.1.1": "^3.1.1"
+  "yaml@<2.8.3": "^2.8.3"
 ```
 
-Then run `pnpm install` and `pnpm why <pkg>` to verify the patched version is resolved.
+Then run `pnpm install` and `pnpm why <pkg>` to verify the patched version is resolved. (Plugins created before this pnpm change may still carry a `pnpm.overrides` block in `package.json`; move it to `pnpm-workspace.yaml` and delete the old field.)
 
 **Why this format**: pnpm override selectors match against resolved versions. The `package@<range>` key form lets you target one major at a time. A bare `package: "version"` would force every consumer to the same major and break anything depending on a different one.
 
@@ -145,7 +141,7 @@ Then cut releases by pushing a tag (e.g. `git tag 0.1.0 && git push origin 0.1.0
 
 > Build verification failed: the `main.js` built from source does not match the release artifact.
 
-This appears even when attestation passes — attestation proves CI built the
+This appears even when attestation passes; attestation proves CI built the
 asset; build verification proves the asset can be **reproduced** byte-for-byte
 from the tagged source. The single most common cause is an **inline sourcemap**
 in the production build.
@@ -182,7 +178,7 @@ with no args, so dev/watch keeps the inline sourcemap for local debugging.)
 Other reproducibility killers to rule out if the sourcemap is already gated:
 commit `pnpm-lock.yaml` and use `pnpm install --frozen-lockfile` in CI (so the
 dependency tree is identical), pin the CI Node version, and never hand-edit
-`main.js` after building or upload a locally built asset — let the workflow
+`main.js` after building or upload a locally built asset; let the workflow
 build and attach it.
 
 ### Duplicate CSS selectors
@@ -258,11 +254,11 @@ User-facing strings must follow sentence case. The rule auto-detects most static
 ```ts
 // Wrong
 new Notice('Click Here To Continue');
-this.countEl.setText('0 selected');
+this.countEl.setText('0 Selected');
 
 // Right
 new Notice('Click here to continue');
-this.countEl.setText('0 Selected');
+this.countEl.setText('0 selected');
 ```
 
 **Never disable this rule.** The scorecard explicitly flags `eslint-disable-next-line obsidianmd/ui/sentence-case` as a Risk and counts each occurrence. If a string genuinely cannot be sentence case (e.g. it embeds a proper noun or product name), fix the casing instead of disabling.
@@ -325,6 +321,23 @@ Every `eslint-disable*` comment must end with `--` and a reason.
 
 This is the most common Risk-tier finding for plugins that accumulated `eslint-disable` comments before adopting the rule. Audit every existing disable comment and either add a reason or refactor the code to avoid the disable.
 
+#### `obsidianmd/no-static-styles-assignment` (Risk if disabled)
+
+Setting styles imperatively (via `element.style.foo = ...` or `element.style.setProperty(...)`) is flagged. Static styling belongs in `styles.css` (use a class); only genuinely runtime-computed values (a measured height, a zoom factor, a drag offset) should be set from code, and those must go through Obsidian's element helpers.
+
+```ts
+// Wrong
+el.style.maxHeight = '0';
+el.style.setProperty('--progress', `${pct}%`);
+
+// Right - static styling in a class, dynamic values via helpers
+el.addClass('my-plugin-collapsed');            // static
+el.setCssStyles({ maxHeight: '0' });           // runtime standard property (camelCase)
+el.setCssProps({ '--progress': `${pct}%` });   // runtime custom property (uses setProperty)
+```
+
+**Never disable this rule.** Unlike the generic disable rule above, a `--` reason does not make it acceptable; refactor to a class or a `setCssStyles` / `setCssProps` call instead. `setCssProps` maps to `setProperty` (use it for CSS custom properties and kebab-case properties); `setCssStyles` takes camelCase standard properties.
+
 #### `@typescript-eslint/no-unused-vars` (Warning)
 
 > 'foo' is defined but never used. Allowed unused args must match /^_/u.
@@ -381,18 +394,19 @@ Lowercase the `name` field in `manifest.json`. Title case is fine; all caps is n
 
 ## ESLint Config Pattern for the Type-Aware Rules
 
-When you bump `eslint-plugin-obsidianmd` to a version that adds type-aware rules (0.3.0+), the rules will fail on non-TypeScript files because there is no `parserOptions.project` for them. Scope the recommended config to TS only:
+When you bump `eslint-plugin-obsidianmd` to a version that adds type-aware rules (0.3.0+), the rules will fail on non-TypeScript files because there is no `parserOptions.project` for them. Scope the recommended config to TS only, but scope **only the rule-bearing config objects**:
 
 ```js
 import obsidianmd from "eslint-plugin-obsidianmd";
 
 export default defineConfig([
   { ignores: ["main.js", "node_modules/**", "*.js", "scripts/**"] },
-  // Only run obsidianmd recommended rules on TypeScript files
-  ...obsidianmd.configs.recommended.map((config) => ({
-    ...config,
-    files: config.files ?? ["**/*.ts"],
-  })),
+  // Only run obsidianmd recommended rules on TypeScript files. Objects that
+  // merely register the plugin must stay unscoped, or rules applied to other
+  // file types cannot resolve the plugin and ESLint refuses to start.
+  ...obsidianmd.configs.recommended.map((config) =>
+    config.rules ? { ...config, files: config.files ?? ["**/*.ts"] } : config,
+  ),
   {
     files: ["**/*.ts"],
     languageOptions: {
@@ -401,8 +415,110 @@ export default defineConfig([
       // ...
     },
   },
+  {
+    files: ["**/*.mjs"],
+    // Build tooling (esbuild config, version bump) runs in Node, not inside the
+    // plugin sandbox, so the mobile-compatibility and console restrictions that
+    // apply to plugin source are not relevant. The scorecard scans plugin source
+    // only and does not flag these files either.
+    rules: {
+      "obsidianmd/no-nodejs-modules": "off",
+      "obsidianmd/rule-custom-message": "off",
+      "no-console": "off",
+    },
+  },
 ]);
 ```
+
+**Do not blanket-map `files` onto every recommended config object.** The older form below breaks on 0.4.1, because that version's recommended config includes a plugin-registration object with no `files` of its own. Forcing `files: ["**/*.ts"]` onto it registers the plugin for TS only, while other blocks still apply `obsidianmd/*` rules to `.js`/`.mjs`, and ESLint aborts with "could not find plugin obsidianmd" before linting anything:
+
+```js
+// Wrong on 0.4.1+ - ESLint fails to start
+...obsidianmd.configs.recommended.map((config) => ({
+  ...config,
+  files: config.files ?? ["**/*.ts"],
+})),
+```
+
+### Keep the lint toolchain at the version the scorecard runs
+
+The scorecard runs the **latest** `eslint-plugin-obsidianmd`, not the version pinned in `package.json`. A pinned older version cannot report rules it does not contain, so a green local `pnpm lint` says nothing about the scorecard. For example 0.1.9 has no `prefer-create-el` and no `prefer-window-timers` at all.
+
+Before interpreting any scorecard result, match the version and re-lint:
+
+```bash
+pnpm add -D eslint-plugin-obsidianmd@latest
+pnpm lint
+```
+
+Most `prefer-create-el` findings are auto-fixable with `pnpm exec eslint src --fix` (it rewrites `createEl('div', ...)` to `createDiv(...)`). Note the scorecard labels these "uses `document.createElement`" even when the code already uses `createEl`; the rule is really about the shorthand.
+
+## Declare the TypeScript lib your code actually uses
+
+A large cluster of `@typescript-eslint/no-unsafe-*` findings (`no-unsafe-member-access`, `no-unsafe-call`, `no-unsafe-assignment`, `no-unsafe-argument`, `no-unsafe-return`) that you **cannot reproduce locally** usually means the `lib` in `tsconfig.json` does not declare the APIs the code calls.
+
+The Obsidian sample plugin template ships:
+
+```json
+"lib": ["DOM", "ES5", "ES6", "ES7"]
+```
+
+That stops at ES2016. Anything newer is undeclared, so calls to it resolve to `any` and every downstream use is flagged as unsafe. Commonly hit:
+
+| API | Requires |
+| --- | --- |
+| `Object.values`, `Object.entries`, `padStart`, `padEnd` | ES2017 |
+| `Array.flat`, `Array.flatMap`, `Object.fromEntries`, `trimStart`, `trimEnd` | ES2019 |
+| `String.matchAll`, `Promise.allSettled` | ES2020 |
+| `String.replaceAll`, `Promise.any` | ES2021 |
+| `Array.at`, `Object.hasOwn` | ES2022 |
+
+It still type checks locally because `@types/node` contains a `/// <reference lib="es2020" />` that pulls the newer lib in as a side effect. Any type check that does not get that incidental injection sees the calls as untyped, which is what the scorecard reports.
+
+**Fix**: declare the lib explicitly.
+
+```json
+"lib": ["DOM", "ES2020"]
+```
+
+This is a type-only change. `esbuild.config.mjs` sets its own `target`, so `main.js` is byte identical and the build stays reproducible. Verify that: hash `main.js` before and after, and confirm the hashes match.
+
+**Reproduce the scorecard's view** with a throwaway config that disables the automatic `@types` injection:
+
+```bash
+printf '{ "extends": "./tsconfig.json", "compilerOptions": { "types": [] } }' > tsconfig.probe.json
+pnpm exec tsc -p tsconfig.probe.json --noEmit --skipLibCheck
+rm tsconfig.probe.json
+```
+
+Errors of the form `TS2550: Property 'values' does not exist on type 'ObjectConstructor'. Do you need to change your target library?` land on exactly the lines the scorecard flags. Zero errors means the plugin is unaffected and needs no change.
+
+## A manifest version with no matching release
+
+> No release matches your manifest version
+
+This is worse than a failed review: the directory installs assets from the release tagged with the manifest version, so until one exists it can neither scan nor distribute the plugin. Bumping `manifest.json` in a commit without also pushing the tag is enough to cause it, and nothing local complains.
+
+**Fix**: push a tag matching the manifest version exactly, with no `v` prefix (`0.1.0`, not `v0.1.0`).
+
+```bash
+git tag 0.1.0 && git push origin 0.1.0
+```
+
+`node scripts/fleet-audit.mjs --releases` checks every maintained repo for this mismatch.
+
+## Auditing the whole fleet
+
+The drift described above is invisible to a per-repo `pnpm lint`, so check it across every repo at once:
+
+```bash
+node scripts/fleet-audit.mjs           # config drift only
+node scripts/fleet-audit.mjs --probe   # also compile-probe the TypeScript lib
+```
+
+It is read-only and never edits, commits, or releases. It reports, per repo: a tsconfig lib that stops at ES2016, an `eslint-plugin-obsidianmd` pin behind the expected version, the broken recommended-config mapping, and `pnpm.overrides` left in `package.json`.
+
+The repo list comes from `fleet.json`, which is the single source of truth for the fleet scripts. Repos that are not David's to release live in its `excluded` map; anything found in the root but not yet classified is reported under "Unclassified" rather than silently skipped, so new repos cannot quietly fall out of fleet-wide audits.
 
 ## Verification Workflow
 
@@ -418,16 +534,16 @@ After applying fixes:
 
 ## What the Scorecard Doesn't Penalize
 
-- Plugin runtime API surface (vault read/write, clipboard, network) — these become **Disclosures** and inform the user, not deductions.
-- Obsidian API breadth — using lots of API is fine and expected.
+- Plugin runtime API surface (vault read/write, clipboard, network): these become **Disclosures** and inform the user, not deductions.
+- Obsidian API breadth: using lots of API is fine and expected.
 - Plugin file count or repo size.
 - The plugin's actual functionality or popularity (Maintenance and Adoption are reported separately and do not require code changes).
 
 ## Related Documentation
 
-- [contributing-template.md](contributing-template.md) — canonical CONTRIBUTING.md text.
-- [versioning-releases.md](versioning-releases.md) — release workflow setup.
-- [security-privacy.md](security-privacy.md) — dependency vulnerability handling.
-- [release-readiness.md](release-readiness.md) — broader pre-release checklist.
-- [code-patterns.md](../../obsidian-dev/references/code-patterns.md) — idiomatic API usage that satisfies obsidianmd rules.
-- [ux-copy.md](../../obsidian-ref/references/ux-copy.md) — sentence case and other UI text rules.
+- [contributing-template.md](contributing-template.md): canonical CONTRIBUTING.md text.
+- [versioning-releases.md](versioning-releases.md): release workflow setup.
+- [security-privacy.md](security-privacy.md): dependency vulnerability handling.
+- [release-readiness.md](release-readiness.md): broader pre-release checklist.
+- [code-patterns.md](../../obsidian-dev/references/code-patterns.md): idiomatic API usage that satisfies obsidianmd rules.
+- [ux-copy.md](../../obsidian-ref/references/ux-copy.md): sentence case and other UI text rules.
