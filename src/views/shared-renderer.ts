@@ -166,6 +166,9 @@ export class SharedCardRenderer {
 			// Add position class for thumbnail
 			cardEl.classList.add(`thumbnail-${settings.imagePosition}`);
 		}
+		if (settings.imageFit === 'contain') {
+			cardEl.classList.add('image-fit-contain');
+		}
 		cardEl.setAttribute('data-path', card.path);
 		cardEl.setAttribute('data-href', card.path);
 		cardEl.addClass('bases-cms-cursor-pointer');
@@ -544,7 +547,7 @@ export class SharedCardRenderer {
 					// Set initial background image (will be updated if GIF conversion is needed)
 					imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
 					setCssProps(imageEmbedContainer, {
-						backgroundSize: 'cover',
+						backgroundSize: settings.imageFit,
 						backgroundPosition: 'center center',
 						backgroundRepeat: 'no-repeat'
 					});
@@ -642,7 +645,7 @@ export class SharedCardRenderer {
 						// Set initial background image (will be updated if GIF conversion is needed)
 						imageEmbedContainer.style.backgroundImage = `url("${originalUrl}")`;
 						setCssProps(imageEmbedContainer, {
-							backgroundSize: 'cover',
+							backgroundSize: settings.imageFit,
 							backgroundPosition: 'center center',
 							backgroundRepeat: 'no-repeat'
 						});

@@ -932,6 +932,8 @@ export class BasesCMSView extends BasesView {
 			descriptionMaxLength: initialSettings.descriptionMaxLength,
 			imageProperty: initialSettings.imageProperty,
 			imageFormat: initialSettings.imageFormat,
+			imageFit: initialSettings.imageFit,
+			toolbarProperties: initialSettings.toolbarProperties,
 			fallbackToEmbeds: initialSettings.fallbackToEmbeds,
 			propertyDisplay1: initialSettings.propertyDisplay1,
 			propertyDisplay2: initialSettings.propertyDisplay2,
@@ -976,6 +978,8 @@ export class BasesCMSView extends BasesView {
 				this.lastSettings.descriptionMaxLength !== currentSettings.descriptionMaxLength ||
 				this.lastSettings.imageProperty !== currentSettings.imageProperty ||
 				this.lastSettings.imageFormat !== currentSettings.imageFormat ||
+				this.lastSettings.imageFit !== currentSettings.imageFit ||
+				this.lastSettings.toolbarProperties?.join('|') !== currentSettings.toolbarProperties.join('|') ||
 				this.lastSettings.fallbackToEmbeds !== currentSettings.fallbackToEmbeds ||
 				this.lastSettings.propertyDisplay1 !== currentSettings.propertyDisplay1 ||
 				this.lastSettings.propertyDisplay2 !== currentSettings.propertyDisplay2 ||
@@ -1023,6 +1027,8 @@ export class BasesCMSView extends BasesView {
 					descriptionMaxLength: currentSettings.descriptionMaxLength,
 					imageProperty: currentSettings.imageProperty,
 					imageFormat: currentSettings.imageFormat,
+					imageFit: currentSettings.imageFit,
+					toolbarProperties: currentSettings.toolbarProperties,
 					fallbackToEmbeds: currentSettings.fallbackToEmbeds,
 					propertyDisplay1: currentSettings.propertyDisplay1,
 					propertyDisplay2: currentSettings.propertyDisplay2,
@@ -1277,7 +1283,7 @@ export class BasesCMSView extends BasesView {
 			// Set initial background image (will be updated if GIF conversion is needed)
 			imageEmbedContainer.style.backgroundImage = `url("${url}")`;
 			setCssProps(imageEmbedContainer, {
-				backgroundSize: 'cover',
+				backgroundSize: cardEl.classList.contains('image-fit-contain') ? 'contain' : 'cover',
 				backgroundPosition: 'center center',
 				backgroundRepeat: 'no-repeat'
 			});

@@ -7,6 +7,7 @@ import type { CMSSettings } from './data-transform';
 
 interface BasesConfig {
 	get(key: string): unknown;
+	getOrder?(): string[];
 }
 
 export function readCMSSettings(
@@ -31,7 +32,7 @@ export function readCMSSettings(
 		return baseVal;
 	};
 
-	return {
+	const settings: CMSSettings = {
 		titleProperty: getProp('titleProperty') || 'note.title',
 		descriptionProperty: getProp('descriptionProperty') || '',
 		imageProperty: getProp('imageProperty') || '',
@@ -80,6 +81,7 @@ export function readCMSSettings(
 		propertyGroup6Position: (getConfig('propertyGroup6Position') as 'top' | 'bottom') || 'bottom',
 		propertyGroup7Position: (getConfig('propertyGroup7Position') as 'top' | 'bottom') || 'bottom',
 		imageFormat: (getConfig('imageFormat') as 'none' | 'thumbnail' | 'cover') || 'thumbnail',
+		imageFit: (getConfig('imageFit') as 'cover' | 'contain') || 'cover',
 		imagePosition: (getConfig('imagePosition') as 'left' | 'right' | 'top' | 'bottom') || 'right',
 		propertyLabels: (getConfig('propertyLabels') as 'hide' | 'inline' | 'above') || 'hide',
 		propertyDisplayMaxLength: (getConfig('propertyDisplayMaxLength') as number) ?? 0,
@@ -95,7 +97,47 @@ export function readCMSSettings(
 		hideQuickEditIcon: (getConfig('hideQuickEditIcon') as boolean) ?? false,
 		cardSize: (getConfig('cardSize') as number) ?? 250,
 		imageAspectRatio: (getConfig('imageAspectRatio') as number) ?? 0.55,
+		showToolbarProperties: (getConfig('showToolbarProperties') as boolean) ?? true,
+		toolbarProperties: [],
 	};
+
+	if (settings.showToolbarProperties) {
+		settings.toolbarProperties = getToolbarProperties(config, settings);
+	}
+	return settings;
+}
+
+/**
+ * Properties ticked in the Bases Properties menu, minus any the card already
+ * shows through a dedicated slot (title, preview, image, date, tags, draft
+ * status or a property group), so nothing renders twice.
+ */
+function getToolbarProperties(config: BasesConfig | undefined, settings: CMSSettings): string[] {
+	let order: string[] = [];
+	try {
+		order = config?.getOrder?.() ?? [];
+	} catch {
+		return [];
+	}
+
+	const shown = new Set<string>([
+		// Bases lists file.name for every view, ticked or not, and core Cards
+		// uses it as the card title. The title slot already covers it here.
+		'file.name',
+		settings.titleProperty,
+		settings.showTextPreview ? settings.descriptionProperty : '',
+		settings.imageFormat !== 'none' ? settings.imageProperty : '',
+		settings.showDate ? settings.dateProperty : '',
+		settings.showTags ? settings.tagsProperty : '',
+		settings.showDraftStatus ? settings.draftStatusProperty : '',
+		settings.propertyDisplay1, settings.propertyDisplay2, settings.propertyDisplay3,
+		settings.propertyDisplay4, settings.propertyDisplay5, settings.propertyDisplay6,
+		settings.propertyDisplay7, settings.propertyDisplay8, settings.propertyDisplay9,
+		settings.propertyDisplay10, settings.propertyDisplay11, settings.propertyDisplay12,
+		settings.propertyDisplay13, settings.propertyDisplay14,
+	].filter(Boolean));
+
+	return order.filter((property) => !shown.has(property));
 }
 
 function getPropItems(displayName: string, key: string) {
@@ -163,6 +205,7 @@ export function getCMSViewOptions(): unknown[] {
 				{ type: 'dropdown', displayName: 'Image format', key: 'imageFormat', options: { 'none': 'No image', 'thumbnail': 'Thumbnail', 'cover': 'Cover' }, default: 'thumbnail' },
 				...getPropItems('Image property', 'imageProperty'),
 				{ type: 'dropdown', displayName: 'Show image embeds', key: 'fallbackToEmbeds', options: { 'always': 'Always', 'if-empty': 'If image property missing or empty', 'never': 'Never' }, default: 'if-empty' },
+				{ type: 'dropdown', displayName: 'Image fit', key: 'imageFit', options: { 'cover': 'Crop to fill', 'contain': 'Show whole image' }, default: 'cover' },
 				{ type: 'slider', displayName: 'Image aspect ratio', key: 'imageAspectRatio', min: 0.1, max: 2.0, step: 0.05, default: 0.55, showWhen: { key: 'imageFormat', value: 'cover' } }
 			]
 		},
@@ -198,6 +241,7 @@ export function getCMSViewOptions(): unknown[] {
 			type: 'group',
 			displayName: 'Properties',
 			items: [
+				{ type: 'toggle', displayName: 'Show properties from the Properties menu', key: 'showToolbarProperties', default: true },
 				{ type: 'dropdown', displayName: 'Show property labels', key: 'propertyLabels', options: { 'hide': 'Hide', 'inline': 'Inline', 'above': 'On top' }, default: 'hide' },
 				{ type: 'slider', displayName: 'Max characters per property (0 = no limit)', key: 'propertyDisplayMaxLength', min: 0, max: 500, step: 10, default: 0 }
 			]

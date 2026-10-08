@@ -282,6 +282,20 @@ export class PropertyRenderer {
 				}
 			});
 		}
+
+		// Properties ticked in the Bases Properties menu, one per row, after the groups
+		if ((position === 'bottom' || position === undefined) && card.toolbarValues && card.toolbarValues.length > 0) {
+			const toolbarEl = cardEl.createDiv('card-properties properties-bottom properties-toolbar');
+			for (const { property, value } of card.toolbarValues) {
+				const displayValue = maxLen > 0 && value != null && value.length > maxLen ? value.slice(0, maxLen) + '…' : value;
+				if (shouldHideProperty(property, displayValue)) continue;
+				const rowEl = toolbarEl.createDiv('property-row');
+				const fieldEl = rowEl.createDiv('property-field property-field-1');
+				this.renderPropertyContent(fieldEl, property, displayValue, card, entry, settings, onPropertyToggle);
+				if (!fieldEl.hasChildNodes()) rowEl.remove();
+			}
+			if (!toolbarEl.hasChildNodes()) toolbarEl.remove();
+		}
 	}
 
 	/**

@@ -100,6 +100,9 @@ export interface CardData {
 	property12?: string | null;
 	property13?: string | null;
 	property14?: string | null;
+	/** Properties ticked in the Bases Properties menu that no dedicated slot
+	 *  already shows, with their resolved values, in menu order. */
+	toolbarValues?: Array<{ property: string; value: string | null }>;
 }
 
 export interface CMSSettings {
@@ -147,6 +150,7 @@ export interface CMSSettings {
 	propertyGroup6Position: 'top' | 'bottom';
 	propertyGroup7Position: 'top' | 'bottom';
 	imageFormat: 'none' | 'thumbnail' | 'cover';
+	imageFit: 'cover' | 'contain';
 	imagePosition: 'left' | 'right' | 'top' | 'bottom';
 	propertyLabels: 'hide' | 'inline' | 'above';
 	propertyDisplayMaxLength: number;
@@ -162,6 +166,10 @@ export interface CMSSettings {
 	hideQuickEditIcon: boolean;
 	cardSize: number;
 	imageAspectRatio: number;
+	showToolbarProperties: boolean;
+	/** Properties from the Bases Properties menu to render, already filtered
+	 *  down to the ones no dedicated slot displays. */
+	toolbarProperties: string[];
 }
 
 /**
@@ -418,6 +426,14 @@ export async function basesEntryToCardData(
 	cardData.property12 = effectiveProps[11] ? await resolveBasesPropertyAsync(effectiveProps[11], entry, cardData, settings, app, mdxFrontmatterCache) : null;
 	cardData.property13 = effectiveProps[12] ? await resolveBasesPropertyAsync(effectiveProps[12], entry, cardData, settings, app, mdxFrontmatterCache) : null;
 	cardData.property14 = effectiveProps[13] ? await resolveBasesPropertyAsync(effectiveProps[13], entry, cardData, settings, app, mdxFrontmatterCache) : null;
+
+	if (settings.toolbarProperties.length > 0) {
+		cardData.toolbarValues = [];
+		for (const property of settings.toolbarProperties) {
+			const value = await resolveBasesPropertyAsync(property, entry, cardData, settings, app, mdxFrontmatterCache);
+			cardData.toolbarValues.push({ property, value });
+		}
+	}
 
 	return cardData;
 }
