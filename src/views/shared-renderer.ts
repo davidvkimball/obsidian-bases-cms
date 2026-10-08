@@ -169,6 +169,9 @@ export class SharedCardRenderer {
 		if (settings.imageFit === 'contain') {
 			cardEl.classList.add('image-fit-contain');
 		}
+		if (settings.wrapPropertyText) {
+			cardEl.classList.add('wrap-property-text');
+		}
 		cardEl.setAttribute('data-path', card.path);
 		cardEl.setAttribute('data-href', card.path);
 		cardEl.addClass('bases-cms-cursor-pointer');

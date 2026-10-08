@@ -85,6 +85,7 @@ export function readCMSSettings(
 		imagePosition: (getConfig('imagePosition') as 'left' | 'right' | 'top' | 'bottom') || 'right',
 		propertyLabels: (getConfig('propertyLabels') as 'hide' | 'inline' | 'above') || 'hide',
 		propertyDisplayMaxLength: (getConfig('propertyDisplayMaxLength') as number) ?? 0,
+		wrapPropertyText: (getConfig('wrapPropertyText') as boolean) ?? false,
 		showDraftStatus: (getConfig('showDraftStatus') as boolean) ?? false,
 		draftStatusProperty: getProp('draftStatusProperty') || '',
 		draftStatusReverse: (getConfig('draftStatusReverse') as boolean) ?? false,
@@ -243,6 +244,7 @@ export function getCMSViewOptions(): unknown[] {
 			items: [
 				{ type: 'toggle', displayName: 'Show properties from the Properties menu', key: 'showToolbarProperties', default: true },
 				{ type: 'dropdown', displayName: 'Show property labels', key: 'propertyLabels', options: { 'hide': 'Hide', 'inline': 'Inline', 'above': 'On top' }, default: 'hide' },
+				{ type: 'toggle', displayName: 'Wrap property text', key: 'wrapPropertyText', default: false },
 				{ type: 'slider', displayName: 'Max characters per property (0 = no limit)', key: 'propertyDisplayMaxLength', min: 0, max: 500, step: 10, default: 0 }
 			]
 		},

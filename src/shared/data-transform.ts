@@ -154,6 +154,7 @@ export interface CMSSettings {
 	imagePosition: 'left' | 'right' | 'top' | 'bottom';
 	propertyLabels: 'hide' | 'inline' | 'above';
 	propertyDisplayMaxLength: number;
+	wrapPropertyText: boolean;
 	showDraftStatus: boolean;
 	draftStatusProperty: string;
 	draftStatusReverse: boolean;

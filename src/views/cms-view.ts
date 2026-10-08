@@ -933,6 +933,7 @@ export class BasesCMSView extends BasesView {
 			imageProperty: initialSettings.imageProperty,
 			imageFormat: initialSettings.imageFormat,
 			imageFit: initialSettings.imageFit,
+			wrapPropertyText: initialSettings.wrapPropertyText,
 			toolbarProperties: initialSettings.toolbarProperties,
 			fallbackToEmbeds: initialSettings.fallbackToEmbeds,
 			propertyDisplay1: initialSettings.propertyDisplay1,
@@ -979,6 +980,7 @@ export class BasesCMSView extends BasesView {
 				this.lastSettings.imageProperty !== currentSettings.imageProperty ||
 				this.lastSettings.imageFormat !== currentSettings.imageFormat ||
 				this.lastSettings.imageFit !== currentSettings.imageFit ||
+				this.lastSettings.wrapPropertyText !== currentSettings.wrapPropertyText ||
 				this.lastSettings.toolbarProperties?.join('|') !== currentSettings.toolbarProperties.join('|') ||
 				this.lastSettings.fallbackToEmbeds !== currentSettings.fallbackToEmbeds ||
 				this.lastSettings.propertyDisplay1 !== currentSettings.propertyDisplay1 ||
@@ -1028,6 +1030,7 @@ export class BasesCMSView extends BasesView {
 					imageProperty: currentSettings.imageProperty,
 					imageFormat: currentSettings.imageFormat,
 					imageFit: currentSettings.imageFit,
+					wrapPropertyText: currentSettings.wrapPropertyText,
 					toolbarProperties: currentSettings.toolbarProperties,
 					fallbackToEmbeds: currentSettings.fallbackToEmbeds,
 					propertyDisplay1: currentSettings.propertyDisplay1,

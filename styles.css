@@ -1286,6 +1286,13 @@ body.bases-cms-property-color-custom .bases-cms .property-content {
 	white-space: nowrap;
 }
 
+/* Wrap property text: let values run onto more lines instead of truncating */
+.bases-cms .card.wrap-property-text .property-content .text-wrapper {
+	overflow: visible;
+	text-overflow: clip;
+	white-space: normal;
+}
+
 /* Tags */
 .bases-cms .tags-wrapper {
 	display: flex;
