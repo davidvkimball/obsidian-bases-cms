@@ -474,8 +474,11 @@ export class PropertyRenderer {
 				const checkbox = metaContent.createEl('input', { type: 'checkbox' });
 				checkbox.checked = entryValue && 'data' in entryValue ? Boolean(entryValue.data) : false;
 
-				// Use the property label (which uses getDisplayName) instead of raw property name
-				metaContent.createSpan({ text: propertyLabel });
+				// Name the checkbox only when labels are hidden; otherwise the label
+				// above or inline already names it and this would repeat it
+				if (settings.propertyLabels === 'hide') {
+					metaContent.createSpan({ text: propertyLabel });
+				}
 
 				checkbox.addEventListener('change', (e) => {
 					e.stopPropagation();
