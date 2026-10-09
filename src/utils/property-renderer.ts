@@ -504,8 +504,9 @@ export class PropertyRenderer {
 			}
 		}
 
-		// Remove metaContent wrapper if it ended up empty
-		if (!metaContent.textContent || metaContent.textContent.trim().length === 0) {
+		// Remove metaContent wrapper if it ended up empty. A checkbox has no
+		// text of its own, so it never counts as empty.
+		if (!metaContent.hasClass('is-checkbox-prop') && (!metaContent.textContent || metaContent.textContent.trim().length === 0)) {
 			metaContent.remove();
 		}
 	}
